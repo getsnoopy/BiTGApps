@@ -6856,7 +6856,8 @@ selinux_fix() {
 
 # Set release tag in system build
 set_release_tag() {
-  insert_line $SYSTEM/build.prop "ro.gapps.release_tag=R20" after 'net.bt.name=Android' 'ro.gapps.release_tag=R20'
+  remove_line $SYSTEM/build.prop "ro.gapps.release_tag"
+  insert_line $SYSTEM/build.prop "ro.gapps.release_tag=" after 'net.bt.name=Android' 'ro.gapps.release_tag='
 }
 
 # Do not add these functions inside 'pre_install' or 'post_install' function

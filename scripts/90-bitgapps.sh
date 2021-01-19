@@ -586,7 +586,7 @@ set_assistant() {
 
 # Set release tag in system build
 set_release_tag() {
-  insert_line $S/build.prop "ro.gapps.release_tag=R20" after 'net.bt.name=Android' 'ro.gapps.release_tag=R20'
+  insert_line $S/build.prop "ro.gapps.release_tag=" after 'net.bt.name=Android' 'ro.gapps.release_tag='
 }
 
 # Set product check property
