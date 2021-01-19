@@ -23,8 +23,11 @@
 # Change selinux status to permissive
 setenforce 0
 
+# Load install functions from utility script
+. $TMP/util_functions.sh
+
 # Set build version
-REL=""
+REL="$REL"
 
 print_title() {
   ui_print " "
@@ -36,36 +39,36 @@ print_title() {
 # Set environmental variables
 env_vars() {
   # ZIPTYPE variable 'basic' or 'addon'
-  ZIPTYPE=""
+  ZIPTYPE="$ZIPTYPE"
   # ADDON variable 'conf' or 'sep'
-  ADDON=""
+  ADDON="$ADDON"
   INTERNAL="/sdcard"
   EXTERNAL="/sdcard1"
   # Enforce clean install for specific release
-  TARGET_GAPPS_RELEASE=""
-  TARGET_DIRTY_INSTALL=""
+  TARGET_GAPPS_RELEASE="$TARGET_GAPPS_RELEASE"
+  TARGET_DIRTY_INSTALL="$TARGET_DIRTY_INSTALL"
   # Supported Android SDK Versions 30, 29, 28, 27, 26, 25
-  TARGET_ANDROID_SDK=""
+  TARGET_ANDROID_SDK="$TARGET_ANDROID_SDK"
   # Android release
-  TARGET_VERSION_ERROR=""
+  TARGET_VERSION_ERROR="$TARGET_VERSION_ERROR"
   # Supported Android platforms ARM & ARM64
-  TARGET_ANDROID_ARCH=""
+  TARGET_ANDROID_ARCH="$TARGET_ANDROID_ARCH"
   # Set addon for installation
   if [ "$ZIPTYPE" == "addon" ]; then
     if [ "$ADDON" == "sep" ]; then
-      TARGET_ASSISTANT_GOOGLE=""
-      TARGET_CALCULATOR_GOOGLE=""
-      TARGET_CALENDAR_GOOGLE=""
-      TARGET_CONTACTS_GOOGLE=""
-      TARGET_DESKCLOCK_GOOGLE=""
-      TARGET_DIALER_GOOGLE=""
-      TARGET_GBOARD_GOOGLE=""
-      TARGET_MARKUP_GOOGLE=""
-      TARGET_MESSAGES_GOOGLE=""
-      TARGET_PHOTOS_GOOGLE=""
-      TARGET_SOUNDPICKER_GOOGLE=""
-      TARGET_VANCED_GOOGLE=""
-      TARGET_WELLBEING_GOOGLE=""
+      TARGET_ASSISTANT_GOOGLE="$TARGET_ASSISTANT_GOOGLE"
+      TARGET_CALCULATOR_GOOGLE="$TARGET_CALCULATOR_GOOGLE"
+      TARGET_CALENDAR_GOOGLE="$TARGET_CALENDAR_GOOGLE"
+      TARGET_CONTACTS_GOOGLE="$TARGET_CONTACTS_GOOGLE"
+      TARGET_DESKCLOCK_GOOGLE="$TARGET_DESKCLOCK_GOOGLE"
+      TARGET_DIALER_GOOGLE="$TARGET_DIALER_GOOGLE"
+      TARGET_GBOARD_GOOGLE="$TARGET_GBOARD_GOOGLE"
+      TARGET_MARKUP_GOOGLE="$TARGET_MARKUP_GOOGLE"
+      TARGET_MESSAGES_GOOGLE="$TARGET_MESSAGES_GOOGLE"
+      TARGET_PHOTOS_GOOGLE="$TARGET_PHOTOS_GOOGLE"
+      TARGET_SOUNDPICKER_GOOGLE="$TARGET_SOUNDPICKER_GOOGLE"
+      TARGET_VANCED_GOOGLE="$TARGET_VANCED_GOOGLE"
+      TARGET_WELLBEING_GOOGLE="$TARGET_WELLBEING_GOOGLE"
     fi
   fi
 }
@@ -127,6 +130,7 @@ set_bb() {
       rm -rf $TMP/installer.sh
       rm -rf $TMP/pm.sh
       rm -rf $TMP/sqlite3
+      rm -rf $TMP/util_functions.sh
       rm -rf $TMP/zipalign
     fi
     ui_print "! Wrong architecture detected. Aborting..."
@@ -1418,6 +1422,7 @@ cleanup() {
   rm -rf $TMP/sqlite3
   rm -rf $TMP/unzip
   rm -rf $TMP/updater
+  rm -rf $TMP/util_functions.sh
   rm -rf $TMP/zip
   rm -rf $TMP/zipalign
 }
@@ -6857,7 +6862,7 @@ selinux_fix() {
 # Set release tag in system build
 set_release_tag() {
   remove_line $SYSTEM/build.prop "ro.gapps.release_tag"
-  insert_line $SYSTEM/build.prop "ro.gapps.release_tag=" after 'net.bt.name=Android' 'ro.gapps.release_tag='
+  insert_line $SYSTEM/build.prop "ro.gapps.release_tag=$TARGET_RELEASE_TAG" after 'net.bt.name=Android' "ro.gapps.release_tag=$TARGET_RELEASE_TAG"
 }
 
 # Do not add these functions inside 'pre_install' or 'post_install' function

@@ -30,6 +30,10 @@ export TMP="/tmp"
 unzip -o "$ZIPFILE" "installer.sh" -d "$TMP"
 chmod +x "$TMP/installer.sh"
 
+# Extract utility script
+unzip -o "$ZIPFILE" "util_functions.sh" -d "$TMP"
+chmod +x "$TMP/util_functions.sh"
+
 # Execute installer script
 source "$TMP/installer.sh" "$@"
 exit "$?"
