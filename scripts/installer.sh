@@ -6312,13 +6312,15 @@ set_addon_zip_sep() {
 
 # Set addon package installation
 set_addon_install() {
-  if [ "$addon_config" == "true" ]; then
-    set_addon_zip_conf
-    insert_line $SYSTEM/config.prop "ro.addon.install_status=conf" after '# Begin build properties' "ro.addon.install_status=conf"
-  fi
-  if [ "$addon_config" == "false" ]; then
-    echo "ERROR: Config file not found" >> $ADDON_CONFIG
-    addon_abort "! Skip installing additional packages"
+  if [ "$ADDON" == "conf" ]; then
+    if [ "$addon_config" == "true" ]; then
+      set_addon_zip_conf
+      insert_line $SYSTEM/config.prop "ro.addon.install_status=conf" after '# Begin build properties' "ro.addon.install_status=conf"
+    fi
+    if [ "$addon_config" == "false" ]; then
+      echo "ERROR: Config file not found" >> $ADDON_CONFIG
+      addon_abort "! Skip installing additional packages"
+    fi
   fi
   if [ "$ADDON" == "sep" ]; then
     set_addon_zip_sep
