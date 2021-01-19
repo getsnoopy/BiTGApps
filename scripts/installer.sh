@@ -1772,7 +1772,7 @@ on_data_check() {
 # Check install type
 check_release_tag() {
   if [ -n "$(cat $SYSTEM/build.prop | grep ro.gapps.release_tag)" ]; then
-    if [ "$android_release" -le "$unsupported_release" ]; then
+    if [ "$android_release" -lt "$unsupported_release" ]; then
       DEPRECATED_RELEASE_TAG="true"
     fi
     if [ ! "$TARGET_DIRTY_INSTALL" == "true" ]; then
