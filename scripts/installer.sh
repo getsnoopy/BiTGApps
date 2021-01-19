@@ -71,18 +71,9 @@ env_vars() {
 }
 
 # Output function
-trampoline() {
-  ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true || BOOTMODE=false
-  $BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
-  if ! $BOOTMODE; then
-    # update-binary|updater <RECOVERY_API_VERSION> <OUTFD> <ZIPFILE>
-    OUTFD=$(ps | grep -v 'grep' | grep -oE 'update(.*) 3 [0-9]+' | cut -d" " -f3)
-    [ -z $OUTFD ] && OUTFD=$(ps -Af | grep -v 'grep' | grep -oE 'update(.*) 3 [0-9]+' | cut -d" " -f3)
-    # update_engine_sideload --payload=file://<ZIPFILE> --offset=<OFFSET> --headers=<HEADERS> --status_fd=<OUTFD>
-    [ -z $OUTFD ] && OUTFD=$(ps | grep -v 'grep' | grep -oE 'status_fd=[0-9]+' | cut -d= -f2)
-    [ -z $OUTFD ] && OUTFD=$(ps -Af | grep -v 'grep' | grep -oE 'status_fd=[0-9]+' | cut -d= -f2)
-  fi
-  ui_print() { echo -e "ui_print $1\nui_print" >> /proc/self/fd/$OUTFD; }
+ui_print() {
+  echo -n -e "ui_print $1\n" >> /proc/self/fd/$OUTFD
+  echo -n -e "ui_print\n" >> /proc/self/fd/$OUTFD
 }
 
 # Extract remaining files
@@ -6869,7 +6860,6 @@ set_release_tag() {
 # Do not add these functions inside 'pre_install' or 'post_install' function
 helper() {
   env_vars
-  trampoline
   zip_extract
   print_title
   set_arch

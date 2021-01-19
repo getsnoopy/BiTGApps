@@ -23,6 +23,7 @@
 
 # Set environmental variables in the global environment
 export ZIPFILE="$3"
+export OUTFD="$2"
 export TMP="/tmp"
 
 # Extract installer script
