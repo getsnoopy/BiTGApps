@@ -3461,7 +3461,6 @@ sdk_v30_install() {
   if [ "$android_sdk" == "$supported_sdk_v30" ]; then
     # Set default packages and unpack
     ZIP="
-      zip/core/AndroidPlatformServices.tar.xz
       zip/core/ConfigUpdater.tar.xz
       zip/core/GoogleServicesFramework.tar.xz
       zip/core/Phonesky.tar.xz
@@ -3488,12 +3487,10 @@ sdk_v30_install() {
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack PRIV-APP Files" >> $LOG
-      tar tvf $ZIP_FILE/core/AndroidPlatformServices.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/ConfigUpdater.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/GoogleServicesFramework.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/Phonesky.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/PrebuiltGmsCoreRvc.tar.xz >> $LOG
-      tar -xf $ZIP_FILE/core/AndroidPlatformServices.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/core/ConfigUpdater.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/core/GoogleServicesFramework.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/core/Phonesky.tar.xz -C $TMP_PRIV
@@ -3535,12 +3532,10 @@ sdk_v30_install() {
     }
 
     selinux_context_sp() {
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/AndroidPlatformServices"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/ConfigUpdater"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleServicesFramework"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/Phonesky"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/PrebuiltGmsCoreRvc"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/Phonesky/Phonesky.apk"
@@ -3592,7 +3587,6 @@ sdk_v30_install() {
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk $ZIPALIGN_OUTFILE/GoogleExtShared.apk >> $ZIPALIGN_LOG
-      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk $ZIPALIGN_OUTFILE/AndroidPlatformServices.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk $ZIPALIGN_OUTFILE/ConfigUpdater.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk $ZIPALIGN_OUTFILE/GoogleServicesFramework.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/Phonesky/Phonesky.apk $ZIPALIGN_OUTFILE/Phonesky.apk >> $ZIPALIGN_LOG
@@ -3603,7 +3597,6 @@ sdk_v30_install() {
       rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       rm -rf $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
-      rm -rf $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk
       rm -rf $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
       rm -rf $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
       rm -rf $SYSTEM_PRIV_APP/Phonesky/Phonesky.apk
@@ -3614,7 +3607,6 @@ sdk_v30_install() {
       cp -f $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleExtShared.apk $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
-      cp -f $ZIPALIGN_OUTFILE/AndroidPlatformServices.apk $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk
       cp -f $ZIPALIGN_OUTFILE/ConfigUpdater.apk $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleServicesFramework.apk $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
       cp -f $ZIPALIGN_OUTFILE/Phonesky.apk $SYSTEM_PRIV_APP/Phonesky/Phonesky.apk
@@ -3625,7 +3617,6 @@ sdk_v30_install() {
       chmod 0644 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       chmod 0644 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       chmod 0644 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
-      chmod 0644 $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk
       chmod 0644 $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
       chmod 0644 $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
       chmod 0644 $SYSTEM_PRIV_APP/Phonesky/Phonesky.apk
@@ -3662,7 +3653,6 @@ sdk_v29_install() {
   if [ "$android_sdk" == "$supported_sdk_v29" ]; then
     # Set default packages and unpack
     ZIP="
-      zip/core/AndroidPlatformServices.tar.xz
       zip/core/ConfigUpdater.tar.xz
       zip/core/GoogleExtServices.tar.xz
       zip/core/GoogleServicesFramework.tar.xz
@@ -3690,13 +3680,11 @@ sdk_v29_install() {
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack PRIV-APP Files" >> $LOG
-      tar tvf $ZIP_FILE/core/AndroidPlatformServices.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/ConfigUpdater.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/GoogleExtServices.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/GoogleServicesFramework.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/Phonesky.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/PrebuiltGmsCoreQt.tar.xz >> $LOG
-      tar -xf $ZIP_FILE/core/AndroidPlatformServices.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/core/ConfigUpdater.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/core/GoogleExtServices.tar.xz -C $TMP_PRIV_JAR
       tar -xf $ZIP_FILE/core/GoogleServicesFramework.tar.xz -C $TMP_PRIV
@@ -3739,13 +3727,11 @@ sdk_v29_install() {
     }
 
     selinux_context_sp() {
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/AndroidPlatformServices"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/ConfigUpdater"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP_SHARED/GoogleExtServices"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleServicesFramework"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/Phonesky"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/PrebuiltGmsCoreQt"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk"
@@ -3798,7 +3784,6 @@ sdk_v29_install() {
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk $ZIPALIGN_OUTFILE/GoogleExtShared.apk >> $ZIPALIGN_LOG
-      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk $ZIPALIGN_OUTFILE/AndroidPlatformServices.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk $ZIPALIGN_OUTFILE/ConfigUpdater.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk $ZIPALIGN_OUTFILE/GoogleExtServices.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk $ZIPALIGN_OUTFILE/GoogleServicesFramework.apk >> $ZIPALIGN_LOG
@@ -3810,7 +3795,6 @@ sdk_v29_install() {
       rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       rm -rf $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
-      rm -rf $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk
       rm -rf $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
       rm -rf $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk
       rm -rf $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
@@ -3822,7 +3806,6 @@ sdk_v29_install() {
       cp -f $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleExtShared.apk $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
-      cp -f $ZIPALIGN_OUTFILE/AndroidPlatformServices.apk $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk
       cp -f $ZIPALIGN_OUTFILE/ConfigUpdater.apk $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleExtServices.apk $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleServicesFramework.apk $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
@@ -3834,7 +3817,6 @@ sdk_v29_install() {
       chmod 0644 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       chmod 0644 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       chmod 0644 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
-      chmod 0644 $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk
       chmod 0644 $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
       chmod 0644 $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk
       chmod 0644 $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
@@ -3872,7 +3854,6 @@ sdk_v28_install() {
   if [ "$android_sdk" == "$supported_sdk_v28" ]; then
     # Set default packages and unpack
     ZIP="
-      zip/core/AndroidPlatformServices.tar.xz
       zip/core/ConfigUpdater.tar.xz
       zip/core/GoogleExtServices.tar.xz
       zip/core/GoogleServicesFramework.tar.xz
@@ -3905,13 +3886,11 @@ sdk_v28_install() {
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack PRIV-APP Files" >> $LOG
-      tar tvf $ZIP_FILE/core/AndroidPlatformServices.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/ConfigUpdater.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/GoogleExtServices.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/GoogleServicesFramework.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/Phonesky.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/PrebuiltGmsCorePi.tar.xz >> $LOG
-      tar -xf $ZIP_FILE/core/AndroidPlatformServices.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/core/ConfigUpdater.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/core/GoogleExtServices.tar.xz -C $TMP_PRIV_JAR
       tar -xf $ZIP_FILE/core/GoogleServicesFramework.tar.xz -C $TMP_PRIV
@@ -3962,13 +3941,11 @@ sdk_v28_install() {
     }
 
     selinux_context_sp() {
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/AndroidPlatformServices"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/ConfigUpdater"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP_SHARED/GoogleExtServices"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleServicesFramework"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/Phonesky"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/PrebuiltGmsCorePi"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk"
@@ -4030,7 +4007,6 @@ sdk_v28_install() {
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk $ZIPALIGN_OUTFILE/GoogleExtShared.apk >> $ZIPALIGN_LOG
-      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk $ZIPALIGN_OUTFILE/AndroidPlatformServices.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk $ZIPALIGN_OUTFILE/ConfigUpdater.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk $ZIPALIGN_OUTFILE/GoogleExtServices.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk $ZIPALIGN_OUTFILE/GoogleServicesFramework.apk >> $ZIPALIGN_LOG
@@ -4043,7 +4019,6 @@ sdk_v28_install() {
       rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       rm -rf $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
-      rm -rf $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk
       rm -rf $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
       rm -rf $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk
       rm -rf $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
@@ -4056,7 +4031,6 @@ sdk_v28_install() {
       cp -f $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleExtShared.apk $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
-      cp -f $ZIPALIGN_OUTFILE/AndroidPlatformServices.apk $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk
       cp -f $ZIPALIGN_OUTFILE/ConfigUpdater.apk $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleExtServices.apk $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleServicesFramework.apk $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
@@ -4069,7 +4043,6 @@ sdk_v28_install() {
       chmod 0644 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       chmod 0644 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       chmod 0644 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
-      chmod 0644 $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk
       chmod 0644 $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
       chmod 0644 $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk
       chmod 0644 $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
@@ -4108,7 +4081,6 @@ sdk_v27_install() {
   if [ "$android_sdk" == "$supported_sdk_v27" ]; then
     # Set default packages and unpack
     ZIP="
-      zip/core/AndroidPlatformServices.tar.xz
       zip/core/ConfigUpdater.tar.xz
       zip/core/GmsCoreSetupPrebuilt.tar.xz
       zip/core/GoogleExtServices.tar.xz
@@ -4142,14 +4114,12 @@ sdk_v27_install() {
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack PRIV-APP Files" >> $LOG
-      tar tvf $ZIP_FILE/core/AndroidPlatformServices.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/ConfigUpdater.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/GmsCoreSetupPrebuilt.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/GoogleExtServices.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/GoogleServicesFramework.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/Phonesky.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/PrebuiltGmsCorePix.tar.xz >> $LOG
-      tar -xf $ZIP_FILE/core/AndroidPlatformServices.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/core/ConfigUpdater.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/core/GmsCoreSetupPrebuilt.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/core/GoogleExtServices.tar.xz -C $TMP_PRIV_JAR
@@ -4201,14 +4171,12 @@ sdk_v27_install() {
     }
 
     selinux_context_sp() {
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/AndroidPlatformServices"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/ConfigUpdater"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP_SHARED/GoogleExtServices"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleServicesFramework"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/Phonesky"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/PrebuiltGmsCorePix"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt/GmsCoreSetupPrebuilt.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk"
@@ -4271,7 +4239,6 @@ sdk_v27_install() {
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk $ZIPALIGN_OUTFILE/GoogleExtShared.apk >> $ZIPALIGN_LOG
-      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk $ZIPALIGN_OUTFILE/AndroidPlatformServices.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk $ZIPALIGN_OUTFILE/ConfigUpdater.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt/GmsCoreSetupPrebuilt.apk $ZIPALIGN_OUTFILE/GmsCoreSetupPrebuilt.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk $ZIPALIGN_OUTFILE/GoogleExtServices.apk >> $ZIPALIGN_LOG
@@ -4285,7 +4252,6 @@ sdk_v27_install() {
       rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       rm -rf $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
-      rm -rf $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk
       rm -rf $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
       rm -rf $SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt/GmsCoreSetupPrebuilt.apk
       rm -rf $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk
@@ -4299,7 +4265,6 @@ sdk_v27_install() {
       cp -f $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleExtShared.apk $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
-      cp -f $ZIPALIGN_OUTFILE/AndroidPlatformServices.apk $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk
       cp -f $ZIPALIGN_OUTFILE/ConfigUpdater.apk $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
       cp -f $ZIPALIGN_OUTFILE/GmsCoreSetupPrebuilt.apk $SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt/GmsCoreSetupPrebuilt.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleExtServices.apk $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk
@@ -4313,7 +4278,6 @@ sdk_v27_install() {
       chmod 0644 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       chmod 0644 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       chmod 0644 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
-      chmod 0644 $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk
       chmod 0644 $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
       chmod 0644 $SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt/GmsCoreSetupPrebuilt.apk
       chmod 0644 $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk
@@ -4353,7 +4317,6 @@ sdk_v26_install() {
   if [ "$android_sdk" == "$supported_sdk_v26" ]; then
     # Set default packages and unpack
     ZIP="
-      zip/core/AndroidPlatformServices.tar.xz
       zip/core/ConfigUpdater.tar.xz
       zip/core/GmsCoreSetupPrebuilt.tar.xz
       zip/core/GoogleExtServices.tar.xz
@@ -4387,14 +4350,12 @@ sdk_v26_install() {
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack PRIV-APP Files" >> $LOG
-      tar tvf $ZIP_FILE/core/AndroidPlatformServices.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/ConfigUpdater.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/GmsCoreSetupPrebuilt.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/GoogleExtServices.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/GoogleServicesFramework.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/Phonesky.tar.xz >> $LOG
       tar tvf $ZIP_FILE/core/PrebuiltGmsCorePix.tar.xz >> $LOG
-      tar -xf $ZIP_FILE/core/AndroidPlatformServices.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/core/ConfigUpdater.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/core/GmsCoreSetupPrebuilt.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/core/GoogleExtServices.tar.xz -C $TMP_PRIV_JAR
@@ -4446,14 +4407,12 @@ sdk_v26_install() {
     }
 
     selinux_context_sp() {
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/AndroidPlatformServices"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/ConfigUpdater"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP_SHARED/GoogleExtServices"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleServicesFramework"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/Phonesky"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/PrebuiltGmsCorePix"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt/GmsCoreSetupPrebuilt.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk"
@@ -4516,7 +4475,6 @@ sdk_v26_install() {
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk $ZIPALIGN_OUTFILE/GoogleExtShared.apk >> $ZIPALIGN_LOG
-      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk $ZIPALIGN_OUTFILE/AndroidPlatformServices.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk $ZIPALIGN_OUTFILE/ConfigUpdater.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt/GmsCoreSetupPrebuilt.apk $ZIPALIGN_OUTFILE/GmsCoreSetupPrebuilt.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk $ZIPALIGN_OUTFILE/GoogleExtServices.apk >> $ZIPALIGN_LOG
@@ -4530,7 +4488,6 @@ sdk_v26_install() {
       rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       rm -rf $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
-      rm -rf $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk
       rm -rf $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
       rm -rf $SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt/GmsCoreSetupPrebuilt.apk
       rm -rf $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk
@@ -4544,7 +4501,6 @@ sdk_v26_install() {
       cp -f $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleExtShared.apk $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
-      cp -f $ZIPALIGN_OUTFILE/AndroidPlatformServices.apk $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk
       cp -f $ZIPALIGN_OUTFILE/ConfigUpdater.apk $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
       cp -f $ZIPALIGN_OUTFILE/GmsCoreSetupPrebuilt.apk $SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt/GmsCoreSetupPrebuilt.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleExtServices.apk $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk
@@ -4558,7 +4514,6 @@ sdk_v26_install() {
       chmod 0644 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       chmod 0644 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       chmod 0644 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
-      chmod 0644 $SYSTEM_PRIV_APP/AndroidPlatformServices/AndroidPlatformServices.apk
       chmod 0644 $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
       chmod 0644 $SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt/GmsCoreSetupPrebuilt.apk
       chmod 0644 $SYSTEM_PRIV_APP_SHARED/GoogleExtServices/GoogleExtServices.apk
