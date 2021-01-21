@@ -662,7 +662,7 @@ function uts_zipsign_R() {
   do
     case $answer in
      [yY]* ) cd $DIR_R
-           java -jar $ZIPSIGNER $DIR_R.zip ${DIR_R}_signed.zip
+           java -jar $ZIPSIGNER $DIR_R.zip ${DIR_R}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -676,7 +676,7 @@ function uts_zipsign_Q() {
   do
     case $answer in
      [yY]* ) cd $DIR_Q
-           java -jar $ZIPSIGNER $DIR_Q.zip ${DIR_Q}_signed.zip
+           java -jar $ZIPSIGNER $DIR_Q.zip ${DIR_Q}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -690,7 +690,7 @@ function uts_zipsign_PIE() {
   do
     case $answer in
      [yY]* ) cd $DIR_PIE
-           java -jar $ZIPSIGNER $DIR_PIE.zip ${DIR_PIE}_signed.zip
+           java -jar $ZIPSIGNER $DIR_PIE.zip ${DIR_PIE}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -704,7 +704,7 @@ function uts_zipsign_OREO() {
   do
     case $answer in
      [yY]* ) cd $DIR_OREO
-           java -jar $ZIPSIGNER $DIR_OREO.zip ${DIR_OREO}_signed.zip
+           java -jar $ZIPSIGNER $DIR_OREO.zip ${DIR_OREO}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -718,7 +718,7 @@ function uts_zipsign_OREO_V2() {
   do
     case $answer in
      [yY]* ) cd $DIR_OREO_V2
-           java -jar $ZIPSIGNER $DIR_OREO_V2.zip ${DIR_OREO_V2}_signed.zip
+           java -jar $ZIPSIGNER $DIR_OREO_V2.zip ${DIR_OREO_V2}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -732,7 +732,7 @@ function uts_zipsign_NOUGAT() {
   do
     case $answer in
      [yY]* ) cd $DIR_NOUGAT
-           java -jar $ZIPSIGNER $DIR_NOUGAT.zip ${DIR_NOUGAT}_signed.zip
+           java -jar $ZIPSIGNER $DIR_NOUGAT.zip ${DIR_NOUGAT}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -746,7 +746,7 @@ function uts_zipsign_NOUGAT_V2() {
   do
     case $answer in
      [yY]* ) cd $DIR_NOUGAT_V2
-           java -jar $ZIPSIGNER $DIR_NOUGAT_V2.zip ${DIR_NOUGAT_V2}_signed.zip
+           java -jar $ZIPSIGNER $DIR_NOUGAT_V2.zip ${DIR_NOUGAT_V2}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;

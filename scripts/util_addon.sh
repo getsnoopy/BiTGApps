@@ -1119,7 +1119,7 @@ function uts_zipsign_ARM32() {
   do
     case $answer in
      [yY]* ) cd $DIR_ARM32
-           java -jar $ZIPSIGNER $DIR_ARM32.zip ${DIR_ARM32}_signed.zip
+           java -jar $ZIPSIGNER $DIR_ARM32.zip ${DIR_ARM32}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -1133,7 +1133,7 @@ function uts_zipsign_ARM64() {
   do
     case $answer in
      [yY]* ) cd $DIR_ARM64
-           java -jar $ZIPSIGNER $DIR_ARM64.zip ${DIR_ARM64}_signed.zip
+           java -jar $ZIPSIGNER $DIR_ARM64.zip ${DIR_ARM64}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -1158,7 +1158,7 @@ function uts_zipsign_ASSISTANT() {
   do
     case $answer in
      [yY]* ) cd $DIR_ASSISTANT
-           java -jar $ZIPSIGNER $DIR_ASSISTANT.zip ${DIR_ASSISTANT}_signed.zip
+           java -jar $ZIPSIGNER $DIR_ASSISTANT.zip ${DIR_ASSISTANT}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -1172,7 +1172,7 @@ function uts_zipsign_CALCULATOR() {
   do
     case $answer in
      [yY]* ) cd $DIR_CALCULATOR
-           java -jar $ZIPSIGNER $DIR_CALCULATOR.zip ${DIR_CALCULATOR}_signed.zip
+           java -jar $ZIPSIGNER $DIR_CALCULATOR.zip ${DIR_CALCULATOR}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -1186,7 +1186,7 @@ function uts_zipsign_CALENDAR() {
   do
     case $answer in
      [yY]* ) cd $DIR_CALENDAR
-           java -jar $ZIPSIGNER $DIR_CALENDAR.zip ${DIR_CALENDAR}_signed.zip
+           java -jar $ZIPSIGNER $DIR_CALENDAR.zip ${DIR_CALENDAR}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -1200,7 +1200,7 @@ function uts_zipsign_CONTACTS() {
   do
     case $answer in
      [yY]* ) cd $DIR_CONTACTS
-           java -jar $ZIPSIGNER $DIR_CONTACTS.zip ${DIR_CONTACTS}_signed.zip
+           java -jar $ZIPSIGNER $DIR_CONTACTS.zip ${DIR_CONTACTS}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -1214,7 +1214,7 @@ function uts_zipsign_DESKCLOCK() {
   do
     case $answer in
      [yY]* ) cd $DIR_DESKCLOCK
-           java -jar $ZIPSIGNER $DIR_DESKCLOCK.zip ${DIR_DESKCLOCK}_signed.zip
+           java -jar $ZIPSIGNER $DIR_DESKCLOCK.zip ${DIR_DESKCLOCK}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -1228,7 +1228,7 @@ function uts_zipsign_DIALER() {
   do
     case $answer in
      [yY]* ) cd $DIR_DIALER
-           java -jar $ZIPSIGNER $DIR_DIALER.zip ${DIR_DIALER}_signed.zip
+           java -jar $ZIPSIGNER $DIR_DIALER.zip ${DIR_DIALER}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -1242,7 +1242,7 @@ function uts_zipsign_GBOARD() {
   do
     case $answer in
      [yY]* ) cd $DIR_GBOARD
-           java -jar $ZIPSIGNER $DIR_GBOARD.zip ${DIR_GBOARD}_signed.zip
+           java -jar $ZIPSIGNER $DIR_GBOARD.zip ${DIR_GBOARD}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -1256,7 +1256,7 @@ function uts_zipsign_MARKUP() {
   do
     case $answer in
      [yY]* ) cd $DIR_MARKUP
-           java -jar $ZIPSIGNER $DIR_MARKUP.zip ${DIR_MARKUP}_signed.zip
+           java -jar $ZIPSIGNER $DIR_MARKUP.zip ${DIR_MARKUP}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -1270,7 +1270,7 @@ function uts_zipsign_MESSAGES() {
   do
     case $answer in
      [yY]* ) cd $DIR_MESSAGES
-           java -jar $ZIPSIGNER $DIR_MESSAGES.zip ${DIR_MESSAGES}_signed.zip
+           java -jar $ZIPSIGNER $DIR_MESSAGES.zip ${DIR_MESSAGES}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -1284,7 +1284,7 @@ function uts_zipsign_PHOTOS() {
   do
     case $answer in
      [yY]* ) cd $DIR_PHOTOS
-           java -jar $ZIPSIGNER $DIR_PHOTOS.zip ${DIR_PHOTOS}_signed.zip
+           java -jar $ZIPSIGNER $DIR_PHOTOS.zip ${DIR_PHOTOS}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -1298,7 +1298,7 @@ function uts_zipsign_SOUNDPICKER() {
   do
     case $answer in
      [yY]* ) cd $DIR_SOUNDPICKER
-           java -jar $ZIPSIGNER $DIR_SOUNDPICKER.zip ${DIR_SOUNDPICKER}_signed.zip
+           java -jar $ZIPSIGNER $DIR_SOUNDPICKER.zip ${DIR_SOUNDPICKER}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -1312,7 +1312,7 @@ function uts_zipsign_VANCED() {
   do
     case $answer in
      [yY]* ) cd $DIR_VANCED
-           java -jar $ZIPSIGNER $DIR_VANCED.zip ${DIR_VANCED}_signed.zip
+           java -jar $ZIPSIGNER $DIR_VANCED.zip ${DIR_VANCED}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
@@ -1326,7 +1326,7 @@ function uts_zipsign_WELLBEING() {
   do
     case $answer in
      [yY]* ) cd $DIR_WELLBEING
-           java -jar $ZIPSIGNER $DIR_WELLBEING.zip ${DIR_WELLBEING}_signed.zip
+           java -jar $ZIPSIGNER $DIR_WELLBEING.zip ${DIR_WELLBEING}_signed.zip 2>/dev/null
            cd ../
            break;;
      [nN]* ) break;;
