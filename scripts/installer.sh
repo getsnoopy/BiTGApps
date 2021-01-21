@@ -2963,16 +2963,6 @@ pre_installed_v30() {
       rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
       rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
       rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
-      rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
-      rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
-      rm -rf $SYSTEM_ETC_CONFIG/nexus.xml
-      rm -rf $SYSTEM_ETC_CONFIG/nga.xml
-      rm -rf $SYSTEM_ETC_CONFIG/pixel_2019_exclusive.xml
-      rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2017.xml
-      rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2018.xml
-      rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2019_midyear.xml
-      rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2019.xml
-      rm -rf $SYSTEM_ETC_CONFIG/preinstalled-packages-product-pixel-2017-and-newer.xml
       rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
       rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
       rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.xml
@@ -3017,16 +3007,6 @@ pre_installed_v29() {
       rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
       rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
       rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
-      rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
-      rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
-      rm -rf $SYSTEM_ETC_CONFIG/nexus.xml
-      rm -rf $SYSTEM_ETC_CONFIG/nga.xml
-      rm -rf $SYSTEM_ETC_CONFIG/pixel_2019_exclusive.xml
-      rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2017.xml
-      rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2018.xml
-      rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2019_midyear.xml
-      rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2019.xml
-      rm -rf $SYSTEM_ETC_CONFIG/preinstalled-packages-product-pixel-2017-and-newer.xml
       rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
       rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
       rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.xml
@@ -3072,16 +3052,6 @@ pre_installed_v28() {
     rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
     rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
     rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/nexus.xml
-    rm -rf $SYSTEM_ETC_CONFIG/nga.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_2019_exclusive.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2017.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2018.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2019_midyear.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2019.xml
-    rm -rf $SYSTEM_ETC_CONFIG/preinstalled-packages-product-pixel-2017-and-newer.xml
     rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.xml
@@ -3120,16 +3090,6 @@ pre_installed_v27() {
     rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
     rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
     rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/nexus.xml
-    rm -rf $SYSTEM_ETC_CONFIG/nga.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_2019_exclusive.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2017.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2018.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2019_midyear.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2019.xml
-    rm -rf $SYSTEM_ETC_CONFIG/preinstalled-packages-product-pixel-2017-and-newer.xml
     rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.xml
@@ -3167,16 +3127,6 @@ pre_installed_v26() {
     rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
     rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
     rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/nexus.xml
-    rm -rf $SYSTEM_ETC_CONFIG/nga.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_2019_exclusive.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2017.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2018.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2019_midyear.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2019.xml
-    rm -rf $SYSTEM_ETC_CONFIG/preinstalled-packages-product-pixel-2017-and-newer.xml
     rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.xml
@@ -3214,16 +3164,6 @@ pre_installed_v25() {
     rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
     rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
     rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/nexus.xml
-    rm -rf $SYSTEM_ETC_CONFIG/nga.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_2019_exclusive.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2017.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2018.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2019_midyear.xml
-    rm -rf $SYSTEM_ETC_CONFIG/pixel_experience_2019.xml
-    rm -rf $SYSTEM_ETC_CONFIG/preinstalled-packages-product-pixel-2017-and-newer.xml
     rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.xml
@@ -3572,16 +3512,6 @@ sdk_v30_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_build.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_exclusives_enable.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/nexus.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/nga.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_2019_exclusive.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2017.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2018.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2019_midyear.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2019.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/preinstalled-packages-product-pixel-2017-and-newer.xml"
     }
 
     # APK optimization using zipalign tool
@@ -3769,16 +3699,6 @@ sdk_v29_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_build.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_exclusives_enable.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/nexus.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/nga.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_2019_exclusive.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2017.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2018.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2019_midyear.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2019.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/preinstalled-packages-product-pixel-2017-and-newer.xml"
     }
 
     # APK optimization using zipalign tool
@@ -3990,16 +3910,6 @@ sdk_v28_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_build.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_exclusives_enable.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/nexus.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/nga.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_2019_exclusive.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2017.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2018.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2019_midyear.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2019.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/preinstalled-packages-product-pixel-2017-and-newer.xml"
     }
 
     # Create FaceLock lib symlink
@@ -4226,16 +4136,6 @@ sdk_v27_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_build.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_exclusives_enable.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/nexus.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/nga.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_2019_exclusive.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2017.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2018.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2019_midyear.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2019.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/preinstalled-packages-product-pixel-2017-and-newer.xml"
     }
 
     # Create FaceLock lib symlink
@@ -4466,16 +4366,6 @@ sdk_v26_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_build.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_exclusives_enable.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/nexus.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/nga.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_2019_exclusive.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2017.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2018.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2019_midyear.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2019.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/preinstalled-packages-product-pixel-2017-and-newer.xml"
     }
 
     # Create FaceLock lib symlink
@@ -4711,16 +4601,6 @@ sdk_v25_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_build.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_exclusives_enable.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/nexus.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/nga.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_2019_exclusive.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2017.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2018.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2019_midyear.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/pixel_experience_2019.xml"
-      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/preinstalled-packages-product-pixel-2017-and-newer.xml"
     }
 
     # Create FaceLock lib symlink
