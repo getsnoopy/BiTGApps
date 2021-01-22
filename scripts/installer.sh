@@ -6010,8 +6010,14 @@ set_addon_zip_sep() {
       rm -rf $SYSTEM/system_ext/priv-app/gboard*
       rm -rf $SYSTEM/system_ext/priv-app/LatinIMEGooglePrebuilt
       # Install
-      ADDON_SYS="GboardGooglePrebuilt.tar.xz"
-      PKG_SYS="GboardGooglePrebuilt"
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
+        ADDON_SYS="GboardGooglePrebuilt_arm.tar.xz"
+        PKG_SYS="GboardGooglePrebuilt"
+      fi
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
+        ADDON_SYS="GboardGooglePrebuilt_arm64.tar.xz"
+        PKG_SYS="GboardGooglePrebuilt"
+      fi
       target_sys
     fi
     if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
