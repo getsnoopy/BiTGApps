@@ -5755,8 +5755,14 @@ set_addon_zip_sep() {
       rm -rf $SYSTEM/system_ext/priv-app/Velvet*
       rm -rf $SYSTEM/system_ext/priv-app/velvet*
       # Install
-      ADDON_CORE="Velvet.tar.xz"
-      PKG_CORE="Velvet"
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
+        ADDON_CORE="Velvet_arm.tar.xz"
+        PKG_CORE="Velvet"
+      fi
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
+        ADDON_CORE="Velvet_arm64.tar.xz"
+        PKG_CORE="Velvet"
+      fi
       target_core
     fi
     if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
