@@ -5003,7 +5003,7 @@ set_setup_install() {
         tar tvf $ZIP_FILE/core/GoogleOneTimeInitializer.tar.xz >> $config_log
         tar tvf $ZIP_FILE/core/GoogleRestore.tar.xz >> $config_log
         tar tvf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz >> $config_log
-        tar tvf $ZIP_FILE/core/setupwizardprebuilt_lib64.tar.xz >> $config_log
+        $AARCH64 && tar tvf $ZIP_FILE/core/setupwizardprebuilt_lib64.tar.xz >> $config_log
         tar -xf $ZIP_FILE/core/GoogleBackupTransport.tar.xz -C $TMP_PRIV_SETUP
         tar -xf $ZIP_FILE/core/GoogleOneTimeInitializer.tar.xz -C $TMP_PRIV_SETUP
         tar -xf $ZIP_FILE/core/GoogleRestore.tar.xz -C $TMP_PRIV_SETUP
