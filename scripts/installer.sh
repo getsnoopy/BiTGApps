@@ -6090,8 +6090,14 @@ set_addon_zip_sep() {
       rm -rf $SYSTEM/system_ext/priv-app/Photos*
       rm -rf $SYSTEM/system_ext/priv-app/photos*
       # Install
-      ADDON_SYS="PhotosGooglePrebuilt.tar.xz"
-      PKG_SYS="PhotosGooglePrebuilt"
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
+        ADDON_SYS="PhotosGooglePrebuilt_arm.tar.xz"
+        PKG_SYS="PhotosGooglePrebuilt"
+      fi
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
+        ADDON_SYS="PhotosGooglePrebuilt_arm64.tar.xz"
+        PKG_SYS="PhotosGooglePrebuilt"
+      fi
       target_sys
     fi
     if [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
