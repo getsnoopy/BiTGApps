@@ -5976,8 +5976,14 @@ set_addon_zip_sep() {
       rm -rf $SYSTEM/product/etc/permissions/com.android.dialer.xml
       rm -rf $SYSTEM/system_ext/etc/permissions/com.android.dialer.xml
       # Install
-      ADDON_CORE="DialerGooglePrebuilt.tar.xz"
-      PKG_CORE="DialerGooglePrebuilt"
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
+        ADDON_CORE="DialerGooglePrebuilt_arm.tar.xz"
+        PKG_CORE="DialerGooglePrebuilt"
+      fi
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
+        ADDON_CORE="DialerGooglePrebuilt_arm64.tar.xz"
+        PKG_CORE="DialerGooglePrebuilt"
+      fi
       target_core
       set_google_default
     fi
