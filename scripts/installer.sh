@@ -5589,8 +5589,8 @@ set_addon_zip_conf() {
       ADDON_SYS="MarkupGooglePrebuilt.tar.xz"
       PKG_SYS="MarkupGooglePrebuilt"
       target_sys
-      target_lib32
-      target_lib64
+      $ARMEABI && target_lib32
+      $AARCH64 && target_lib64
     fi
     if [ "$supported_messages_config" == "true" ]; then
       insert_line $SYSTEM/config.prop "ro.config.messages" after '# Begin addon properties' "ro.config.messages"
@@ -6016,8 +6016,8 @@ set_addon_zip_sep() {
       ADDON_SYS="MarkupGooglePrebuilt.tar.xz"
       PKG_SYS="MarkupGooglePrebuilt"
       target_sys
-      target_lib32
-      target_lib64
+      $ARMEABI && target_lib32
+      $AARCH64 && target_lib64
     fi
     if [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
       insert_line $SYSTEM/config.prop "ro.config.messages" after '# Begin addon properties' "ro.config.messages"
