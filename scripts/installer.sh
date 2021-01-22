@@ -5042,6 +5042,8 @@ set_setup_install() {
         chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleOneTimeInitializer"
         chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleRestore"
         chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/SetupWizardPrebuilt"
+        $ARMEABI && chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/SetupWizardPrebuilt/lib"
+        $ARMEABI && chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/SetupWizardPrebuilt/lib/arm"
         chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleBackupTransport/GoogleBackupTransport.apk"
         chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleOneTimeInitializer/GoogleOneTimeInitializer.apk"
         chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleRestore/GoogleRestore.apk"
@@ -5059,7 +5061,8 @@ set_setup_install() {
 
     selinux_context_sl64() {
       if [ "$android_sdk" == "$supported_sdk_v28" ]; then
-        chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB64/libbarhopper.so"
+        $AARCH64 && chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB64/libbarhopper.so"
+        $ARMEABI && chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_PRIV_APP/SetupWizardPrebuilt/lib/arm/libbarhopper.so"
       fi
     }
 
@@ -5168,7 +5171,7 @@ set_setup_install() {
       pre_installed
       extract_app
       selinux_context_sp
-      $AARCH64 && selinux_context_sl64
+      selinux_context_sl64
       apk_opt
       pre_opt
       add_opt
