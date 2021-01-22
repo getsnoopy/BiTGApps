@@ -6066,18 +6066,10 @@ set_addon_zip_sep() {
       rm -rf $SYSTEM/system_ext/priv-app/Messaging*
       rm -rf $SYSTEM/system_ext/priv-app/messaging*
       # Install
-      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
-        ADDON_SYS="MessagesGooglePrebuilt_arm.tar.xz"
-        PKG_SYS="MessagesGooglePrebuilt"
-        ADDON_CORE="CarrierServices_arm.tar.xz"
-        PKG_CORE="CarrierServices"
-      fi
-      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-        ADDON_SYS="MessagesGooglePrebuilt_arm64.tar.xz"
-        PKG_SYS="MessagesGooglePrebuilt"
-        ADDON_CORE="CarrierServices_arm64.tar.xz"
-        PKG_CORE="CarrierServices"
-      fi
+      ADDON_SYS="MessagesGooglePrebuilt.tar.xz"
+      PKG_SYS="MessagesGooglePrebuilt"
+      ADDON_CORE="CarrierServices.tar.xz"
+      PKG_CORE="CarrierServices"
       target_sys
       target_core
     fi
