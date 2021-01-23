@@ -214,6 +214,14 @@ opt_defaults() {
   OPTv30="$TMP/gms_opt_v30.log"
 }
 
+debug_defaults() {
+  bootlog_SAR="$TMP/init-SAR.log"
+  bootlog_AB="$TMP/init-AB.log"
+  bootlog_A="$TMP/init-A.log"
+  bootlog_SARHW="$TMP/init-SARHW.log"
+  bootlog_SYSHW="$TMP/init-SYSHW.log"
+}
+
 build_defaults() {
   # Set temporary zip directory
   ZIP_FILE="$TMP/zip"
@@ -273,11 +281,6 @@ build_defaults() {
   TARGET_PRODUCT="$TMP/bitgapps/cts-product.log"
   TARGET_EXT="$TMP/bitgapps/cts-ext.log"
   TARGET_VENDOR="$TMP/bitgapps/cts-vendor.log"
-  bootlog_SAR="$TMP/bitgapps/init-SAR.log"
-  bootlog_AB="$TMP/bitgapps/init-AB.log"
-  bootlog_A="$TMP/bitgapps/init-A.log"
-  bootlog_SARHW="$TMP/bitgapps/init-SARHW.log"
-  bootlog_SYSHW="$TMP/bitgapps/init-SYSHW.log"
   OPTv28="$TMP/bitgapps/gms_opt_v28.log"
 }
 
@@ -826,14 +829,29 @@ on_inst_abort() {
   fi
 }
 
-get_debug_config_path() {
+# Check whether bootlog config file present in device or not
+get_debug_config() {
   for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage; do
-    for s in $(find $f -iname "debug-config.prop" 2>/dev/null); do
+    for d in $(find $f -iname "debug-config.prop" 2>/dev/null); do
       if [ -f "$d" ]; then
-        DEBUG_CONFIG_DEST="$d"
+        debug_config="true"
       fi
     done
   done
+  if [ ! "$debug_config" == "true" ]; then
+    debug_config="false"
+  fi
+}
+
+print_title_debug() {
+  if [ "$debug_config" == "true" ]; then
+    ui_print "- Debug config detected"
+    ui_print "- Installing bootlog patch"
+  fi
+  if [ "$debug_config" == "false" ]; then
+    ui_print "! Debug config not found"
+    ui_print "! Skip installing bootlog patch"
+  fi
 }
 
 # Bootlog function, trigger at 'on fs' stage
@@ -1362,6 +1380,11 @@ on_install_complete() {
   cp -f $TMP/fstab.log $TMP/bitgapps/fstab.log 2>/dev/null
   cp -f $TMP/gms_opt_v29.log $TMP/bitgapps/gms_opt_v29.log 2>/dev/null
   cp -f $TMP/gms_opt_v30.log $TMP/bitgapps/gms_opt_v30.log 2>/dev/null
+  cp -f $TMP/init-SAR.log $TMP/bitgapps/init-SAR.log 2>/dev/null
+  cp -f $TMP/init-AB.log $TMP/bitgapps/init-AB.log 2>/dev/null
+  cp -f $TMP/init-A.log $TMP/bitgapps/init-A.log 2>/dev/null
+  cp -f $TMP/init-SARHW.log $TMP/bitgapps/init-SARHW.log 2>/dev/null
+  cp -f $TMP/init-SYSHW.log $TMP/bitgapps/init-SYSHW.log 2>/dev/null
   cp -f $TMP/IS_MOUNTED_SAR $TMP/bitgapps/IS_MOUNTED_SAR 2>/dev/null
   cp -f $TMP/IS_MOUNTED_SAS $TMP/bitgapps/IS_MOUNTED_SAS 2>/dev/null
   cp -f $TMP/IS_LAYOUT_SYSTEM $TMP/bitgapps/IS_LAYOUT_SYSTEM 2>/dev/null
@@ -1379,6 +1402,7 @@ on_install_complete() {
   if [ -f $SYSTEM/etc/prop.default ]; then
     cp -f $SYSTEM/etc/prop.default $TMP/bitgapps/system.default 2>/dev/null
   fi
+  cp -f $DEBUG_CONFIG_DEST $TMP/bitgapps/debug-config.prop 2>/dev/null
   cp -f $ADDON_CONFIG_DEST $TMP/bitgapps/addon-config.prop 2>/dev/null
   cp -f $CTS_CONFIG_DEST $TMP/bitgapps/cts-config.prop 2>/dev/null
   cp -f $SETUP_CONFIG_DEST $TMP/bitgapps/setup-config.prop 2>/dev/null
@@ -1434,6 +1458,11 @@ cleanup() {
   rm -rf $TMP/gms_opt_v29.log
   rm -rf $TMP/gms_opt_v30.log
   rm -rf $TMP/init.bootlog.rc
+  rm -rf $TMP/init-SAR.log
+  rm -rf $TMP/init-AB.log
+  rm -rf $TMP/init-A.log
+  rm -rf $TMP/init-SARHW.log
+  rm -rf $TMP/init-SYSHW.log
   rm -rf $TMP/installer.sh
   rm -rf $TMP/IS_MOUNTED_SAR
   rm -rf $TMP/IS_MOUNTED_SAS
@@ -1596,6 +1625,16 @@ sqlite_opt() {
       resIndex="ERRCODE-$resIndex"
     fi
     echo "Database $i:  VACUUM=$resVac  REINDEX=$resIndex" >> "$SQLITE_LOG"
+  done
+}
+
+get_debug_config_path() {
+  for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage; do
+    for d in $(find $f -iname "debug-config.prop" 2>/dev/null); do
+      if [ -f "$d" ]; then
+        DEBUG_CONFIG_DEST="$d"
+      fi
+    done
   done
 }
 
@@ -6839,17 +6878,20 @@ pre_install() {
     on_platform
     build_platform
     check_platform
-    on_data_check
-    clean_inst
-    opt_defaults
-    opt_v29
-    opt_v30
+    debug_defaults
     on_debug_check
+    get_debug_config
+    print_title_debug
     boot_SAR
     boot_AB
     boot_A
     boot_SARHW
     boot_SYSHW
+    on_data_check
+    clean_inst
+    opt_defaults
+    opt_v29
+    opt_v30
   fi
 }
 
