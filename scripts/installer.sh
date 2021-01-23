@@ -2010,7 +2010,9 @@ ext_pathmap() {
     test -d $SYSTEM_ETC_PREF || mkdir $SYSTEM_ETC_PREF
     test -d $SYSTEM_FRAMEWORK || mkdir $SYSTEM_FRAMEWORK
     test -d $SYSTEM_LIB || mkdir $SYSTEM_LIB
-    $AARCH64 && test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
+    if [ "$AARCH64" == "true" ]; then
+      test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
+    fi
     test -d $SYSTEM_XBIN || mkdir $SYSTEM_XBIN
     chmod 0755 $SYSTEM_APP
     chmod 0755 $SYSTEM_PRIV_APP
@@ -2060,7 +2062,9 @@ product_pathmap() {
     test -d $SYSTEM_ETC_PREF || mkdir $SYSTEM_ETC_PREF
     test -d $SYSTEM_FRAMEWORK || mkdir $SYSTEM_FRAMEWORK
     test -d $SYSTEM_LIB || mkdir $SYSTEM_LIB
-    $AARCH64 && test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
+    if [ "$AARCH64" == "true" ]; then
+      test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
+    fi
     test -d $SYSTEM_XBIN || mkdir $SYSTEM_XBIN
     chmod 0755 $SYSTEM_APP
     chmod 0755 $SYSTEM_PRIV_APP
@@ -2110,7 +2114,9 @@ system_pathmap() {
     test -d $SYSTEM_ETC_PREF || mkdir $SYSTEM_ETC_PREF
     test -d $SYSTEM_FRAMEWORK || mkdir $SYSTEM_FRAMEWORK
     test -d $SYSTEM_LIB || mkdir $SYSTEM_LIB
-    $AARCH64 && test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
+    if [ "$AARCH64" == "true" ]; then
+      test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
+    fi
     test -d $SYSTEM_XBIN || mkdir $SYSTEM_XBIN
     chmod 0755 $SYSTEM_APP
     chmod 0755 $SYSTEM_PRIV_APP
