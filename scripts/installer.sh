@@ -395,9 +395,9 @@ system_as_root() {
 
 # Detect dynamic partition layout https://source.android.com/devices/tech/ota/dynamic_partitions/implement
 super_partition() {
-  dynamic_partitions="false"
+  SUPER_PARTITION="false"
   if [ "$dynamic_partitions" == "true" ]; then
-    dynamic_partitions="true"
+    SUPER_PARTITION="true"
   fi
 }
 
@@ -591,7 +591,7 @@ mount_all() {
   mount -o rw,remount -t auto /cache
   mount -o ro -t auto /persist 2>/dev/null
   $SYSTEM_ROOT && ui_print "- Device is system-as-root"
-  $dynamic_partitions && ui_print "- Super partition detected"
+  $SUPER_PARTITION && ui_print "- Super partition detected"
   if [ "$dynamic_partitions" == "true" ]; then
     # Set ANDROID_ROOT in the global environment
     test -d "/system_root" && export ANDROID_ROOT="/system_root" || export ANDROID_ROOT="/system"
