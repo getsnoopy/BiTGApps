@@ -591,6 +591,7 @@ mount_all() {
   mount -o rw,remount -t auto /cache
   mount -o ro -t auto /persist 2>/dev/null
   $SYSTEM_ROOT && ui_print "- Device is system-as-root"
+  $dynamic_partitions && ui_print "- Super partition detected"
   if [ "$dynamic_partitions" == "true" ]; then
     # Set ANDROID_ROOT in the global environment
     test -d "/system_root" && export ANDROID_ROOT="/system_root" || export ANDROID_ROOT="/system"
