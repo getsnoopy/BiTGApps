@@ -3035,10 +3035,14 @@ pre_installed_v30() {
       rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
       rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
       rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
+      rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
+      rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
       rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
       rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
       rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.xml
       rm -rf $SYSTEM_ETC_PERM/com.google.android.media.effects.xml
+      rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
+      rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
       rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
       rm -rf $SYSTEM_ETC_PREF/google.xml
     }
@@ -3079,10 +3083,14 @@ pre_installed_v29() {
       rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
       rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
       rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
+      rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
+      rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
       rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
       rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
       rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.xml
       rm -rf $SYSTEM_ETC_PERM/com.google.android.media.effects.xml
+      rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
+      rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
       rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
       rm -rf $SYSTEM_ETC_PREF/google.xml
     }
@@ -3124,10 +3132,14 @@ pre_installed_v28() {
     rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
     rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
     rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
+    rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
+    rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
     rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.media.effects.xml
+    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
+    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
     rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
     rm -rf $SYSTEM_ETC_PREF/google.xml
     rm -rf $SYSTEM/bin/pm.sh
@@ -3162,10 +3174,14 @@ pre_installed_v27() {
     rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
     rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
     rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
+    rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
+    rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
     rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.media.effects.xml
+    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
+    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
     rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
     rm -rf $SYSTEM_ETC_PREF/google.xml
   fi
@@ -3199,10 +3215,14 @@ pre_installed_v26() {
     rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
     rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
     rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
+    rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
+    rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
     rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.media.effects.xml
+    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
+    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
     rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
     rm -rf $SYSTEM_ETC_PREF/google.xml
   fi
@@ -3236,10 +3256,14 @@ pre_installed_v25() {
     rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
     rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
     rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
+    rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
+    rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
     rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.media.effects.xml
+    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
+    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
     rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
     rm -rf $SYSTEM_ETC_PREF/google.xml
   fi
@@ -3576,6 +3600,8 @@ sdk_v30_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.dialer.support.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.maps.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.media.effects.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/privapp-permissions-atv.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/privapp-permissions-google.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/split-permissions-google.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF/google.xml"
@@ -3584,6 +3610,8 @@ sdk_v30_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_build.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_exclusives_enable.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml"
     }
 
     # APK optimization using zipalign tool
@@ -3763,6 +3791,8 @@ sdk_v29_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.dialer.support.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.maps.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.media.effects.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/privapp-permissions-atv.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/privapp-permissions-google.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/split-permissions-google.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF/google.xml"
@@ -3771,6 +3801,8 @@ sdk_v29_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_build.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_exclusives_enable.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml"
     }
 
     # APK optimization using zipalign tool
@@ -3974,6 +4006,8 @@ sdk_v28_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.dialer.support.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.maps.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.media.effects.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/privapp-permissions-atv.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/privapp-permissions-google.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/split-permissions-google.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF/google.xml"
@@ -3982,6 +4016,8 @@ sdk_v28_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_build.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_exclusives_enable.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml"
     }
 
     # Create FaceLock lib symlink
@@ -4200,6 +4236,8 @@ sdk_v27_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.dialer.support.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.maps.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.media.effects.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/privapp-permissions-atv.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/privapp-permissions-google.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/split-permissions-google.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF/google.xml"
@@ -4208,6 +4246,8 @@ sdk_v27_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_build.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_exclusives_enable.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml"
     }
 
     # Create FaceLock lib symlink
@@ -4430,6 +4470,8 @@ sdk_v26_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.dialer.support.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.maps.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.media.effects.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/privapp-permissions-atv.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/privapp-permissions-google.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/split-permissions-google.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF/google.xml"
@@ -4438,6 +4480,8 @@ sdk_v26_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_build.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_exclusives_enable.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml"
     }
 
     # Create FaceLock lib symlink
@@ -4665,6 +4709,8 @@ sdk_v25_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.dialer.support.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.maps.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.media.effects.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/privapp-permissions-atv.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/privapp-permissions-google.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/split-permissions-google.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF/google.xml"
@@ -4673,6 +4719,8 @@ sdk_v25_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_build.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_exclusives_enable.xml"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml"
     }
 
     # Create FaceLock lib symlink
