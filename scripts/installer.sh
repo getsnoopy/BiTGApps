@@ -830,31 +830,6 @@ on_inst_abort() {
   fi
 }
 
-# Check whether bootlog config file present in device or not
-get_debug_config() {
-  for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage; do
-    for d in $(find $f -iname "debug-config.prop" 2>/dev/null); do
-      if [ -f "$d" ]; then
-        debug_config="true"
-      fi
-    done
-  done
-  if [ ! "$debug_config" == "true" ]; then
-    debug_config="false"
-  fi
-}
-
-print_title_debug() {
-  if [ "$debug_config" == "true" ]; then
-    ui_print "- Debug config detected"
-    ui_print "- Installing bootlog patch"
-  fi
-  if [ "$debug_config" == "false" ]; then
-    ui_print "! Debug config not found"
-    ui_print "! Skip installing bootlog patch"
-  fi
-}
-
 # Bootlog function, trigger at 'on fs' stage
 boot_SAR() {
   if [ "$supported_debug_config" == "true" ]; then
@@ -6985,8 +6960,6 @@ pre_install() {
     check_platform
     debug_defaults
     on_debug_check
-    get_debug_config
-    print_title_debug
     boot_SAR
     boot_AB
     boot_A
