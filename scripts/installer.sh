@@ -3122,6 +3122,7 @@ pre_installed_v28() {
     rm -rf $SYSTEM_FRAMEWORK/com.google.android.dialer.support.jar
     rm -rf $SYSTEM_FRAMEWORK/com.google.android.maps.jar
     rm -rf $SYSTEM_FRAMEWORK/com.google.android.media.effects.jar
+    rm -rf $SYSTEM_LIB/libfacenet.so
     rm -rf $SYSTEM_LIB/libfilterpack_facedetect.so
     rm -rf $SYSTEM_LIB/libfrsdk.so
     rm -rf $SYSTEM_LIB64/libfacenet.so
@@ -3164,6 +3165,7 @@ pre_installed_v27() {
     rm -rf $SYSTEM_FRAMEWORK/com.google.android.dialer.support.jar
     rm -rf $SYSTEM_FRAMEWORK/com.google.android.maps.jar
     rm -rf $SYSTEM_FRAMEWORK/com.google.android.media.effects.jar
+    rm -rf $SYSTEM_LIB/libfacenet.so
     rm -rf $SYSTEM_LIB/libfilterpack_facedetect.so
     rm -rf $SYSTEM_LIB/libfrsdk.so
     rm -rf $SYSTEM_LIB64/libfacenet.so
@@ -3205,6 +3207,7 @@ pre_installed_v26() {
     rm -rf $SYSTEM_FRAMEWORK/com.google.android.dialer.support.jar
     rm -rf $SYSTEM_FRAMEWORK/com.google.android.maps.jar
     rm -rf $SYSTEM_FRAMEWORK/com.google.android.media.effects.jar
+    rm -rf $SYSTEM_LIB/libfacenet.so
     rm -rf $SYSTEM_LIB/libfilterpack_facedetect.so
     rm -rf $SYSTEM_LIB/libfrsdk.so
     rm -rf $SYSTEM_LIB64/libfacenet.so
@@ -3246,6 +3249,7 @@ pre_installed_v25() {
     rm -rf $SYSTEM_FRAMEWORK/com.google.android.dialer.support.jar
     rm -rf $SYSTEM_FRAMEWORK/com.google.android.maps.jar
     rm -rf $SYSTEM_FRAMEWORK/com.google.android.media.effects.jar
+    rm -rf $SYSTEM_LIB/libfacenet.so
     rm -rf $SYSTEM_LIB/libfilterpack_facedetect.so
     rm -rf $SYSTEM_LIB/libfrsdk.so
     rm -rf $SYSTEM_LIB64/libfacenet.so
@@ -3885,6 +3889,7 @@ sdk_v28_install() {
       zip/core/GoogleServicesFramework.tar.xz
       zip/core/Phonesky.tar.xz
       zip/core/PrebuiltGmsCorePi.tar.xz
+      zip/sys/FaceLock.tar.xz
       zip/sys/GoogleCalendarSyncAdapter.tar.xz
       zip/sys/GoogleContactsSyncAdapter.tar.xz
       zip/sys/GoogleExtShared.tar.xz
@@ -3894,9 +3899,12 @@ sdk_v28_install() {
       zip/Permissions.tar.xz
       zip/Preferred.tar.xz" && unpack_zip
 
+    if [ "$ARMEABI" == "true" ]; then
+      ZIP="zip/sys/facelock_lib32.tar.xz" && unpack_zip
+    fi
+
     if [ "$AARCH64" == "true" ]; then
       ZIP="
-        zip/sys/FaceLock.tar.xz
         zip/sys/facelock_lib32.tar.xz
         zip/sys/facelock_lib64.tar.xz" && unpack_zip
     fi
@@ -3905,11 +3913,11 @@ sdk_v28_install() {
     extract_app() {
       echo "-----------------------------------" >> $LOG
       echo "- Unpack SYS-APP Files" >> $LOG
-      $AARCH64 && tar tvf $ZIP_FILE/sys/FaceLock.tar.xz >> $LOG
+      tar tvf $ZIP_FILE/sys/FaceLock.tar.xz >> $LOG
       tar tvf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz >> $LOG
       tar tvf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz >> $LOG
       tar tvf $ZIP_FILE/sys/GoogleExtShared.tar.xz >> $LOG
-      $AARCH64 && tar -xf $ZIP_FILE/sys/FaceLock.tar.xz -C $TMP_SYS
+      tar -xf $ZIP_FILE/sys/FaceLock.tar.xz -C $TMP_SYS
       tar -xf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz -C $TMP_SYS
       tar -xf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz -C $TMP_SYS
       tar -xf $ZIP_FILE/sys/GoogleExtShared.tar.xz -C $TMP_SYS_JAR
@@ -3934,13 +3942,17 @@ sdk_v28_install() {
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack System Lib" >> $LOG
-      $AARCH64 && tar tvf $ZIP_FILE/sys/facelock_lib32.tar.xz >> $LOG
-      $AARCH64 && tar -xf $ZIP_FILE/sys/facelock_lib32.tar.xz -C $TMP_LIB
+      if [ "$ARMEABI" == "true" ] || [ "$AARCH64" == "true" ]; then
+        tar tvf $ZIP_FILE/sys/facelock_lib32.tar.xz >> $LOG
+        tar -xf $ZIP_FILE/sys/facelock_lib32.tar.xz -C $TMP_LIB
+      fi
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack System Lib64" >> $LOG
-      $AARCH64 && tar tvf $ZIP_FILE/sys/facelock_lib64.tar.xz >> $LOG
-      $AARCH64 && tar -xf $ZIP_FILE/sys/facelock_lib64.tar.xz -C $TMP_LIB64
+      if [ "$AARCH64" == "true" ]; then
+        tar tvf $ZIP_FILE/sys/facelock_lib64.tar.xz >> $LOG
+        tar -xf $ZIP_FILE/sys/facelock_lib64.tar.xz -C $TMP_LIB64
+      fi
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack System Files" >> $LOG
@@ -3958,13 +3970,14 @@ sdk_v28_install() {
 
     # Set selinux context
     selinux_context_sa() {
-      $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock"
-      $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib"
+      $ARMEABI && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib/arm"
       $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib/arm64"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleCalendarSyncAdapter"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleContactsSyncAdapter"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP_SHARED/GoogleExtShared"
-      $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/FaceLock.apk"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/FaceLock.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk"
@@ -3990,8 +4003,11 @@ sdk_v28_install() {
     }
 
     selinux_context_sl() {
-      chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfilterpack_facedetect.so"
-      chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfrsdk.so"
+      $ARMEABI && chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfacenet.so"
+      if [ "$ARMEABI" == "true" ] || [ "$AARCH64" == "true" ]; then
+        chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfilterpack_facedetect.so"
+        chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfrsdk.so"
+      fi
     }
 
     selinux_context_sl64() {
@@ -4022,12 +4038,13 @@ sdk_v28_install() {
 
     # Create FaceLock lib symlink
     bind_facelock_lib() {
-      ln -sfnv $SYSTEM_LIB64/libfacenet.so $SYSTEM_APP/FaceLock/lib/arm64/libfacenet.so >> $LINKER
+      $ARMEABI && ln -sfnv $SYSTEM_LIB/libfacenet.so $SYSTEM_APP/FaceLock/lib/arm/libfacenet.so >> $LINKER
+      $AARCH64 && ln -sfnv $SYSTEM_LIB64/libfacenet.so $SYSTEM_APP/FaceLock/lib/arm64/libfacenet.so >> $LINKER
     }
 
     # APK optimization using zipalign tool
     apk_opt() {
-      $AARCH64 && $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/FaceLock/FaceLock.apk $ZIPALIGN_OUTFILE/FaceLock.apk >> $ZIPALIGN_LOG
+      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/FaceLock/FaceLock.apk $ZIPALIGN_OUTFILE/FaceLock.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk $ZIPALIGN_OUTFILE/GoogleExtShared.apk >> $ZIPALIGN_LOG
@@ -4039,7 +4056,7 @@ sdk_v28_install() {
     }
 
     pre_opt() {
-      $AARCH64 && rm -rf $SYSTEM_APP/FaceLock/FaceLock.apk
+      rm -rf $SYSTEM_APP/FaceLock/FaceLock.apk
       rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       rm -rf $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
@@ -4051,7 +4068,7 @@ sdk_v28_install() {
     }
 
     add_opt() {
-      $AARCH64 && cp -f $ZIPALIGN_OUTFILE/FaceLock.apk $SYSTEM_APP/FaceLock/FaceLock.apk
+      cp -f $ZIPALIGN_OUTFILE/FaceLock.apk $SYSTEM_APP/FaceLock/FaceLock.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleExtShared.apk $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
@@ -4063,7 +4080,7 @@ sdk_v28_install() {
     }
 
     perm_opt() {
-      $AARCH64 && chmod 0644 $SYSTEM_APP/FaceLock/FaceLock.apk
+      chmod 0644 $SYSTEM_APP/FaceLock/FaceLock.apk
       chmod 0644 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       chmod 0644 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       chmod 0644 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
@@ -4081,10 +4098,10 @@ sdk_v28_install() {
       selinux_context_sa
       selinux_context_sp
       selinux_context_sf
-      $AARCH64 && selinux_context_sl
+      selinux_context_sl
       $AARCH64 && selinux_context_sl64
       selinux_context_se
-      $AARCH64 && bind_facelock_lib
+      bind_facelock_lib
       apk_opt
       pre_opt
       add_opt
@@ -4111,6 +4128,7 @@ sdk_v27_install() {
       zip/core/GoogleServicesFramework.tar.xz
       zip/core/Phonesky.tar.xz
       zip/core/PrebuiltGmsCorePix.tar.xz
+      zip/sys/FaceLock.tar.xz
       zip/sys/GoogleCalendarSyncAdapter.tar.xz
       zip/sys/GoogleContactsSyncAdapter.tar.xz
       zip/sys/GoogleExtShared.tar.xz
@@ -4120,9 +4138,12 @@ sdk_v27_install() {
       zip/Permissions.tar.xz
       zip/Preferred.tar.xz" && unpack_zip
 
+    if [ "$ARMEABI" == "true" ]; then
+      ZIP="zip/sys/facelock_lib32.tar.xz" && unpack_zip
+    fi
+
     if [ "$AARCH64" == "true" ]; then
       ZIP="
-        zip/sys/FaceLock.tar.xz
         zip/sys/facelock_lib32.tar.xz
         zip/sys/facelock_lib64.tar.xz" && unpack_zip
     fi
@@ -4131,11 +4152,11 @@ sdk_v27_install() {
     extract_app() {
       echo "-----------------------------------" >> $LOG
       echo "- Unpack SYS-APP Files" >> $LOG
-      $AARCH64 && tar tvf $ZIP_FILE/sys/FaceLock.tar.xz >> $LOG
+      tar tvf $ZIP_FILE/sys/FaceLock.tar.xz >> $LOG
       tar tvf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz >> $LOG
       tar tvf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz >> $LOG
       tar tvf $ZIP_FILE/sys/GoogleExtShared.tar.xz >> $LOG
-      $AARCH64 && tar -xf $ZIP_FILE/sys/FaceLock.tar.xz -C $TMP_SYS
+      tar -xf $ZIP_FILE/sys/FaceLock.tar.xz -C $TMP_SYS
       tar -xf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz -C $TMP_SYS
       tar -xf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz -C $TMP_SYS
       tar -xf $ZIP_FILE/sys/GoogleExtShared.tar.xz -C $TMP_SYS_JAR
@@ -4162,13 +4183,17 @@ sdk_v27_install() {
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack System Lib" >> $LOG
-      $AARCH64 && tar tvf $ZIP_FILE/sys/facelock_lib32.tar.xz >> $LOG
-      $AARCH64 && tar -xf $ZIP_FILE/sys/facelock_lib32.tar.xz -C $TMP_LIB
+      if [ "$ARMEABI" == "true" ] || [ "$AARCH64" == "true" ]; then
+        tar tvf $ZIP_FILE/sys/facelock_lib32.tar.xz >> $LOG
+        tar -xf $ZIP_FILE/sys/facelock_lib32.tar.xz -C $TMP_LIB
+      fi
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack System Lib64" >> $LOG
-      $AARCH64 && tar tvf $ZIP_FILE/sys/facelock_lib64.tar.xz >> $LOG
-      $AARCH64 && tar -xf $ZIP_FILE/sys/facelock_lib64.tar.xz -C $TMP_LIB64
+      if [ "$AARCH64" == "true" ]; then
+        tar tvf $ZIP_FILE/sys/facelock_lib64.tar.xz >> $LOG
+        tar -xf $ZIP_FILE/sys/facelock_lib64.tar.xz -C $TMP_LIB64
+      fi
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack System Files" >> $LOG
@@ -4186,13 +4211,14 @@ sdk_v27_install() {
 
     # Set selinux context
     selinux_context_sa() {
-      $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock"
-      $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib"
+      $ARMEABI && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib/arm"
       $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib/arm64"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleCalendarSyncAdapter"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleContactsSyncAdapter"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP_SHARED/GoogleExtShared"
-      $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/FaceLock.apk"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/FaceLock.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk"
@@ -4220,8 +4246,11 @@ sdk_v27_install() {
     }
 
     selinux_context_sl() {
-      chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfilterpack_facedetect.so"
-      chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfrsdk.so"
+      $ARMEABI && chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfacenet.so"
+      if [ "$ARMEABI" == "true" ] || [ "$AARCH64" == "true" ]; then
+        chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfilterpack_facedetect.so"
+        chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfrsdk.so"
+      fi
     }
 
     selinux_context_sl64() {
@@ -4252,12 +4281,13 @@ sdk_v27_install() {
 
     # Create FaceLock lib symlink
     bind_facelock_lib() {
-      ln -sfnv $SYSTEM_LIB64/libfacenet.so $SYSTEM_APP/FaceLock/lib/arm64/libfacenet.so >> $LINKER
+      $ARMEABI && ln -sfnv $SYSTEM_LIB/libfacenet.so $SYSTEM_APP/FaceLock/lib/arm/libfacenet.so >> $LINKER
+      $AARCH64 && ln -sfnv $SYSTEM_LIB64/libfacenet.so $SYSTEM_APP/FaceLock/lib/arm64/libfacenet.so >> $LINKER
     }
 
     # APK optimization using zipalign tool
     apk_opt() {
-      $AARCH64 && $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/FaceLock/FaceLock.apk $ZIPALIGN_OUTFILE/FaceLock.apk >> $ZIPALIGN_LOG
+      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/FaceLock/FaceLock.apk $ZIPALIGN_OUTFILE/FaceLock.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk $ZIPALIGN_OUTFILE/GoogleExtShared.apk >> $ZIPALIGN_LOG
@@ -4270,7 +4300,7 @@ sdk_v27_install() {
     }
 
     pre_opt() {
-      $AARCH64 && rm -rf $SYSTEM_APP/FaceLock/FaceLock.apk
+      rm -rf $SYSTEM_APP/FaceLock/FaceLock.apk
       rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       rm -rf $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
@@ -4283,7 +4313,7 @@ sdk_v27_install() {
     }
 
     add_opt() {
-      $AARCH64 && cp -f $ZIPALIGN_OUTFILE/FaceLock.apk $SYSTEM_APP/FaceLock/FaceLock.apk
+      cp -f $ZIPALIGN_OUTFILE/FaceLock.apk $SYSTEM_APP/FaceLock/FaceLock.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleExtShared.apk $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
@@ -4296,7 +4326,7 @@ sdk_v27_install() {
     }
 
     perm_opt() {
-      $AARCH64 && chmod 0644 $SYSTEM_APP/FaceLock/FaceLock.apk
+      chmod 0644 $SYSTEM_APP/FaceLock/FaceLock.apk
       chmod 0644 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       chmod 0644 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       chmod 0644 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
@@ -4315,10 +4345,10 @@ sdk_v27_install() {
       selinux_context_sa
       selinux_context_sp
       selinux_context_sf
-      $AARCH64 && selinux_context_sl
+      selinux_context_sl
       $AARCH64 && selinux_context_sl64
       selinux_context_se
-      $AARCH64 && bind_facelock_lib
+      bind_facelock_lib
       apk_opt
       pre_opt
       add_opt
@@ -4345,6 +4375,7 @@ sdk_v26_install() {
       zip/core/GoogleServicesFramework.tar.xz
       zip/core/Phonesky.tar.xz
       zip/core/PrebuiltGmsCorePix.tar.xz
+      zip/sys/FaceLock.tar.xz
       zip/sys/GoogleCalendarSyncAdapter.tar.xz
       zip/sys/GoogleContactsSyncAdapter.tar.xz
       zip/sys/GoogleExtShared.tar.xz
@@ -4354,9 +4385,12 @@ sdk_v26_install() {
       zip/Permissions.tar.xz
       zip/Preferred.tar.xz" && unpack_zip
 
+    if [ "$ARMEABI" == "true" ]; then
+      ZIP="zip/sys/facelock_lib32.tar.xz" && unpack_zip
+    fi
+
     if [ "$AARCH64" == "true" ]; then
       ZIP="
-        zip/sys/FaceLock.tar.xz
         zip/sys/facelock_lib32.tar.xz
         zip/sys/facelock_lib64.tar.xz" && unpack_zip
     fi
@@ -4365,11 +4399,11 @@ sdk_v26_install() {
     extract_app() {
       echo "-----------------------------------" >> $LOG
       echo "- Unpack SYS-APP Files" >> $LOG
-      $AARCH64 && tar tvf $ZIP_FILE/sys/FaceLock.tar.xz >> $LOG
+      tar tvf $ZIP_FILE/sys/FaceLock.tar.xz >> $LOG
       tar tvf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz >> $LOG
       tar tvf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz >> $LOG
       tar tvf $ZIP_FILE/sys/GoogleExtShared.tar.xz >> $LOG
-      $AARCH64 && tar -xf $ZIP_FILE/sys/FaceLock.tar.xz -C $TMP_SYS
+      tar -xf $ZIP_FILE/sys/FaceLock.tar.xz -C $TMP_SYS
       tar -xf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz -C $TMP_SYS
       tar -xf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz -C $TMP_SYS
       tar -xf $ZIP_FILE/sys/GoogleExtShared.tar.xz -C $TMP_SYS_JAR
@@ -4396,13 +4430,17 @@ sdk_v26_install() {
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack System Lib" >> $LOG
-      $AARCH64 && tar tvf $ZIP_FILE/sys/facelock_lib32.tar.xz >> $LOG
-      $AARCH64 && tar -xf $ZIP_FILE/sys/facelock_lib32.tar.xz -C $TMP_LIB
+      if [ "$ARMEABI" == "true" ] || [ "$AARCH64" == "true" ]; then
+        tar tvf $ZIP_FILE/sys/facelock_lib32.tar.xz >> $LOG
+        tar -xf $ZIP_FILE/sys/facelock_lib32.tar.xz -C $TMP_LIB
+      fi
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack System Lib64" >> $LOG
-      $AARCH64 && tar tvf $ZIP_FILE/sys/facelock_lib64.tar.xz >> $LOG
-      $AARCH64 && tar -xf $ZIP_FILE/sys/facelock_lib64.tar.xz -C $TMP_LIB64
+      if [ "$AARCH64" == "true" ]; then
+        tar tvf $ZIP_FILE/sys/facelock_lib64.tar.xz >> $LOG
+        tar -xf $ZIP_FILE/sys/facelock_lib64.tar.xz -C $TMP_LIB64
+      fi
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack System Files" >> $LOG
@@ -4420,13 +4458,14 @@ sdk_v26_install() {
 
     # Set selinux context
     selinux_context_sa() {
-      $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock"
-      $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib"
+      $ARMEABI && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib/arm"
       $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib/arm64"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleCalendarSyncAdapter"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleContactsSyncAdapter"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP_SHARED/GoogleExtShared"
-      $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/FaceLock.apk"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/FaceLock.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk"
@@ -4454,8 +4493,11 @@ sdk_v26_install() {
     }
 
     selinux_context_sl() {
-      chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfilterpack_facedetect.so"
-      chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfrsdk.so"
+      $ARMEABI && chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfacenet.so"
+      if [ "$ARMEABI" == "true" ] || [ "$AARCH64" == "true" ]; then
+        chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfilterpack_facedetect.so"
+        chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfrsdk.so"
+      fi
     }
 
     selinux_context_sl64() {
@@ -4486,12 +4528,13 @@ sdk_v26_install() {
 
     # Create FaceLock lib symlink
     bind_facelock_lib() {
-      ln -sfnv $SYSTEM_LIB64/libfacenet.so $SYSTEM_APP/FaceLock/lib/arm64/libfacenet.so >> $LINKER
+      $ARMEABI && ln -sfnv $SYSTEM_LIB/libfacenet.so $SYSTEM_APP/FaceLock/lib/arm/libfacenet.so >> $LINKER
+      $AARCH64 && ln -sfnv $SYSTEM_LIB64/libfacenet.so $SYSTEM_APP/FaceLock/lib/arm64/libfacenet.so >> $LINKER
     }
 
     # APK optimization using zipalign tool
     apk_opt() {
-      $AARCH64 && $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/FaceLock/FaceLock.apk $ZIPALIGN_OUTFILE/FaceLock.apk >> $ZIPALIGN_LOG
+      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/FaceLock/FaceLock.apk $ZIPALIGN_OUTFILE/FaceLock.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk $ZIPALIGN_OUTFILE/GoogleExtShared.apk >> $ZIPALIGN_LOG
@@ -4504,7 +4547,7 @@ sdk_v26_install() {
     }
 
     pre_opt() {
-      $AARCH64 && rm -rf $SYSTEM_APP/FaceLock/FaceLock.apk
+      rm -rf $SYSTEM_APP/FaceLock/FaceLock.apk
       rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       rm -rf $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
@@ -4517,7 +4560,7 @@ sdk_v26_install() {
     }
 
     add_opt() {
-      $AARCH64 && cp -f $ZIPALIGN_OUTFILE/FaceLock.apk $SYSTEM_APP/FaceLock/FaceLock.apk
+      cp -f $ZIPALIGN_OUTFILE/FaceLock.apk $SYSTEM_APP/FaceLock/FaceLock.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleExtShared.apk $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
@@ -4530,7 +4573,7 @@ sdk_v26_install() {
     }
 
     perm_opt() {
-      $AARCH64 && chmod 0644 $SYSTEM_APP/FaceLock/FaceLock.apk
+      chmod 0644 $SYSTEM_APP/FaceLock/FaceLock.apk
       chmod 0644 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       chmod 0644 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       chmod 0644 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
@@ -4549,10 +4592,10 @@ sdk_v26_install() {
       selinux_context_sa
       selinux_context_sp
       selinux_context_sf
-      $AARCH64 && selinux_context_sl
+      selinux_context_sl
       $AARCH64 && selinux_context_sl64
       selinux_context_se
-      $AARCH64 && bind_facelock_lib
+      bind_facelock_lib
       apk_opt
       pre_opt
       add_opt
@@ -4580,6 +4623,7 @@ sdk_v25_install() {
       zip/core/GoogleServicesFramework.tar.xz
       zip/core/Phonesky.tar.xz
       zip/core/PrebuiltGmsCore.tar.xz
+      zip/sys/FaceLock.tar.xz
       zip/sys/GoogleCalendarSyncAdapter.tar.xz
       zip/sys/GoogleContactsSyncAdapter.tar.xz
       zip/sys/GoogleExtShared.tar.xz
@@ -4589,9 +4633,12 @@ sdk_v25_install() {
       zip/Permissions.tar.xz
       zip/Preferred.tar.xz" && unpack_zip
 
+    if [ "$ARMEABI" == "true" ]; then
+      ZIP="zip/sys/facelock_lib32.tar.xz" && unpack_zip
+    fi
+
     if [ "$AARCH64" == "true" ]; then
       ZIP="
-        zip/sys/FaceLock.tar.xz
         zip/sys/facelock_lib32.tar.xz
         zip/sys/facelock_lib64.tar.xz" && unpack_zip
     fi
@@ -4600,11 +4647,11 @@ sdk_v25_install() {
     extract_app() {
       echo "-----------------------------------" >> $LOG
       echo "- Unpack SYS-APP Files" >> $LOG
-      $AARCH64 && tar tvf $ZIP_FILE/sys/FaceLock.tar.xz >> $LOG
+      tar tvf $ZIP_FILE/sys/FaceLock.tar.xz >> $LOG
       tar tvf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz >> $LOG
       tar tvf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz >> $LOG
       tar tvf $ZIP_FILE/sys/GoogleExtShared.tar.xz >> $LOG
-      $AARCH64 && tar -xf $ZIP_FILE/sys/FaceLock.tar.xz -C $TMP_SYS
+      tar -xf $ZIP_FILE/sys/FaceLock.tar.xz -C $TMP_SYS
       tar -xf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz -C $TMP_SYS
       tar -xf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz -C $TMP_SYS
       tar -xf $ZIP_FILE/sys/GoogleExtShared.tar.xz -C $TMP_SYS_JAR
@@ -4633,13 +4680,17 @@ sdk_v25_install() {
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack System Lib" >> $LOG
-      $AARCH64 && tar tvf $ZIP_FILE/sys/facelock_lib32.tar.xz >> $LOG
-      $AARCH64 && tar -xf $ZIP_FILE/sys/facelock_lib32.tar.xz -C $TMP_LIB
+      if [ "$ARMEABI" == "true" ] || [ "$AARCH64" == "true" ]; then
+        tar tvf $ZIP_FILE/sys/facelock_lib32.tar.xz >> $LOG
+        tar -xf $ZIP_FILE/sys/facelock_lib32.tar.xz -C $TMP_LIB
+      fi
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack System Lib64" >> $LOG
-      $AARCH64 && tar tvf $ZIP_FILE/sys/facelock_lib64.tar.xz >> $LOG
-      $AARCH64 && tar -xf $ZIP_FILE/sys/facelock_lib64.tar.xz -C $TMP_LIB64
+      if [ "$AARCH64" == "true" ]; then
+        tar tvf $ZIP_FILE/sys/facelock_lib64.tar.xz >> $LOG
+        tar -xf $ZIP_FILE/sys/facelock_lib64.tar.xz -C $TMP_LIB64
+      fi
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
       echo "- Unpack System Files" >> $LOG
@@ -4657,13 +4708,14 @@ sdk_v25_install() {
 
     # Set selinux context
     selinux_context_sa() {
-      $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock"
-      $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib"
+      $ARMEABI && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib/arm"
       $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/lib/arm64"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleCalendarSyncAdapter"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleContactsSyncAdapter"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP_SHARED/GoogleExtShared"
-      $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/FaceLock.apk"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/FaceLock/FaceLock.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk"
       chcon -h u:object_r:system_file:s0 "$SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk"
@@ -4693,8 +4745,11 @@ sdk_v25_install() {
     }
 
     selinux_context_sl() {
-      chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfilterpack_facedetect.so"
-      chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfrsdk.so"
+      $ARMEABI && chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfacenet.so"
+      if [ "$ARMEABI" == "true" ] || [ "$AARCH64" == "true" ]; then
+        chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfilterpack_facedetect.so"
+        chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB/libfrsdk.so"
+      fi
     }
 
     selinux_context_sl64() {
@@ -4725,12 +4780,13 @@ sdk_v25_install() {
 
     # Create FaceLock lib symlink
     bind_facelock_lib() {
-      ln -sfnv $SYSTEM_LIB64/libfacenet.so $SYSTEM_APP/FaceLock/lib/arm64/libfacenet.so >> $LINKER
+      $ARMEABI && ln -sfnv $SYSTEM_LIB/libfacenet.so $SYSTEM_APP/FaceLock/lib/arm/libfacenet.so >> $LINKER
+      $AARCH64 && ln -sfnv $SYSTEM_LIB64/libfacenet.so $SYSTEM_APP/FaceLock/lib/arm64/libfacenet.so >> $LINKER
     }
 
     # APK optimization using zipalign tool
     apk_opt() {
-      $AARCH64 && $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/FaceLock/FaceLock.apk $ZIPALIGN_OUTFILE/FaceLock.apk >> $ZIPALIGN_LOG
+      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/FaceLock/FaceLock.apk $ZIPALIGN_OUTFILE/FaceLock.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk $ZIPALIGN_OUTFILE/GoogleExtShared.apk >> $ZIPALIGN_LOG
@@ -4744,7 +4800,7 @@ sdk_v25_install() {
     }
 
     pre_opt() {
-      $AARCH64 && rm -rf $SYSTEM_APP/FaceLock/FaceLock.apk
+      rm -rf $SYSTEM_APP/FaceLock/FaceLock.apk
       rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       rm -rf $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
@@ -4758,7 +4814,7 @@ sdk_v25_install() {
     }
 
     add_opt() {
-      $AARCH64 && cp -f $ZIPALIGN_OUTFILE/FaceLock.apk $SYSTEM_APP/FaceLock/FaceLock.apk
+      cp -f $ZIPALIGN_OUTFILE/FaceLock.apk $SYSTEM_APP/FaceLock/FaceLock.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       cp -f $ZIPALIGN_OUTFILE/GoogleExtShared.apk $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
@@ -4772,7 +4828,7 @@ sdk_v25_install() {
     }
 
     perm_opt() {
-      $AARCH64 && chmod 0644 $SYSTEM_APP/FaceLock/FaceLock.apk
+      chmod 0644 $SYSTEM_APP/FaceLock/FaceLock.apk
       chmod 0644 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
       chmod 0644 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
       chmod 0644 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
@@ -4792,10 +4848,10 @@ sdk_v25_install() {
       selinux_context_sa
       selinux_context_sp
       selinux_context_sf
-      $AARCH64 && selinux_context_sl
+      selinux_context_sl
       $AARCH64 && selinux_context_sl64
       selinux_context_se
-      $AARCH64 && bind_facelock_lib
+      bind_facelock_lib
       apk_opt
       pre_opt
       add_opt
