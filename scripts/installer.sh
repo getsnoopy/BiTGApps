@@ -420,7 +420,7 @@ setup_mountpoint() {
 }
 
 mount_apex() {
-  if [ "$dynamic_partitions" == "false" ]; then
+  if [ "$SUPER_PARTITION" == "false" ]; then
     if [ -d /system_root/system ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
       SYSTEM="/system_root/system"
     else
@@ -592,7 +592,7 @@ mount_all() {
   mount -o ro -t auto /persist 2>/dev/null
   $SYSTEM_ROOT && ui_print "- Device is system-as-root"
   $SUPER_PARTITION && ui_print "- Super partition detected"
-  if [ "$dynamic_partitions" == "true" ]; then
+  if [ "$SUPER_PARTITION" == "true" ]; then
     # Set ANDROID_ROOT in the global environment
     test -d "/system_root" && export ANDROID_ROOT="/system_root" || export ANDROID_ROOT="/system"
     if [ "$ANDROID_ROOT" == "/system_root" ]; then
@@ -661,7 +661,7 @@ mount_all() {
       fi
     fi
   fi
-  if [ "$dynamic_partitions" == "false" ]; then
+  if [ "$SUPER_PARTITION" == "false" ]; then
     # Set ANDROID_ROOT in the global environment
     if [ -d /system_root ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
       export ANDROID_ROOT="/system_root" && echo "$ANDROID_ROOT" >> $TMP/IS_MOUNTED_SAR
@@ -747,11 +747,11 @@ system_property() {
 system_layout() {
   # Wipe SYSTEM variable that is set using 'mount_apex' function
   unset SYSTEM
-  if [ "$dynamic_partitions" == "true" ]; then
+  if [ "$SUPER_PARTITION" == "true" ]; then
     export SYSTEM="$ANDROID_ROOT/system"
     echo "$SYSTEM" >> $TMP/IS_LAYOUT_SYSTEM
   fi
-  if [ "$dynamic_partitions" == "false" ]; then
+  if [ "$SUPER_PARTITION" == "false" ]; then
     if [ -f /system_root/system/build.prop ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
       export SYSTEM="/system_root/system"
     elif [ -f /system/system/build.prop ] && [ -n "$(cat $fstab | grep /system)" ]; then
@@ -6975,7 +6975,7 @@ pre_install() {
 
 # Check availability of Product partition
 chk_product() {
-  if [ "$dynamic_partitions" == "true" ]; then
+  if [ "$SUPER_PARTITION" == "true" ]; then
     if [ "$android_sdk" == "$supported_sdk_v29" ]; then
       if [ ! -n "$(cat $fstab | grep /product)" ]; then
         ui_print "! Product partition not found. Aborting..."
@@ -6995,7 +6995,7 @@ chk_product() {
 
 # Check availability of SystemExt partition
 chk_system_Ext() {
-  if [ "$dynamic_partitions" == "true" ]; then
+  if [ "$SUPER_PARTITION" == "true" ]; then
     if [ "$android_sdk" == "$supported_sdk_v30" ]; then
       if [ ! -n "$(cat $fstab | grep /system_ext)" ]; then
         ui_print "! SystemExt partition not found. Aborting..."
@@ -7015,7 +7015,7 @@ chk_system_Ext() {
 
 # Set partitions for checking available space
 df_system() {
-  if [ "$dynamic_partitions" == "false" ]; then
+  if [ "$SUPER_PARTITION" == "false" ]; then
     # Get the available space left on the device
     size=`df -k $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     CAPACITY="170000"
@@ -7029,7 +7029,7 @@ df_system() {
 }
 
 df_product() {
-  if [ "$dynamic_partitions" == "true" ]; then
+  if [ "$SUPER_PARTITION" == "true" ]; then
     if [ "$android_sdk" == "$supported_sdk_v29" ]; then
       # Get the available space left on the device
       size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
@@ -7045,7 +7045,7 @@ df_product() {
 }
 
 df_systemExt() {
-  if [ "$dynamic_partitions" == "true" ]; then
+  if [ "$SUPER_PARTITION" == "true" ]; then
     if [ "$android_sdk" == "$supported_sdk_v30" ]; then
       # Get the available space left on the device
       size=`df -k /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
