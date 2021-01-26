@@ -252,9 +252,9 @@ system_as_root() {
 
 # Detect dynamic partition layout https://source.android.com/devices/tech/ota/dynamic_partitions/implement
 super_partition() {
-  dynamic_partitions="false"
+  SUPER_PARTITION="false"
   if [ "$dynamic_partitions" == "true" ]; then
-    dynamic_partitions="true"
+    SUPER_PARTITION="true"
   fi
 }
 
@@ -264,7 +264,7 @@ mount_all() {
   mount -o ro -t auto /cache 2>/dev/null
   mount -o rw,remount -t auto /cache
   mount -o ro -t auto /persist 2>/dev/null
-  if [ "$dynamic_partitions" == "true" ]; then
+  if [ "$SUPER_PARTITION" == "true" ]; then
     # Set ANDROID_ROOT in the global environment
     test -d "/system_root" && export ANDROID_ROOT="/system_root" || export ANDROID_ROOT="/system"
     if [ "$device_abpartition" == "true" ]; then
@@ -311,7 +311,7 @@ mount_all() {
       fi
     fi
   fi
-  if [ "$dynamic_partitions" == "false" ]; then
+  if [ "$SUPER_PARTITION" == "false" ]; then
     # Set ANDROID_ROOT in the global environment
     if [ -d /system_root ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
       export ANDROID_ROOT="/system_root"
@@ -367,10 +367,10 @@ mount_all() {
 
 # Export our own system layout
 system_layout() {
-  if [ "$dynamic_partitions" == "true" ]; then
+  if [ "$SUPER_PARTITION" == "true" ]; then
     S="$ANDROID_ROOT/system"
   fi
-  if [ "$dynamic_partitions" == "false" ]; then
+  if [ "$SUPER_PARTITION" == "false" ]; then
     if [ -f /system_root/system/build.prop ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
       S="/system_root/system"
     elif [ -f /system/system/build.prop ] && [ -n "$(cat $fstab | grep /system)" ]; then
