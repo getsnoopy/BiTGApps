@@ -1758,6 +1758,7 @@ backupdirSYS() {
     $SYSTEM/framework/com.google.android.media.effects.jar"
 
   SYS_LIB="
+    $SYSTEM/lib/libfacenet.so
     $SYSTEM/lib/libfilterpack_facedetect.so
     $SYSTEM/lib/libfrsdk.so"
 
@@ -1902,6 +1903,7 @@ restoredirTMP() {
     $TMP/framework/com.google.android.media.effects.jar"
 
   TMP_LIB="
+    $TMP/lib/libfacenet.so
     $TMP/lib/libfilterpack_facedetect.so
     $TMP/lib/libfrsdk.so"
 
