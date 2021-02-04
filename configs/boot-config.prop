@@ -1,7 +1,7 @@
 ##############################################################
-# File name       : debug-config.prop
+# File name       : boot-config.prop
 #
-# Description     : Install bootlog patch
+# Description     : Install boot log patch
 #
 # Copyright       : Copyright (C) 2018-2021 TheHitMan7
 #
@@ -18,5 +18,5 @@
 # GNU General Public License for more details.
 ##############################################################
 
-# Property for installing bootlog patch
-ro.config.debug=true
+# Property for installing boot log patch
+ro.config.boot=true

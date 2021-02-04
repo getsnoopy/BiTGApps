@@ -86,7 +86,7 @@ zip_extract() {
   unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
   chmod +x "$TMP/busybox-arm"
   if [ "$ZIPTYPE" == "basic" ]; then
-    for f in config.prop data.prop g.prop init.bootlog.rc pm.sh sqlite3 zipalign; do
+    for f in config.prop data.prop g.prop init.boot.rc pm.sh sqlite3 zipalign; do
       unzip -o "$ZIPFILE" "$f" -d "$TMP"
     done
     for f in sqlite3 zipalign; do
@@ -214,12 +214,12 @@ opt_defaults() {
   OPTv30="$TMP/gms_opt_v30.log"
 }
 
-debug_defaults() {
-  bootlog_SAR="$TMP/init-SAR.log"
-  bootlog_AB="$TMP/init-AB.log"
-  bootlog_A="$TMP/init-A.log"
-  bootlog_SARHW="$TMP/init-SARHW.log"
-  bootlog_SYSHW="$TMP/init-SYSHW.log"
+boot_defaults() {
+  bootSAR="$TMP/SAR.log"
+  bootAB="$TMP/AB.log"
+  bootA="$TMP/A-only.log"
+  bootSARHW="$TMP/SARHW.log"
+  bootSYSHW="$TMP/SYSHW.log"
 }
 
 build_defaults() {
@@ -830,115 +830,140 @@ on_inst_abort() {
   fi
 }
 
-# Bootlog function, trigger at 'on fs' stage
+# Check whether boot config file present in device or not
+get_boot_config() {
+  for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage; do
+    for b in $(find $f -iname "boot-config.prop" 2>/dev/null); do
+      if [ -f "$b" ]; then
+        boot_config="true"
+      fi
+    done
+  done
+  if [ ! "$boot_config" == "true" ]; then
+    boot_config="false"
+  fi
+}
+
+print_title_boot() {
+  if [ "$boot_config" == "true" ]; then
+    ui_print "- Boot config detected"
+    ui_print "- Installing boot log patch"
+  fi
+  if [ "$boot_config" == "false" ]; then
+    ui_print "! Boot config not found"
+    ui_print "! Skip installing boot log patch"
+  fi
+}
+
+# Boot log function, trigger at 'on fs' stage
 boot_SAR() {
-  if [ "$supported_debug_config" == "true" ]; then
+  if [ "$supported_boot_config" == "true" ]; then
     if [ -f "/system_root/init.rc" ] && [ -n "$(cat /system_root/init.rc | grep ro.zygote)" ]; then
-      if [ -n "$(cat /system_root/init.rc | grep init.bootlog.rc)" ]; then
-        echo "ERROR: Kernel init patched already" >> $bootlog_SAR
-        rm -rf /system_root/init.bootlog.rc
-        cp -f $TMP/init.bootlog.rc /system_root/init.bootlog.rc
-        chmod 0750 /system_root/init.bootlog.rc
-        chcon -h u:object_r:rootfs:s0 "/system_root/init.bootlog.rc"
+      if [ -n "$(cat /system_root/init.rc | grep init.boot.rc)" ]; then
+        echo "ERROR: Kernel init patched already" >> $bootSAR
+        rm -rf /system_root/init.boot.rc
+        cp -f $TMP/init.boot.rc /system_root/init.boot.rc
+        chmod 0750 /system_root/init.boot.rc
+        chcon -h u:object_r:rootfs:s0 "/system_root/init.boot.rc"
       else
-        echo "ANDROID: Kernel init patched" >> $bootlog_SAR
-        sed -i '/init.${ro.zygote}.rc/a\\import /init.bootlog.rc' /system_root/init.rc
-        cp -f $TMP/init.bootlog.rc /system_root/init.bootlog.rc
-        chmod 0750 /system_root/init.bootlog.rc
-        chcon -h u:object_r:rootfs:s0 "/system_root/init.bootlog.rc"
+        echo "ANDROID: Kernel init patched" >> $bootSAR
+        sed -i '/init.${ro.zygote}.rc/a\\import /init.boot.rc' /system_root/init.rc
+        cp -f $TMP/init.boot.rc /system_root/init.boot.rc
+        chmod 0750 /system_root/init.boot.rc
+        chcon -h u:object_r:rootfs:s0 "/system_root/init.boot.rc"
       fi
     else
-      echo "ERROR: Unable to find kernel init" >> $bootlog_SAR
+      echo "ERROR: Unable to find kernel init" >> $bootSAR
     fi
   fi
 }
 
 boot_AB() {
-  if [ "$supported_debug_config" == "true" ]; then
+  if [ "$supported_boot_config" == "true" ]; then
     if [ -f "/system/init.rc" ] && [ -n "$(cat /system/init.rc | grep ro.zygote)" ]; then
-      if [ -n "$(cat /system/init.rc | grep init.bootlog.rc)" ]; then
-        echo "ERROR: Kernel init patched already" >> $bootlog_AB
-        rm -rf /system/init.bootlog.rc
-        cp -f $TMP/init.bootlog.rc /system/init.bootlog.rc
-        chmod 0750 /system/init.bootlog.rc
-        chcon -h u:object_r:rootfs:s0 "/system/init.bootlog.rc"
+      if [ -n "$(cat /system/init.rc | grep init.boot.rc)" ]; then
+        echo "ERROR: Kernel init patched already" >> $bootAB
+        rm -rf /system/init.boot.rc
+        cp -f $TMP/init.boot.rc /system/init.boot.rc
+        chmod 0750 /system/init.boot.rc
+        chcon -h u:object_r:rootfs:s0 "/system/init.boot.rc"
       else
-        echo "ANDROID: Kernel init patched" >> $bootlog_AB
-        sed -i '/init.${ro.zygote}.rc/a\\import /init.bootlog.rc' /system/init.rc
-        cp -f $TMP/init.bootlog.rc /system/init.bootlog.rc
-        chmod 0750 /system/init.bootlog.rc
-        chcon -h u:object_r:rootfs:s0 "/system/init.bootlog.rc"
+        echo "ANDROID: Kernel init patched" >> $bootAB
+        sed -i '/init.${ro.zygote}.rc/a\\import /init.boot.rc' /system/init.rc
+        cp -f $TMP/init.boot.rc /system/init.boot.rc
+        chmod 0750 /system/init.boot.rc
+        chcon -h u:object_r:rootfs:s0 "/system/init.boot.rc"
       fi
     else
-      echo "ERROR: Unable to find kernel init" >> $bootlog_AB
+      echo "ERROR: Unable to find kernel init" >> $bootAB
     fi
   fi
 }
 
 boot_A() {
-  if [ "$supported_debug_config" == "true" ]; then
+  if [ "$supported_boot_config" == "true" ]; then
     if [ -f "/init.rc" ] && [ -n "$(cat /init.rc | grep ro.zygote)" ]; then
-      if [ -n "$(cat /init.rc | grep init.bootlog.rc)" ]; then
-        echo "ERROR: Kernel init patched already" >> $bootlog_A
-        rm -rf /init.bootlog.rc
-        cp -f $TMP/init.bootlog.rc /init.bootlog.rc
-        chmod 0750 /init.bootlog.rc
-        chcon -h u:object_r:rootfs:s0 "/init.bootlog.rc"
+      if [ -n "$(cat /init.rc | grep init.boot.rc)" ]; then
+        echo "ERROR: Kernel init patched already" >> $bootA
+        rm -rf /init.boot.rc
+        cp -f $TMP/init.boot.rc /init.boot.rc
+        chmod 0750 /init.boot.rc
+        chcon -h u:object_r:rootfs:s0 "/init.boot.rc"
       else
-        echo "ANDROID: Kernel init patched" >> $bootlog_A
-        sed -i '/init.${ro.zygote}.rc/a\\import /init.bootlog.rc' /init.rc
-        cp -f $TMP/init.bootlog.rc /init.bootlog.rc
-        chmod 0750 /init.bootlog.rc
-        chcon -h u:object_r:rootfs:s0 "/init.bootlog.rc"
+        echo "ANDROID: Kernel init patched" >> $bootA
+        sed -i '/init.${ro.zygote}.rc/a\\import /init.boot.rc' /init.rc
+        cp -f $TMP/init.boot.rc /init.boot.rc
+        chmod 0750 /init.boot.rc
+        chcon -h u:object_r:rootfs:s0 "/init.boot.rc"
       fi
     else
-      echo "ERROR: Unable to find kernel init" >> $bootlog_A
+      echo "ERROR: Unable to find kernel init" >> $bootA
     fi
   fi
 }
 
 boot_SARHW() {
-  if [ "$supported_debug_config" == "true" ]; then
+  if [ "$supported_boot_config" == "true" ]; then
     INIT="/system_root/system/etc/init/hw/init.rc"
     if [ -f $INIT ] && [ -n "$(cat $INIT | grep ro.zygote)" ]; then
-      if [ -n "$(cat $INIT | grep init.bootlog.rc)" ]; then
-        echo "ERROR: Kernel init patched already" >> $bootlog_SARHW
-        rm -rf /system_root/system/etc/init/hw/init.bootlog.rc
-        cp -f $TMP/init.bootlog.rc /system_root/system/etc/init/hw/init.bootlog.rc
-        chmod 0644 /system_root/system/etc/init/hw/init.bootlog.rc
-        chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.bootlog.rc"
+      if [ -n "$(cat $INIT | grep init.boot.rc)" ]; then
+        echo "ERROR: Kernel init patched already" >> $bootSARHW
+        rm -rf /system_root/system/etc/init/hw/init.boot.rc
+        cp -f $TMP/init.boot.rc /system_root/system/etc/init/hw/init.boot.rc
+        chmod 0644 /system_root/system/etc/init/hw/init.boot.rc
+        chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.boot.rc"
       else
-        echo "ANDROID: Kernel init patched" >> $bootlog_SARHW
-        sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.bootlog.rc' $INIT
-        cp -f $TMP/init.bootlog.rc /system_root/system/etc/init/hw/init.bootlog.rc
-        chmod 0644 /system_root/system/etc/init/hw/init.bootlog.rc
-        chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.bootlog.rc"
+        echo "ANDROID: Kernel init patched" >> $bootSARHW
+        sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.boot.rc' $INIT
+        cp -f $TMP/init.boot.rc /system_root/system/etc/init/hw/init.boot.rc
+        chmod 0644 /system_root/system/etc/init/hw/init.boot.rc
+        chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.boot.rc"
       fi
     else
-      echo "ERROR: Unable to find kernel init" >> $bootlog_SARHW
+      echo "ERROR: Unable to find kernel init" >> $bootSARHW
     fi
   fi
 }
 
 boot_SYSHW() {
-  if [ "$supported_debug_config" == "true" ]; then
+  if [ "$supported_boot_config" == "true" ]; then
     INIT="/system/system/etc/init/hw/init.rc"
     if [ -f $INIT ] && [ -n "$(cat $INIT | grep ro.zygote)" ]; then
-      if [ -n "$(cat $INIT | grep init.bootlog.rc)" ]; then
-        echo "ERROR: Kernel init patched already" >> $bootlog_SYSHW
-        rm -rf /system/system/etc/init/hw/init.bootlog.rc
-        cp -f $TMP/init.bootlog.rc /system/system/etc/init/hw/init.bootlog.rc
-        chmod 0644 /system/system/etc/init/hw/init.bootlog.rc
-        chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.bootlog.rc"
+      if [ -n "$(cat $INIT | grep init.boot.rc)" ]; then
+        echo "ERROR: Kernel init patched already" >> $bootSYSHW
+        rm -rf /system/system/etc/init/hw/init.boot.rc
+        cp -f $TMP/init.boot.rc /system/system/etc/init/hw/init.boot.rc
+        chmod 0644 /system/system/etc/init/hw/init.boot.rc
+        chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.boot.rc"
       else
-        echo "ANDROID: Kernel init patched" >> $bootlog_SYSHW
-        sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.bootlog.rc' $INIT
-        cp -f $TMP/init.bootlog.rc /system/system/etc/init/hw/init.bootlog.rc
-        chmod 0644 /system/system/etc/init/hw/init.bootlog.rc
-        chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.bootlog.rc"
+        echo "ANDROID: Kernel init patched" >> $bootSYSHW
+        sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.boot.rc' $INIT
+        cp -f $TMP/init.boot.rc /system/system/etc/init/hw/init.boot.rc
+        chmod 0644 /system/system/etc/init/hw/init.boot.rc
+        chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.boot.rc"
       fi
     else
-      echo "ERROR: Unable to find kernel init" >> $bootlog_SYSHW
+      echo "ERROR: Unable to find kernel init" >> $bootSYSHW
     fi
   fi
 }
@@ -1356,11 +1381,11 @@ on_install_complete() {
   cp -f $TMP/fstab.log $TMP/bitgapps/fstab.log 2>/dev/null
   cp -f $TMP/gms_opt_v29.log $TMP/bitgapps/gms_opt_v29.log 2>/dev/null
   cp -f $TMP/gms_opt_v30.log $TMP/bitgapps/gms_opt_v30.log 2>/dev/null
-  cp -f $TMP/init-SAR.log $TMP/bitgapps/init-SAR.log 2>/dev/null
-  cp -f $TMP/init-AB.log $TMP/bitgapps/init-AB.log 2>/dev/null
-  cp -f $TMP/init-A.log $TMP/bitgapps/init-A.log 2>/dev/null
-  cp -f $TMP/init-SARHW.log $TMP/bitgapps/init-SARHW.log 2>/dev/null
-  cp -f $TMP/init-SYSHW.log $TMP/bitgapps/init-SYSHW.log 2>/dev/null
+  cp -f $TMP/SAR.log $TMP/bitgapps/SAR.log 2>/dev/null
+  cp -f $TMP/AB.log $TMP/bitgapps/AB.log 2>/dev/null
+  cp -f $TMP/A-only.log $TMP/bitgapps/A-only.log 2>/dev/null
+  cp -f $TMP/SARHW.log $TMP/bitgapps/SARHW.log 2>/dev/null
+  cp -f $TMP/SYSHW.log $TMP/bitgapps/SYSHW.log 2>/dev/null
   cp -f $TMP/IS_MOUNTED_SAR $TMP/bitgapps/IS_MOUNTED_SAR 2>/dev/null
   cp -f $TMP/IS_MOUNTED_SAS $TMP/bitgapps/IS_MOUNTED_SAS 2>/dev/null
   cp -f $TMP/IS_LAYOUT_SYSTEM $TMP/bitgapps/IS_LAYOUT_SYSTEM 2>/dev/null
@@ -1378,8 +1403,8 @@ on_install_complete() {
   if [ -f $SYSTEM/etc/prop.default ]; then
     cp -f $SYSTEM/etc/prop.default $TMP/bitgapps/system.default 2>/dev/null
   fi
-  cp -f $DEBUG_CONFIG_DEST $TMP/bitgapps/debug-config.prop 2>/dev/null
   cp -f $ADDON_CONFIG_DEST $TMP/bitgapps/addon-config.prop 2>/dev/null
+  cp -f $BOOT_CONFIG_DEST $TMP/bitgapps/boot-config.prop 2>/dev/null
   cp -f $CTS_CONFIG_DEST $TMP/bitgapps/cts-config.prop 2>/dev/null
   cp -f $SETUP_CONFIG_DEST $TMP/bitgapps/setup-config.prop 2>/dev/null
   echo "$ANDROID_ROOT" >> $TMP/bitgapps/mount.log 2>/dev/null
@@ -1433,12 +1458,12 @@ cleanup() {
   rm -rf $TMP/g.prop
   rm -rf $TMP/gms_opt_v29.log
   rm -rf $TMP/gms_opt_v30.log
-  rm -rf $TMP/init.bootlog.rc
-  rm -rf $TMP/init-SAR.log
-  rm -rf $TMP/init-AB.log
-  rm -rf $TMP/init-A.log
-  rm -rf $TMP/init-SARHW.log
-  rm -rf $TMP/init-SYSHW.log
+  rm -rf $TMP/init.boot.rc
+  rm -rf $TMP/SAR.log
+  rm -rf $TMP/AB.log
+  rm -rf $TMP/A-only.log
+  rm -rf $TMP/SARHW.log
+  rm -rf $TMP/SYSHW.log
   rm -rf $TMP/installer.sh
   rm -rf $TMP/IS_MOUNTED_SAR
   rm -rf $TMP/IS_MOUNTED_SAS
@@ -1604,11 +1629,11 @@ sqlite_opt() {
   done
 }
 
-get_debug_config_path() {
+get_boot_config_path() {
   for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage; do
-    for d in $(find $f -iname "debug-config.prop" 2>/dev/null); do
-      if [ -f "$d" ]; then
-        DEBUG_CONFIG_DEST="$d"
+    for b in $(find $f -iname "boot-config.prop" 2>/dev/null); do
+      if [ -f "$b" ]; then
+        BOOT_CONFIG_DEST="$b"
       fi
     done
   done
@@ -1646,7 +1671,7 @@ get_addon_config_path() {
 
 profile() {
   BUILD_PROPFILE="$SYSTEM/build.prop"
-  DEBUG_PROPFILE="$DEBUG_CONFIG_DEST"
+  BOOT_PROPFILE="$BOOT_CONFIG_DEST"
   SETUP_PROPFILE="$SETUP_CONFIG_DEST"
   CTS_PROPFILE="$CTS_CONFIG_DEST"
   ADDON_PROPFILE="$ADDON_CONFIG_DEST"
@@ -1659,7 +1684,7 @@ get_file_prop() {
 
 get_prop() {
   # Check known .prop files using get_file_prop
-  for f in $BUILD_PROPFILE $DEBUG_PROPFILE $SETUP_PROPFILE $CTS_PROPFILE $ADDON_PROPFILE $DATA_PROPFILE; do
+  for f in $BUILD_PROPFILE $BOOT_PROPFILE $SETUP_PROPFILE $CTS_PROPFILE $ADDON_PROPFILE $DATA_PROPFILE; do
     if [ -e "$f" ]; then
       prop="$(get_file_prop "$f" "$1")"
       if [ -n "$prop" ]; then
@@ -1681,9 +1706,9 @@ on_release_tag() {
   unsupported_release="$TARGET_GAPPS_RELEASE"
 }
 
-# Set bootlog check property
-on_debug_check() {
-  supported_debug_config="$(get_prop "ro.config.debug")"
+# Set boot check property
+on_boot_check() {
+  supported_boot_config="$(get_prop "ro.config.boot")"
 }
 
 # Set setupwizard check property
@@ -6945,7 +6970,7 @@ pre_install() {
     mount_status
     chk_inst_pkg
     on_inst_abort
-    get_debug_config_path
+    get_boot_config_path
     get_setup_config_path
     get_cts_config_path
     profile
@@ -6958,8 +6983,10 @@ pre_install() {
     on_platform
     build_platform
     check_platform
-    debug_defaults
-    on_debug_check
+    boot_defaults
+    on_boot_check
+    get_boot_config
+    print_title_boot
     boot_SAR
     boot_AB
     boot_A
