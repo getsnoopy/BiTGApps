@@ -255,6 +255,7 @@ build_defaults() {
   TMP_G_PERM_AOSP="$UNZIP_DIR/tmp_perm_aosp"
   TMP_G_PREF="$UNZIP_DIR/tmp_pref"
   TMP_PERM_ROOT="$UNZIP_DIR/tmp_perm_root"
+  TMP_OVERLAY="$UNZIP_DIR/tmp_overlay"
   # Set logging
   LOG="$TMP/bitgapps/installation.log"
   AOSP="$TMP/bitgapps/aosp.log"
@@ -1982,6 +1983,7 @@ mk_component() {
   mkdir $UNZIP_DIR/tmp_perm_aosp
   mkdir $UNZIP_DIR/tmp_pref
   mkdir $UNZIP_DIR/tmp_perm_root
+  mkdir $UNZIP_DIR/tmp_overlay
   chmod 0755 $UNZIP_DIR
   chmod 0755 $UNZIP_DIR/tmp_addon
   chmod 0755 $UNZIP_DIR/tmp_sys
@@ -2002,6 +2004,7 @@ mk_component() {
   chmod 0755 $UNZIP_DIR/tmp_perm_aosp
   chmod 0755 $UNZIP_DIR/tmp_pref
   chmod 0755 $UNZIP_DIR/tmp_perm_root
+  chmod 0755 $UNZIP_DIR/tmp_overlay
 }
 
 # Check RWG status
@@ -2076,6 +2079,7 @@ ext_pathmap() {
     SYSTEM_LIB="$SYSTEM/system_ext/lib"
     $AARCH64 && SYSTEM_LIB64="$SYSTEM/system_ext/lib64"
     SYSTEM_XBIN="$SYSTEM/xbin"
+    SYSTEM_OVERLAY="$SYSTEM/system_ext/overlay"
     test -d $SYSTEM_APP || mkdir $SYSTEM_APP
     test -d $SYSTEM_PRIV_APP || mkdir $SYSTEM_PRIV_APP
     test -d $SYSTEM_ETC_DIR || mkdir $SYSTEM_ETC_DIR
@@ -2089,6 +2093,7 @@ ext_pathmap() {
       test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
     fi
     test -d $SYSTEM_XBIN || mkdir $SYSTEM_XBIN
+    test -d $SYSTEM_OVERLAY || mkdir $SYSTEM_OVERLAY
     chmod 0755 $SYSTEM_APP
     chmod 0755 $SYSTEM_PRIV_APP
     chmod 0755 $SYSTEM_ETC_DIR
@@ -2100,6 +2105,7 @@ ext_pathmap() {
     chmod 0755 $SYSTEM_LIB
     $AARCH64 && chmod 0755 $SYSTEM_LIB64
     chmod 0755 $SYSTEM_XBIN
+    chmod 0755 $SYSTEM_OVERLAY
     chcon -h u:object_r:system_file:s0 "$SYSTEM_APP"
     chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
     chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DIR"
@@ -2111,6 +2117,7 @@ ext_pathmap() {
     chcon -h u:object_r:system_file:s0 "$SYSTEM_LIB"
     $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_LIB64"
     chcon -h u:object_r:system_file:s0 "$SYSTEM_XBIN"
+    chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
   fi
 }
 
@@ -3054,6 +3061,7 @@ pre_installed_v30() {
       rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
       rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
       rm -rf $SYSTEM_ETC_PREF/google.xml
+      rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay
     }
     # Delete pre-installed APKs from system_ext
     zip_pkg
@@ -3457,6 +3465,18 @@ pkg_TMPPermAosp() {
   fi
 }
 
+pkg_TMPOverlay() {
+  file_list="$(find "$TMP_OVERLAY/" -mindepth 1 -type f | cut -d/ -f5-)"
+  dir_list="$(find "$TMP_OVERLAY/" -mindepth 1 -type d | cut -d/ -f5-)"
+  for file in $file_list; do
+    install -D "$TMP_OVERLAY/${file}" "$SYSTEM_OVERLAY/${file}"
+    chmod 0644 "$SYSTEM_OVERLAY/${file}"
+  done
+  for dir in $dir_list; do
+    chmod 0755 "$SYSTEM_OVERLAY/${dir}"
+  done
+}
+
 pkg_TMPAddon() {
   file_list="$(find "$TMP_ADDON/" -mindepth 1 -type f | cut -d/ -f5-)"
   dir_list="$(find "$TMP_ADDON/" -mindepth 1 -type d | cut -d/ -f5-)"
@@ -3504,6 +3524,7 @@ on_pkg_inst() {
     pkg_TMPPref
     pkg_TMPPerm
     pkg_TMPPermAosp
+    pkg_TMPOverlay
   fi
 }
 
@@ -3523,7 +3544,8 @@ sdk_v30_install() {
       zip/Default.tar.xz
       zip/Framework.tar.xz
       zip/Permissions.tar.xz
-      zip/Preferred.tar.xz" && unpack_zip
+      zip/Preferred.tar.xz
+      zip/overlay/PlayStoreOverlay.tar.xz" && unpack_zip
 
     # Unpack system files
     extract_app() {
@@ -3568,6 +3590,11 @@ sdk_v30_install() {
       tar -xf $ZIP_FILE/Default.tar.xz -C $TMP_DEFAULT_PERM
       tar -xf $ZIP_FILE/Permissions.tar.xz -C $TMP_G_PERM
       tar -xf $ZIP_FILE/Preferred.tar.xz -C $TMP_G_PREF
+      echo "- Done" >> $LOG
+      echo "-----------------------------------" >> $LOG
+      echo "- Unpack System Overlay" >> $LOG
+      tar tvf $ZIP_FILE/overlay/PlayStoreOverlay.tar.xz >> $LOG
+      tar -xf $ZIP_FILE/overlay/PlayStoreOverlay.tar.xz -C $TMP_OVERLAY
       echo "- Done" >> $LOG
       echo "-----------------------------------" >> $LOG
     }
@@ -3627,6 +3654,11 @@ sdk_v30_install() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml"
     }
 
+    selinux_context_so() {
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY/PlayStoreOverlay"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY/PlayStoreOverlay/PlayStoreOverlay.apk"
+    }
+
     # APK optimization using zipalign tool
     apk_opt() {
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk >> $ZIPALIGN_LOG
@@ -3636,6 +3668,7 @@ sdk_v30_install() {
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk $ZIPALIGN_OUTFILE/GoogleServicesFramework.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/Phonesky/Phonesky.apk $ZIPALIGN_OUTFILE/Phonesky.apk >> $ZIPALIGN_LOG
       $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/PrebuiltGmsCoreRvc/PrebuiltGmsCoreRvc.apk $ZIPALIGN_OUTFILE/PrebuiltGmsCoreRvc.apk >> $ZIPALIGN_LOG
+      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_OVERLAY/PlayStoreOverlay/PlayStoreOverlay.apk $ZIPALIGN_OUTFILE/PlayStoreOverlay.apk >> $ZIPALIGN_LOG
     }
 
     pre_opt() {
@@ -3646,6 +3679,7 @@ sdk_v30_install() {
       rm -rf $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
       rm -rf $SYSTEM_PRIV_APP/Phonesky/Phonesky.apk
       rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreRvc/PrebuiltGmsCoreRvc.apk
+      rm -rf $SYSTEM_PRIV_APP/PlayStoreOverlay/PlayStoreOverlay.apk
     }
 
     add_opt() {
@@ -3656,6 +3690,7 @@ sdk_v30_install() {
       cp -f $ZIPALIGN_OUTFILE/GoogleServicesFramework.apk $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
       cp -f $ZIPALIGN_OUTFILE/Phonesky.apk $SYSTEM_PRIV_APP/Phonesky/Phonesky.apk
       cp -f $ZIPALIGN_OUTFILE/PrebuiltGmsCoreRvc.apk $SYSTEM_PRIV_APP/PrebuiltGmsCoreRvc/PrebuiltGmsCoreRvc.apk
+      cp -f $ZIPALIGN_OUTFILE/PlayStoreOverlay.apk $SYSTEM_PRIV_APP/PlayStoreOverlay/PlayStoreOverlay.apk
     }
 
     perm_opt() {
@@ -3666,6 +3701,7 @@ sdk_v30_install() {
       chmod 0644 $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
       chmod 0644 $SYSTEM_PRIV_APP/Phonesky/Phonesky.apk
       chmod 0644 $SYSTEM_PRIV_APP/PrebuiltGmsCoreRvc/PrebuiltGmsCoreRvc.apk
+      chmod 0644 $SYSTEM_PRIV_APP/PlayStoreOverlay/PlayStoreOverlay.apk
     }
 
     # Execute functions
@@ -3678,12 +3714,14 @@ sdk_v30_install() {
       selinux_context_sl
       selinux_context_sl64
       selinux_context_se
+      selinux_context_so
       apk_opt
       pre_opt
       add_opt
       perm_opt
       selinux_context_sa
       selinux_context_sp
+      selinux_context_so
     }
     ui_print "- Installing GApps"
     sdk_v30
