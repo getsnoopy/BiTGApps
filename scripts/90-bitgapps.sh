@@ -172,6 +172,7 @@ tmp_dir() {
   test -d $TMP/fboot || mkdir $TMP/fboot
   test -d $TMP/fboot/priv-app || mkdir $TMP/fboot/priv-app
   test -d $TMP/fboot/lib64 || mkdir $TMP/fboot/lib64
+  test -d $TMP/overlay || mkdir $TMP/overlay
 }
 
 # Wipe temporary dir
@@ -191,6 +192,7 @@ del_tmp_dir() {
   rm -rf $TMP/addon
   rm -rf $TMP/rwg
   rm -rf $TMP/fboot
+  rm -rf $TMP/overlay
   rm -rf $TMP/SYS_APP_CP
   rm -rf $TMP/SYS_PRIV_CP
   rm -rf $TMP/PRO_APP_CP
@@ -437,6 +439,7 @@ ensure_dir() {
   SYSTEM_LIB="$SYSTEM/lib"
   SYSTEM_LIB64="$SYSTEM/lib64"
   SYSTEM_XBIN="$S/xbin"
+  SYSTEM_OVERLAY="$SYSTEM/overlay"
   test -d $SYSTEM_APP || mkdir $SYSTEM_APP
   test -d $SYSTEM_PRIV_APP || mkdir $SYSTEM_PRIV_APP
   test -d $SYSTEM_ETC_DIR || mkdir $SYSTEM_ETC_DIR
@@ -448,6 +451,7 @@ ensure_dir() {
   test -d $SYSTEM_LIB || mkdir $SYSTEM_LIB
   test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
   test -d $SYSTEM_XBIN || mkdir $SYSTEM_XBIN
+  test -d $SYSTEM_OVERLAY || mkdir $SYSTEM_OVERLAY
   chmod 0755 $SYSTEM_APP
   chmod 0755 $SYSTEM_PRIV_APP
   chmod 0755 $SYSTEM_ETC_DIR
@@ -459,6 +463,7 @@ ensure_dir() {
   chmod 0755 $SYSTEM_LIB
   chmod 0755 $SYSTEM_LIB64
   chmod 0755 $SYSTEM_XBIN
+  chmod 0755 $SYSTEM_OVERLAY
   chcon -h u:object_r:system_file:s0 "$SYSTEM_APP"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DIR"
@@ -470,6 +475,7 @@ ensure_dir() {
   chcon -h u:object_r:system_file:s0 "$SYSTEM_LIB"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_LIB64"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_XBIN"
+  chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
 }
 
 # Set installation layout
@@ -1853,6 +1859,11 @@ backupdirSYSAddon() {
     $SYSTEM/lib64/libsketchology_native.so"
 }
 
+backupdirSYSOverlay() {
+  SYS_OVERLAY="
+    $SYSTEM/overlay/PlayStoreOverlay"
+}
+
 # Set restore function
 restoredirTMP() {
   TMP_APP="
@@ -1990,6 +2001,11 @@ restoredirTMPAddon() {
 
   TMP_LIB64_ADDON="
     $TMP/addon/lib64/libsketchology_native.so"
+}
+
+restoredirTMPOverlay() {
+  TMP_OVERLAY="
+    $TMP/overlay/PlayStoreOverlay"
 }
 
 backup_conflicting_packages() {
@@ -2491,6 +2507,8 @@ case "$1" in
     backupdirSYSRwg
     on_rwg_status_check
     trigger_rwg_backup
+    backupdirSYSOverlay
+    mv $SYS_OVERLAY $TMP/overlay 2>/dev/null
   ;;
   post-backup)
     # Stub
@@ -2516,6 +2534,8 @@ case "$1" in
     mv $TMP_PROPFILE $S/etc 2>/dev/null
     mv $TMP_BUILDFILE $S 2>/dev/null
     mv $TMP_XBIN $S/xbin 2>/dev/null
+    restoredirTMPOverlay
+    mv $TMP_OVERLAY $SYSTEM/overlay 2>/dev/null
   ;;
   restore)
     # Stub
