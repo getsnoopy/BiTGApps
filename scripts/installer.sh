@@ -281,6 +281,7 @@ build_defaults() {
   TARGET_PRODUCT="$TMP/bitgapps/cts-product.log"
   TARGET_EXT="$TMP/bitgapps/cts-ext.log"
   TARGET_VENDOR="$TMP/bitgapps/cts-vendor.log"
+  TARGET_ODM="$TMP/bitgapps/cts-odm.log"
   OPTv28="$TMP/bitgapps/gms_opt_v28.log"
 }
 
@@ -308,6 +309,10 @@ cts_defaults() {
   CTS_DEFAULT_VENDOR_BUILD_TAG="ro.vendor.build.tags="
   CTS_DEFAULT_VENDOR_BUILD_TYPE="ro.vendor.build.type="
   CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint="
+  CTS_DEFAULT_ODM_BUILD_FINGERPRINT="ro.odm.build.fingerprint="
+  CTS_DEFAULT_ODM_BUILD_ID="ro.odm.build.id="
+  CTS_DEFAULT_ODM_BUILD_TAG="ro.odm.build.tags="
+  CTS_DEFAULT_ODM_BUILD_TYPE="ro.odm.build.type="
 }
 
 # CTS patch
@@ -334,6 +339,10 @@ patch_v30() {
   CTS_VENDOR_BUILD_TAG="ro.vendor.build.tags=release-keys"
   CTS_VENDOR_BUILD_TYPE="ro.vendor.build.type=user"
   CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
+  CTS_ODM_BUILD_FINGERPRINT="ro.odm.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
+  CTS_ODM_BUILD_ID="ro.odm.build.id=RQ1A.210205.004"
+  CTS_ODM_BUILD_TAG="ro.odm.build.tags=release-keys"
+  CTS_ODM_BUILD_TYPE="ro.odm.build.type=user"
 }
 
 # Set partition and boot slot property
@@ -6534,7 +6543,7 @@ cts_patch_system() {
     rm -rf $TMP/system.prop
     insert_line $SYSTEM/build.prop "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT" after 'ro.system.build.date.utc=' "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT"
   else
-    echo "ERROR: Unable to find target property'ro.system.build.fingerprint'" >> $TARGET_SYSTEM
+    echo "ERROR: Unable to find target property 'ro.system.build.fingerprint'" >> $TARGET_SYSTEM
   fi
   # Ext Build id
   if [ -n "$(cat $SYSTEM/build.prop | grep ro.system.build.id)" ]; then
@@ -6545,7 +6554,7 @@ cts_patch_system() {
     rm -rf $TMP/system.prop
     insert_line $SYSTEM/build.prop "$CTS_SYSTEM_EXT_BUILD_ID" after 'ro.system.build.fingerprint=' "$CTS_SYSTEM_EXT_BUILD_ID"
   else
-    echo "ERROR: Unable to find target property'ro.system.build.id'" >> $TARGET_SYSTEM
+    echo "ERROR: Unable to find target property 'ro.system.build.id'" >> $TARGET_SYSTEM
   fi
   # Ext Build tags
   if [ -n "$(cat $SYSTEM/build.prop | grep ro.system.build.tags)" ]; then
@@ -6556,7 +6565,7 @@ cts_patch_system() {
     rm -rf $TMP/system.prop
     insert_line $SYSTEM/build.prop "$CTS_SYSTEM_EXT_BUILD_TAG" after 'ro.system.build.id=' "$CTS_SYSTEM_EXT_BUILD_TAG"
   else
-    echo "ERROR: Unable to find target property'ro.system.build.tags'" >> $TARGET_SYSTEM
+    echo "ERROR: Unable to find target property 'ro.system.build.tags'" >> $TARGET_SYSTEM
   fi
   # Ext Build type
   if [ -n "$(cat $SYSTEM/build.prop | grep ro.system.build.type)" ]; then
@@ -6567,7 +6576,7 @@ cts_patch_system() {
     rm -rf $TMP/system.prop
     insert_line $SYSTEM/build.prop "$CTS_SYSTEM_EXT_BUILD_TYPE" after 'ro.system.build.tags=' "$CTS_SYSTEM_EXT_BUILD_TYPE"
   else
-    echo "ERROR: Unable to find target property'ro.system.build.type'" >> $TARGET_SYSTEM
+    echo "ERROR: Unable to find target property 'ro.system.build.type'" >> $TARGET_SYSTEM
   fi
   # Build fingerprint
   if [ -n "$(cat $SYSTEM/build.prop | grep ro.build.fingerprint)" ]; then
@@ -6627,7 +6636,7 @@ cts_patch_product() {
       rm -rf $TMP/product.prop
       insert_line $SYSTEM/product/build.prop "$CTS_PRODUCT_BUILD_FINGERPRINT" after 'ro.product.build.date.utc=' "$CTS_PRODUCT_BUILD_FINGERPRINT"
     else
-      echo "ERROR: Unable to find target property'ro.product.build.fingerprint'" >> $TARGET_PRODUCT
+      echo "ERROR: Unable to find target property 'ro.product.build.fingerprint'" >> $TARGET_PRODUCT
     fi
     # Build id
     if [ -n "$(cat $SYSTEM/product/build.prop | grep ro.product.build.id)" ]; then
@@ -6638,7 +6647,7 @@ cts_patch_product() {
       rm -rf $TMP/product.prop
       insert_line $SYSTEM/product/build.prop "$CTS_PRODUCT_BUILD_ID" after 'ro.product.build.fingerprint=' "$CTS_PRODUCT_BUILD_ID"
     else
-      echo "ERROR: Unable to find target property'ro.product.build.id'" >> $TARGET_PRODUCT
+      echo "ERROR: Unable to find target property 'ro.product.build.id'" >> $TARGET_PRODUCT
     fi
     # Build tags
     if [ -n "$(cat $SYSTEM/product/build.prop | grep ro.product.build.tags)" ]; then
@@ -6649,7 +6658,7 @@ cts_patch_product() {
       rm -rf $TMP/product.prop
       insert_line $SYSTEM/product/build.prop "$CTS_PRODUCT_BUILD_TAG" after 'ro.product.build.id=' "$CTS_PRODUCT_BUILD_TAG"
     else
-      echo "ERROR: Unable to find target property'ro.product.build.tags'" >> $TARGET_PRODUCT
+      echo "ERROR: Unable to find target property 'ro.product.build.tags'" >> $TARGET_PRODUCT
     fi
     # Build type
     if [ -n "$(cat $SYSTEM/product/build.prop | grep ro.product.build.type=userdebug)" ]; then
@@ -6679,7 +6688,7 @@ cts_patch_ext() {
       rm -rf $TMP/ext.prop
       insert_line $SYSTEM/system_ext/build.prop "$CTS_EXT_BUILD_FINGERPRINT" after 'ro.system_ext.build.date.utc=' "$CTS_EXT_BUILD_FINGERPRINT"
     else
-      echo "ERROR: Unable to find target property'ro.system_ext.build.fingerprint'" >> $TARGET_EXT
+      echo "ERROR: Unable to find target property 'ro.system_ext.build.fingerprint'" >> $TARGET_EXT
     fi
     # Build id
     if [ -n "$(cat $SYSTEM/system_ext/build.prop | grep ro.system_ext.build.id)" ]; then
@@ -6690,7 +6699,7 @@ cts_patch_ext() {
       rm -rf $TMP/ext.prop
       insert_line $SYSTEM/system_ext/build.prop "$CTS_EXT_BUILD_ID" after 'ro.system_ext.build.fingerprint=' "$CTS_EXT_BUILD_ID"
     else
-      echo "ERROR: Unable to find target property'ro.system_ext.build.id'" >> $TARGET_EXT
+      echo "ERROR: Unable to find target property 'ro.system_ext.build.id'" >> $TARGET_EXT
     fi
     # Build tags
     if [ -n "$(cat $SYSTEM/system_ext/build.prop | grep ro.system_ext.build.tags)" ]; then
@@ -6701,7 +6710,7 @@ cts_patch_ext() {
       rm -rf $TMP/ext.prop
       insert_line $SYSTEM/system_ext/build.prop "$CTS_EXT_BUILD_TAG" after 'ro.system_ext.build.id=' "$CTS_EXT_BUILD_TAG"
     else
-      echo "ERROR: Unable to find target property'ro.system_ext.build.tags'" >> $TARGET_EXT
+      echo "ERROR: Unable to find target property 'ro.system_ext.build.tags'" >> $TARGET_EXT
     fi
     # Build type
     if [ -n "$(cat $SYSTEM/system_ext/build.prop | grep ro.system_ext.build.type=userdebug)" ]; then
@@ -6793,6 +6802,58 @@ cts_patch_vendor() {
   fi
 }
 
+# Apply safetynet patch on odm build
+cts_patch_odm() {
+  if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
+    # Build fingerprint
+    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.fingerprint)" ]; then
+      grep -v "$CTS_DEFAULT_ODM_BUILD_FINGERPRINT" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+      rm -rf $ANDROID_ROOT/odm/etc/build.prop
+      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+      rm -rf $TMP/odm.prop
+      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_FINGERPRINT" after 'ro.odm.build.date.utc=' "$CTS_ODM_BUILD_FINGERPRINT"
+    else
+      echo "ERROR: Unable to find target property 'ro.odm.build.fingerprint'" >> $TARGET_ODM
+    fi
+    # Build id
+    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.id)" ]; then
+      grep -v "$CTS_DEFAULT_ODM_BUILD_ID" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+      rm -rf $ANDROID_ROOT/odm/etc/build.prop
+      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+      rm -rf $TMP/odm.prop
+      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_ID" after 'ro.odm.build.fingerprint=' "$CTS_ODM_BUILD_ID"
+    else
+      echo "ERROR: Unable to find target property 'ro.odm.build.id'" >> $TARGET_ODM
+    fi
+    # Build tags
+    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.tags)" ]; then
+      grep -v "$CTS_DEFAULT_ODM_BUILD_TAG" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+      rm -rf $ANDROID_ROOT/odm/etc/build.prop
+      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+      rm -rf $TMP/odm.prop
+      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_TAG" after 'ro.odm.build.id=' "$CTS_ODM_BUILD_TAG"
+    else
+      echo "ERROR: Unable to find target property 'ro.odm.build.tags'" >> $TARGET_ODM
+    fi
+    # Build type
+    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.type=userdebug)" ]; then
+      grep -v "$CTS_DEFAULT_ODM_BUILD_TYPE" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+      rm -rf $ANDROID_ROOT/odm/etc/build.prop
+      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+      rm -rf $TMP/odm.prop
+      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_TYPE" after 'ro.odm.build.tags=' "$CTS_ODM_BUILD_TYPE"
+    else
+      echo "ERROR: Unable to find target property with type 'userdebug'" >> $TARGET_ODM
+    fi
+  else
+    echo "ERROR: unable to find odm 'build.prop'" >> $TARGET_ODM
+  fi
+}
+
 # Check whether CTS config file present in device or not
 get_cts_config() {
   for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage; do
@@ -6854,6 +6915,7 @@ cts_patch() {
           cts_patch_product
           cts_patch_ext
           cts_patch_vendor
+          cts_patch_odm
           insert_line $SYSTEM/config.prop "ro.cts.patch_status=verified" after '# Begin build properties' "ro.cts.patch_status=verified"
         fi
       fi
