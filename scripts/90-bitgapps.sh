@@ -68,6 +68,10 @@ cts_defaults() {
   CTS_DEFAULT_VENDOR_BUILD_TAG="ro.vendor.build.tags="
   CTS_DEFAULT_VENDOR_BUILD_TYPE="ro.vendor.build.type="
   CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint="
+  CTS_DEFAULT_ODM_BUILD_FINGERPRINT="ro.odm.build.fingerprint="
+  CTS_DEFAULT_ODM_BUILD_ID="ro.odm.build.id="
+  CTS_DEFAULT_ODM_BUILD_TAG="ro.odm.build.tags="
+  CTS_DEFAULT_ODM_BUILD_TYPE="ro.odm.build.type="
 }
 
 # CTS patch
@@ -94,6 +98,10 @@ patch_v30() {
   CTS_VENDOR_BUILD_TAG="ro.vendor.build.tags=release-keys"
   CTS_VENDOR_BUILD_TYPE="ro.vendor.build.type=user"
   CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
+  CTS_ODM_BUILD_FINGERPRINT="ro.odm.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
+  CTS_ODM_BUILD_ID="ro.odm.build.id=RQ1A.210205.004"
+  CTS_ODM_BUILD_TAG="ro.odm.build.tags=release-keys"
+  CTS_ODM_BUILD_TYPE="ro.odm.build.type=user"
 }
 
 # insert_line <file> <if search string> <before|after> <line match string> <inserted line>
@@ -833,6 +841,48 @@ cts_patch_vendor() {
   fi
 }
 
+# Apply safetynet patch
+cts_patch_odm() {
+  if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
+    # Build fingerprint
+    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.fingerprint)" ]; then
+      grep -v "$CTS_DEFAULT_ODM_BUILD_FINGERPRINT" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+      rm -rf $ANDROID_ROOT/odm/etc/build.prop
+      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+      rm -rf $TMP/odm.prop
+      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_FINGERPRINT" after 'ro.odm.build.date.utc=' "$CTS_ODM_BUILD_FINGERPRINT"
+    fi
+    # Build id
+    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.id)" ]; then
+      grep -v "$CTS_DEFAULT_ODM_BUILD_ID" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+      rm -rf $ANDROID_ROOT/odm/etc/build.prop
+      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+      rm -rf $TMP/odm.prop
+      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_ID" after 'ro.odm.build.fingerprint=' "$CTS_ODM_BUILD_ID"
+    fi
+    # Build tags
+    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.tags)" ]; then
+      grep -v "$CTS_DEFAULT_ODM_BUILD_TAG" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+      rm -rf $ANDROID_ROOT/odm/etc/build.prop
+      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+      rm -rf $TMP/odm.prop
+      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_TAG" after 'ro.odm.build.id=' "$CTS_ODM_BUILD_TAG"
+    fi
+    # Build type
+    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.type=userdebug)" ]; then
+      grep -v "$CTS_DEFAULT_ODM_BUILD_TYPE" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+      rm -rf $ANDROID_ROOT/odm/etc/build.prop
+      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+      rm -rf $TMP/odm.prop
+      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_TYPE" after 'ro.odm.build.tags=' "$CTS_ODM_BUILD_TYPE"
+    fi
+  fi
+}
+
 cts_patch() {
   if [ "$cts_patch_status" == "verified" ]; then
     if [ "$android_sdk" == "$supported_sdk_v30" ]; then
@@ -841,6 +891,7 @@ cts_patch() {
       cts_patch_product
       cts_patch_ext
       cts_patch_vendor
+      cts_patch_odm
     fi
   fi
 }
