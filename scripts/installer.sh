@@ -6985,6 +6985,9 @@ sdk_fix() {
       chmod 0600 $VENDOR/build.prop
       chmod 0600 $VENDOR/default.prop
     fi
+    if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
+      chmod 0600 $ANDROID_ROOT/odm/etc/build.prop
+    fi
   fi
 }
 
