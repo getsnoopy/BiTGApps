@@ -10,9 +10,9 @@ A custom gapps package with minimal install. Support custom features such as `Ba
 | [Support Chat](https://t.me/bitgapps_official)                                                    | [![Telegram](https://img.shields.io/badge/chat-on%20telegram-blueviolet.svg?style=flat-square)](https://t.me/bitgapps_official)                                                  |
 
 ## Latest Pre-built Packages
-| [BiTGApps](https://bitgapps.com/downloads) | [![Download BiTGApps](https://img.shields.io/badge/Release-%20R20-green.svg?style=flat-square)](https://bitgapps.com/downloads) |
-|                                         -: | :-                                                                                                                              |
-| [Addons](https://bitgapps.com/downloads)   | [![Download Addons](https://img.shields.io/badge/Release-%20R8-green.svg?style=flat-square)](https://bitgapps.com/downloads)    |
+| [BiTGApps](https://bitgapps.com/downloads)     | [![Download BiTGApps](https://img.shields.io/badge/Release-%20R20-green.svg?style=flat-square)](https://bitgapps.com/downloads)    |
+|                                             -: | :-                                                                                                                                 |
+| [Addons](https://bitgapps.com/downloads/addon) | [![Download Addons](https://img.shields.io/badge/Release-%20R8-green.svg?style=flat-square)](https://bitgapps.com/downloads/addon) |
 
 ## License
 
