@@ -7,7 +7,7 @@ A custom gapps package with minimal install. Support custom features such as `Ba
 | [Support Project](https://www.paypal.me/kartikverma443)                                           | [![Donate](https://img.shields.io/badge/donate-on%20paypal-orange.svg?style=flat-square)](https://www.paypal.me/kartikverma443)                                                  |
 |                                                                                                -: | :-                                                                                                                                                                               |
 | [Development Forum](https://forum.xda-developers.com/t/custom-gapps-bitgapps-for-android.4012165) | [![XDA Development](https://img.shields.io/badge/development-on%20xda-blue.svg?style=flat-square)](https://forum.xda-developers.com/t/custom-gapps-bitgapps-for-android.4012165) |
-| [Support Chat](https://t.me/bitgapps_official)                                                    | [![Telegram](https://img.shields.io/badge/chat-on%20telegram-blueviolet.svg?style=flat-square)](https://t.me/bitgapps_official)                                                  |
+| [Support Chat](https://t.me/bitgapps_group_official)                                              | [![Telegram](https://img.shields.io/badge/chat-on%20telegram-blueviolet.svg?style=flat-square)](https://t.me/bitgapps_group_official)                                            |
 
 ## Latest Pre-built Packages
 | [BiTGApps](https://bitgapps.com/downloads)     | [![Download BiTGApps](https://img.shields.io/badge/Release-%20R20-green.svg?style=flat-square)](https://bitgapps.com/downloads)    |
