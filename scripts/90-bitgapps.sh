@@ -26,6 +26,17 @@ TMP="/tmp"
 SQLITE_TOOL="$S/xbin/sqlite3"
 SQLITE3_OPT="false"
 
+# Check device architecture
+set_arch() {
+  arch=`uname -m`
+  if [ "$arch" == "armv7l" ]; then
+    ARMEABI="true"
+  fi
+  if [ "$arch" == "aarch64" ]; then
+    AARCH64="true"
+  fi
+}
+
 # Output function
 trampoline() {
   ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true || BOOTMODE=false
@@ -443,7 +454,7 @@ ensure_dir() {
   SYSTEM_ETC_PREF="$SYSTEM/etc/preferred-apps"
   SYSTEM_FRAMEWORK="$SYSTEM/framework"
   SYSTEM_LIB="$SYSTEM/lib"
-  SYSTEM_LIB64="$SYSTEM/lib64"
+  $AARCH64 && SYSTEM_LIB64="$SYSTEM/lib64"
   SYSTEM_XBIN="$S/xbin"
   $API30 && SYSTEM_OVERLAY="$SYSTEM/overlay"
   test -d $SYSTEM_APP || mkdir $SYSTEM_APP
@@ -455,7 +466,9 @@ ensure_dir() {
   test -d $SYSTEM_ETC_PREF || mkdir $SYSTEM_ETC_PREF
   test -d $SYSTEM_FRAMEWORK || mkdir $SYSTEM_FRAMEWORK
   test -d $SYSTEM_LIB || mkdir $SYSTEM_LIB
-  test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
+  if [ "$AARCH64" == "true" ]; then
+    test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
+  fi
   test -d $SYSTEM_XBIN || mkdir $SYSTEM_XBIN
   if [ "$API30" == "true" ]; then
     test -d $SYSTEM_OVERLAY || mkdir $SYSTEM_OVERLAY
@@ -469,7 +482,7 @@ ensure_dir() {
   chmod 0755 $SYSTEM_ETC_PREF
   chmod 0755 $SYSTEM_FRAMEWORK
   chmod 0755 $SYSTEM_LIB
-  chmod 0755 $SYSTEM_LIB64
+  $AARCH64 && chmod 0755 $SYSTEM_LIB64
   chmod 0755 $SYSTEM_XBIN
   $API30 && chmod 0755 $SYSTEM_OVERLAY
   chcon -h u:object_r:system_file:s0 "$SYSTEM_APP"
@@ -481,7 +494,7 @@ ensure_dir() {
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_FRAMEWORK"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_LIB"
-  chcon -h u:object_r:system_file:s0 "$SYSTEM_LIB64"
+  $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_LIB64"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_XBIN"
   $API30 && chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
 }
@@ -2473,6 +2486,7 @@ restore_conflicting_packages() {
 }
 
 # Call functions
+set_arch
 trampoline
 tmp_dir
 on_sdk
@@ -2503,7 +2517,7 @@ case "$1" in
     mv $SYS_PRIVAPP_JAR $TMP/priv-app 2>/dev/null
     mv $SYS_FRAMEWORK $TMP/framework 2>/dev/null
     mv $SYS_LIB $TMP/lib 2>/dev/null
-    mv $SYS_LIB64 $TMP/lib64 2>/dev/null
+    $AARCH64 && mv $SYS_LIB64 $TMP/lib64 2>/dev/null
     mv $SYS_SYSCONFIG $TMP/sysconfig 2>/dev/null
     mv $SYS_DEFAULTPERMISSIONS $TMP/default-permissions 2>/dev/null
     mv $SYS_PERMISSIONS $TMP/permissions 2>/dev/null
@@ -2540,7 +2554,7 @@ case "$1" in
     mv $TMP_PRIVAPP_JAR $S/priv-app 2>/dev/null
     mv $TMP_FRAMEWORK $SYSTEM/framework 2>/dev/null
     mv $TMP_LIB $SYSTEM/lib 2>/dev/null
-    mv $TMP_LIB64 $SYSTEM/lib64 2>/dev/null
+    $AARCH64 && mv $TMP_LIB64 $SYSTEM/lib64 2>/dev/null
     mv $TMP_SYSCONFIG $SYSTEM/etc/sysconfig 2>/dev/null
     mv $TMP_DEFAULTPERMISSIONS $SYSTEM/etc/default-permissions 2>/dev/null
     mv $TMP_PERMISSIONS $SYSTEM/etc/permissions 2>/dev/null
