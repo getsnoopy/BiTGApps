@@ -427,6 +427,12 @@ on_version_check() {
   android_sdk="$(get_prop "ro.build.version.sdk")"
 }
 
+api_dependent_overlay() {
+  if [ "$android_sdk" == "30" ]; then
+    API30="true"
+  fi
+}
+
 ensure_dir() {
   SYSTEM_APP="$SYSTEM/app"
   SYSTEM_PRIV_APP="$SYSTEM/priv-app"
@@ -439,7 +445,7 @@ ensure_dir() {
   SYSTEM_LIB="$SYSTEM/lib"
   SYSTEM_LIB64="$SYSTEM/lib64"
   SYSTEM_XBIN="$S/xbin"
-  SYSTEM_OVERLAY="$SYSTEM/overlay"
+  $API30 && SYSTEM_OVERLAY="$SYSTEM/overlay"
   test -d $SYSTEM_APP || mkdir $SYSTEM_APP
   test -d $SYSTEM_PRIV_APP || mkdir $SYSTEM_PRIV_APP
   test -d $SYSTEM_ETC_DIR || mkdir $SYSTEM_ETC_DIR
@@ -451,7 +457,9 @@ ensure_dir() {
   test -d $SYSTEM_LIB || mkdir $SYSTEM_LIB
   test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
   test -d $SYSTEM_XBIN || mkdir $SYSTEM_XBIN
-  test -d $SYSTEM_OVERLAY || mkdir $SYSTEM_OVERLAY
+  if [ "$API30" == "true" ]; then
+    test -d $SYSTEM_OVERLAY || mkdir $SYSTEM_OVERLAY
+  fi
   chmod 0755 $SYSTEM_APP
   chmod 0755 $SYSTEM_PRIV_APP
   chmod 0755 $SYSTEM_ETC_DIR
@@ -463,7 +471,7 @@ ensure_dir() {
   chmod 0755 $SYSTEM_LIB
   chmod 0755 $SYSTEM_LIB64
   chmod 0755 $SYSTEM_XBIN
-  chmod 0755 $SYSTEM_OVERLAY
+  $API30 && chmod 0755 $SYSTEM_OVERLAY
   chcon -h u:object_r:system_file:s0 "$SYSTEM_APP"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DIR"
@@ -475,7 +483,7 @@ ensure_dir() {
   chcon -h u:object_r:system_file:s0 "$SYSTEM_LIB"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_LIB64"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_XBIN"
-  chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
+  $API30 && chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
 }
 
 # Set installation layout
@@ -2477,6 +2485,7 @@ vendor_mnt
 mount_all
 system_layout
 on_version_check
+api_dependent_overlay
 set_pathmap
 
 case "$1" in
@@ -2512,8 +2521,8 @@ case "$1" in
     backupdirSYSRwg
     on_rwg_status_check
     trigger_rwg_backup
-    backupdirSYSOverlay
-    mv $SYS_OVERLAY $TMP/overlay 2>/dev/null
+    $API30 && backupdirSYSOverlay
+    $API30 && mv $SYS_OVERLAY $TMP/overlay 2>/dev/null
   ;;
   post-backup)
     # Stub
@@ -2539,8 +2548,8 @@ case "$1" in
     mv $TMP_PROPFILE $S/etc 2>/dev/null
     mv $TMP_BUILDFILE $S 2>/dev/null
     mv $TMP_XBIN $S/xbin 2>/dev/null
-    restoredirTMPOverlay
-    mv $TMP_OVERLAY $SYSTEM/overlay 2>/dev/null
+    $API30 && restoredirTMPOverlay
+    $API30 && mv $TMP_OVERLAY $SYSTEM/overlay 2>/dev/null
   ;;
   restore)
     # Stub
