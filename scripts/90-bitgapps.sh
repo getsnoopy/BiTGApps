@@ -650,7 +650,7 @@ on_rwg_status_check() {
   rwg_install_status="$(get_prop "ro.rwg.device")"
 }
 
-# Apply safetynet patch
+# Apply safetynet patch on system build
 cts_patch_system() {
   # Ext Build fingerprint
   if [ -n "$(cat $S/build.prop | grep ro.system.build.fingerprint)" ]; then
@@ -726,6 +726,7 @@ cts_patch_system() {
   fi
 }
 
+# Apply safetynet patch on product build
 cts_patch_product() {
   if [ -f "$S/product/build.prop" ]; then
     # Build fingerprint
@@ -767,6 +768,7 @@ cts_patch_product() {
   fi
 }
 
+# Apply safetynet patch on system_ext build
 cts_patch_ext() {
   if [ -f "$S/system_ext/build.prop" ]; then
     # Build fingerprint
@@ -808,7 +810,7 @@ cts_patch_ext() {
   fi
 }
 
-# Apply safetynet patch
+# Apply safetynet patch on vendor build
 cts_patch_vendor() {
   if [ "$device_vendorpartition" == "true" ]; then
     # Ext Build fingerprint
@@ -868,7 +870,7 @@ cts_patch_vendor() {
   fi
 }
 
-# Apply safetynet patch
+# Apply safetynet patch on odm build
 cts_patch_odm() {
   if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
     # Build fingerprint
