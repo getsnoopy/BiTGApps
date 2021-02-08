@@ -876,7 +876,6 @@ boot_SAR() {
         chmod 0750 /system_root/init.boot.rc
         chcon -h u:object_r:rootfs:s0 "/system_root/init.boot.rc"
       else
-        echo "ANDROID: Kernel init patched" >> $bootSAR
         sed -i '/init.${ro.zygote}.rc/a\\import /init.boot.rc' /system_root/init.rc
         cp -f $TMP/init.boot.rc /system_root/init.boot.rc
         chmod 0750 /system_root/init.boot.rc
@@ -898,7 +897,6 @@ boot_AB() {
         chmod 0750 /system/init.boot.rc
         chcon -h u:object_r:rootfs:s0 "/system/init.boot.rc"
       else
-        echo "ANDROID: Kernel init patched" >> $bootAB
         sed -i '/init.${ro.zygote}.rc/a\\import /init.boot.rc' /system/init.rc
         cp -f $TMP/init.boot.rc /system/init.boot.rc
         chmod 0750 /system/init.boot.rc
@@ -920,7 +918,6 @@ boot_A() {
         chmod 0750 /init.boot.rc
         chcon -h u:object_r:rootfs:s0 "/init.boot.rc"
       else
-        echo "ANDROID: Kernel init patched" >> $bootA
         sed -i '/init.${ro.zygote}.rc/a\\import /init.boot.rc' /init.rc
         cp -f $TMP/init.boot.rc /init.boot.rc
         chmod 0750 /init.boot.rc
@@ -943,7 +940,6 @@ boot_SARHW() {
         chmod 0644 /system_root/system/etc/init/hw/init.boot.rc
         chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.boot.rc"
       else
-        echo "ANDROID: Kernel init patched" >> $bootSARHW
         sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.boot.rc' $INIT
         cp -f $TMP/init.boot.rc /system_root/system/etc/init/hw/init.boot.rc
         chmod 0644 /system_root/system/etc/init/hw/init.boot.rc
@@ -966,7 +962,6 @@ boot_SYSHW() {
         chmod 0644 /system/system/etc/init/hw/init.boot.rc
         chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.boot.rc"
       else
-        echo "ANDROID: Kernel init patched" >> $bootSYSHW
         sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.boot.rc' $INIT
         cp -f $TMP/init.boot.rc /system/system/etc/init/hw/init.boot.rc
         chmod 0644 /system/system/etc/init/hw/init.boot.rc
