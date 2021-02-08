@@ -20,3 +20,4 @@
 
 # Property for installing safetynet patch
 ro.config.cts=true
+ro.config.usf=true

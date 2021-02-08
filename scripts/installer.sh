@@ -1724,6 +1724,7 @@ on_setup_check() {
 # Set cts check property
 on_cts_check() {
   supported_cts_config="$(get_prop "ro.config.cts")"
+  supported_usf_config="$(get_prop "ro.config.usf")"
 }
 
 # Set addon check property
@@ -6887,6 +6888,61 @@ cts_patch_odm() {
   fi
 }
 
+# Universal SafetyNet Fix; Works together with CTS patch
+usf_v30() {
+  if [ "$supported_usf_config" == "true" ]; then
+    # Set defaults and unpack
+    ZIP="USF/30/bin/keystore USF/30/lib64/libkeystore-attestation-application-id.so"
+    unpack_zip
+    if [ -f "$SYSTEM/bin/keystore" ]; then
+      # Backup system keystore
+      test -d /dev/local || mkdir -p /dev/local/bin
+      chmod -R 0755 /dev/local
+      chcon -Rh u:object_r:tmpfs:s0 "/dev/local"
+      cp -f $SYSTEM/bin/keystore /dev/local/bin/keystore
+      # Install patched keystore
+      if [ ! -f "/dev/local/KEYSTORE" ]; then
+        rm -rf $SYSTEM/bin/keystore
+        cp -f $TMP/keystore $SYSTEM/bin/keystore
+        chmod 0755 $SYSTEM/bin/keystore
+        chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
+      fi
+      # Restore, if bootloop occurs
+      if [ -f "/dev/local/KEYSTORE" ]; then
+        rm -rf $SYSTEM/bin/keystore
+        cp -f /dev/local/bin/keystore $SYSTEM/bin/keystore
+        chmod 0755 $SYSTEM/bin/keystore
+        chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
+      fi
+      test -f /dev/local/KEYSTORE || echo >> /dev/local/KEYSTORE
+    fi
+    if [ -f "$SYSTEM/lib64/libkeystore-attestation-application-id.so" ]; then
+      # Backup system libkeystore
+      test -d /dev/local || mkdir -p /dev/local/lib64
+      chmod -R 0755 /dev/local
+      chcon -Rh u:object_r:tmpfs:s0 "/dev/local"
+      cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so /dev/local/lib64/libkeystore-attestation-application-id.so
+      # Install patched libkeystore
+      if [ ! -f "/dev/local/LIBKEYSTORE" ]; then
+        rm -rf $SYSTEM/lib64/libkeystore-attestation-application-id.so
+        cp -f $TMP/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
+        chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so
+        chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
+      fi
+      # Restore, if bootloop occurs
+      if [ -f "/dev/local/LIBKEYSTORE" ]; then
+        rm -rf $SYSTEM/lib64/libkeystore-attestation-application-id.so
+        cp -f /dev/local/lib64/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
+        chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so
+        chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
+      fi
+      test -f /dev/local/LIBKEYSTORE || echo >> /dev/local/LIBKEYSTORE
+    fi
+    # Wipe keystore backup
+    rm -rf /dev/local
+  fi
+}
+
 # Check whether CTS config file present in device or not
 get_cts_config() {
   for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage; do
@@ -6949,6 +7005,7 @@ cts_patch() {
           cts_patch_ext
           cts_patch_vendor
           cts_patch_odm
+          usf_v30
           insert_line $SYSTEM/config.prop "ro.cts.patch_status=verified" after '# Begin build properties' "ro.cts.patch_status=verified"
         fi
       fi
