@@ -911,7 +911,7 @@ boot_AB() {
 }
 
 boot_A() {
-  if [ "$supported_boot_config" == "true" ]; then
+  if [ "$supported_boot_config" == "false" ]; then
     if [ -f "/init.rc" ] && [ -n "$(cat /init.rc | grep ro.zygote)" ]; then
       if [ -n "$(cat /init.rc | grep init.boot.rc)" ]; then
         echo "ERROR: Kernel init patched already" >> $bootA
