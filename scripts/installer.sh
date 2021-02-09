@@ -909,22 +909,39 @@ boot_AB() {
 }
 
 boot_A() {
-  if [ "$supported_boot_config" == "false" ]; then
-    if [ -f "/init.rc" ] && [ -n "$(cat /init.rc | grep ro.zygote)" ]; then
-      if [ -n "$(cat /init.rc | grep init.boot.rc)" ]; then
-        echo "ERROR: Kernel init patched already" >> $bootA
-        rm -rf /init.boot.rc
-        cp -f $TMP/init.boot.rc /init.boot.rc
-        chmod 0750 /init.boot.rc
-        chcon -h u:object_r:rootfs:s0 "/init.boot.rc"
+  if [ "$supported_boot_config" == "true" ]; then
+    INIT="/system/etc/init/bootanim.rc"
+    patch_bootanim_init() {
+      if [ -f $INIT ]; then
+        if [ -n "$(cat $INIT | grep init.boot.rc)" ]; then
+          echo "ERROR: Bootanim init patched already" >> $bootA
+          rm -rf /system/etc/init/init.boot.rc
+          cp -f $TMP/init.boot.rc /system/etc/init/init.boot.rc
+          chmod 0644 /system/etc/init/init.boot.rc
+          chcon -h u:object_r:system_file:s0 "/system/etc/init/init.boot.rc"
+        else
+          insert_line $INIT "import /system/etc/init/init.boot.rc" before 'service bootanim /system/bin/bootanimation' "import /system/etc/init/init.boot.rc"
+          sed -i '/init.boot.rc/G' $INIT
+          cp -f $TMP/init.boot.rc /system/etc/init/init.boot.rc
+          chmod 0644 /system/etc/init/init.boot.rc
+          chcon -h u:object_r:system_file:s0 "/system/etc/init/init.boot.rc"
+        fi
       else
-        sed -i '/init.${ro.zygote}.rc/a\\import /init.boot.rc' /init.rc
-        cp -f $TMP/init.boot.rc /init.boot.rc
-        chmod 0750 /init.boot.rc
-        chcon -h u:object_r:rootfs:s0 "/init.boot.rc"
+        echo "ERROR: Unable to find bootanim init" >> $bootA
       fi
-    else
-      echo "ERROR: Unable to find kernel init" >> $bootA
+    }
+    # Set dummy target property
+    TARGET_SYSTEM_ONLY="true"
+    # Check partition layout
+    if [ ! "$system_as_root" == "true" ]; then
+      if [ ! "$AB_OTA_UPDATER" == "true" ]; then
+        if [ ! "$dynamic_partitions" == "true" ]; then
+          # Apply, if partition layout is false
+          if [ "$TARGET_SYSTEM_ONLY" == "true" ]; then
+            patch_bootanim_init
+          fi
+        fi
+      fi
     fi
   fi
 }
