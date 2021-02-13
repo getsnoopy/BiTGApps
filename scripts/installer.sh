@@ -86,7 +86,7 @@ zip_extract() {
   unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
   chmod +x "$TMP/busybox-arm"
   if [ "$ZIPTYPE" == "basic" ]; then
-    for f in config.prop data.prop g.prop init.boot.rc init.usf.rc pm.sh sqlite3 zipalign; do
+    for f in config.prop data.prop g.prop init.boot.rc init.spl.rc init.usf.rc pm.sh sqlite3 zipalign; do
       unzip -o "$ZIPFILE" "$f" -d "$TMP"
     done
     for f in sqlite3 zipalign; do
@@ -285,6 +285,7 @@ build_defaults() {
   TARGET_ODM="$TMP/bitgapps/cts-odm.log"
   OPTv28="$TMP/bitgapps/gms_opt_v28.log"
   usf="$TMP/bitgapps/usf.log"
+  spl="$TMP/bitgapps/spl.log"
 }
 
 # Set CTS default properties
@@ -293,6 +294,7 @@ cts_defaults() {
   CTS_DEFAULT_SYSTEM_EXT_BUILD_ID="ro.system.build.id="
   CTS_DEFAULT_SYSTEM_EXT_BUILD_TAG="ro.system.build.tags="
   CTS_DEFAULT_SYSTEM_EXT_BUILD_TYPE="ro.system.build.type="
+  CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=";
   CTS_DEFAULT_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint="
   CTS_DEFAULT_SYSTEM_BUILD_TYPE="ro.build.type="
   CTS_DEFAULT_SYSTEM_BUILD_TAG="ro.build.tags="
@@ -305,6 +307,7 @@ cts_defaults() {
   CTS_DEFAULT_EXT_BUILD_ID="ro.system_ext.build.id="
   CTS_DEFAULT_EXT_BUILD_TAG="ro.system_ext.build.tags="
   CTS_DEFAULT_EXT_BUILD_TYPE="ro.system_ext.build.type="
+  CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=";
   CTS_DEFAULT_VENDOR_EXT_BUILD_FINGERPRINT="ro.vendor.build.fingerprint="
   CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint="
   CTS_DEFAULT_VENDOR_BUILD_ID="ro.vendor.build.id="
@@ -323,6 +326,7 @@ patch_v30() {
   CTS_SYSTEM_EXT_BUILD_ID="ro.system.build.id=RQ1A.210205.004"
   CTS_SYSTEM_EXT_BUILD_TAG="ro.system.build.tags=release-keys"
   CTS_SYSTEM_EXT_BUILD_TYPE="ro.system.build.type=user"
+  CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-02-05";
   CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
   CTS_SYSTEM_BUILD_TYPE="ro.build.type=user"
   CTS_SYSTEM_BUILD_TAG="ro.build.tags=release-keys"
@@ -335,6 +339,7 @@ patch_v30() {
   CTS_EXT_BUILD_ID="ro.system_ext.build.id=RQ1A.210205.004"
   CTS_EXT_BUILD_TAG="ro.system_ext.build.tags=release-keys"
   CTS_EXT_BUILD_TYPE="ro.system_ext.build.type=user"
+  CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-02-05";
   CTS_VENDOR_EXT_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
   CTS_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
   CTS_VENDOR_BUILD_ID="ro.vendor.build.id=RQ1A.210205.004"
@@ -6632,6 +6637,43 @@ cts_patch_system() {
   else
     echo "ERROR: Unable to find target property 'ro.system.build.type'" >> $TARGET_SYSTEM
   fi
+  # Build security patch
+  if [ -n "$(cat $SYSTEM/build.prop | grep ro.build.version.security_patch)" ]; then
+    # Backup default SPL
+    test -d /data/spl || mkdir -p /data/spl
+    chmod 0755 /data/spl
+    chcon -h u:object_r:unlabeled:s0 "/data/spl"
+    sec="$(get_prop "ro.build.version.security_patch")"
+    if [ ! -f "/data/spl/spl.restore" ]; then
+      echo "export RESTORE_SYSTEM_SPL=$sec" >> /data/spl/spl.sh
+    fi
+    chmod 0755 /data/spl/spl.sh
+    chcon -h u:object_r:unlabeled:s0 "/data/spl/spl.sh"
+    # Apply SPL, if restore file not found
+    if [ ! -f "/data/spl/spl.restore" ]; then
+      grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $SYSTEM/build.prop > $TMP/system.prop
+      rm -rf $SYSTEM/build.prop
+      cp -f $TMP/system.prop $SYSTEM/build.prop
+      chmod 0644 $SYSTEM/build.prop
+      rm -rf $TMP/system.prop
+      insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
+    fi
+    # Restore default SPL, if bootloop occurs
+    if [ -f "/data/spl/spl.restore" ]; then
+      # Load SPL string
+      . /data/spl/spl.sh
+      grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $SYSTEM/build.prop > $TMP/system.prop
+      rm -rf $SYSTEM/build.prop
+      cp -f $TMP/system.prop $SYSTEM/build.prop
+      chmod 0644 $SYSTEM/build.prop
+      rm -rf $TMP/system.prop
+      # Only add SPL variable
+      insert_line $SYSTEM/build.prop "ro.build.version.security_patch=$RESTORE_SYSTEM_SPL" after 'ro.build.version.release=' "ro.build.version.security_patch=$RESTORE_SYSTEM_SPL"
+    fi
+    test -f /data/spl/spl.restore || echo >> /data/spl/spl.restore
+  else
+    echo "ERROR: Unable to find target property 'ro.build.version.security_patch'" >> $TARGET_SYSTEM
+  fi
   # Build fingerprint
   if [ -n "$(cat $SYSTEM/build.prop | grep ro.build.fingerprint)" ]; then
     grep -v "$CTS_DEFAULT_SYSTEM_BUILD_FINGERPRINT" $SYSTEM/build.prop > $TMP/system.prop
@@ -6785,6 +6827,43 @@ cts_patch_ext() {
 # Apply safetynet patch on vendor build
 cts_patch_vendor() {
   if [ "$device_vendorpartition" == "true" ]; then
+    # Build security patch
+    if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.security_patch)" ]; then
+      # Backup default SPL
+      test -d /data/spl || mkdir -p /data/spl
+      chmod 0755 /data/spl
+      chcon -h u:object_r:unlabeled:s0 "/data/spl"
+      sec="$(get_prop "ro.vendor.build.security_patch")"
+      if [ ! -f "/data/spl/spl.restore" ]; then
+        echo "export RESTORE_VENDOR_SPL=$sec" >> /data/spl/spl.sh
+      fi
+      chmod 0755 /data/spl/spl.sh
+      chcon -h u:object_r:unlabeled:s0 "/data/spl/spl.sh"
+      # Apply SPL, if restore file not found
+      if [ ! -f "/data/spl/spl.restore" ]; then
+        grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $VENDOR/build.prop > $TMP/vendor.prop
+        rm -rf $VENDOR/build.prop
+        cp -f $TMP/vendor.prop $VENDOR/build.prop
+        chmod 0644 $VENDOR/build.prop
+        rm -rf $TMP/vendor.prop
+        insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
+      fi
+      # Restore default SPL, if bootloop occurs
+      if [ -f "/data/spl/spl.restore" ]; then
+        # Load SPL string
+        . /data/spl/spl.sh
+        grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $VENDOR/build.prop > $TMP/vendor.prop
+        rm -rf $VENDOR/build.prop
+        cp -f $TMP/vendor.prop $VENDOR/build.prop
+        chmod 0644 $VENDOR/build.prop
+        rm -rf $TMP/vendor.prop
+        # Only add SPL variable
+        insert_line $VENDOR/build.prop "ro.vendor.build.security_patch=$RESTORE_VENDOR_SPL" after 'ro.product.first_api_level=' "ro.vendor.build.security_patch=$RESTORE_VENDOR_SPL"
+      fi
+      test -f /data/spl/spl.restore || echo >> /data/spl/spl.restore
+    else
+      echo "ERROR: Unable to find target property 'ro.vendor.build.security_patch'" >> $TARGET_VENDOR
+    fi
     # Ext Build fingerprint
     if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.fingerprint)" ]; then
       grep -v "$CTS_DEFAULT_VENDOR_EXT_BUILD_FINGERPRINT" $VENDOR/build.prop > $TMP/vendor.prop
@@ -6908,6 +6987,27 @@ cts_patch_odm() {
   fi
 }
 
+spl_boot_complete() {
+  # Patch bootanimation init
+  if [ -f "$SYSTEM/etc/init/bootanim.rc" ]; then
+    if [ -n "$(cat $SYSTEM/etc/init/bootanim.rc | grep init.spl.rc)" ]; then
+      echo "ERROR: Bootanim init patched already" >> $spl
+      rm -rf $SYSTEM/etc/init/init.spl.rc
+      cp -f $TMP/init.spl.rc $SYSTEM/etc/init/init.spl.rc
+      chmod 0644 $SYSTEM/etc/init/init.spl.rc
+      chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.spl.rc"
+    else
+      insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.spl.rc" before 'service bootanim /system/bin/bootanimation' "import /system/etc/init/init.spl.rc"
+      sed -i '/init.spl.rc/G' $SYSTEM/etc/init/bootanim.rc
+      cp -f $TMP/init.spl.rc $SYSTEM/etc/init/init.spl.rc
+      chmod 0644 $SYSTEM/etc/init/init.spl.rc
+      chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.spl.rc"
+    fi
+  else
+    echo "ERROR: Unable to find bootanim init" >> $spl
+  fi
+}
+
 # Universal SafetyNet Fix; Works together with CTS patch
 usf_v30() {
   if [ "$supported_usf_config" == "true" ]; then
@@ -6973,13 +7073,7 @@ usf_v30() {
         chmod 0644 $SYSTEM/etc/init/init.usf.rc
         chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.usf.rc"
       else
-        # Check if, bootanim init already patched with boot log
-        if [ -n "$(cat $SYSTEM/etc/init/bootanim.rc | grep init.boot.rc)" ]; then
-          insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.usf.rc" after 'import /system/etc/init/init.boot.rc' "import /system/etc/init/init.usf.rc"
-        else
-          insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.usf.rc" before 'service bootanim /system/bin/bootanimation' "import /system/etc/init/init.usf.rc"
-          sed -i '/init.usf.rc/G' $SYSTEM/etc/init/bootanim.rc
-        fi
+        insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.usf.rc" after 'import /system/etc/init/init.spl.rc' "import /system/etc/init/init.usf.rc"
         cp -f $TMP/init.usf.rc $SYSTEM/etc/init/init.usf.rc
         chmod 0644 $SYSTEM/etc/init/init.usf.rc
         chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.usf.rc"
@@ -7052,6 +7146,7 @@ cts_patch() {
           cts_patch_ext
           cts_patch_vendor
           cts_patch_odm
+          spl_boot_complete
           usf_v30
           insert_line $SYSTEM/config.prop "ro.cts.patch_status=verified" after '# Begin build properties' "ro.cts.patch_status=verified"
         fi
