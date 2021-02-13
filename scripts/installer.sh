@@ -86,7 +86,7 @@ zip_extract() {
   unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
   chmod +x "$TMP/busybox-arm"
   if [ "$ZIPTYPE" == "basic" ]; then
-    for f in config.prop data.prop g.prop init.boot.rc pm.sh sqlite3 zipalign; do
+    for f in config.prop data.prop g.prop init.boot.rc init.usf.rc pm.sh sqlite3 zipalign; do
       unzip -o "$ZIPFILE" "$f" -d "$TMP"
     done
     for f in sqlite3 zipalign; do
@@ -284,6 +284,7 @@ build_defaults() {
   TARGET_VENDOR="$TMP/bitgapps/cts-vendor.log"
   TARGET_ODM="$TMP/bitgapps/cts-odm.log"
   OPTv28="$TMP/bitgapps/gms_opt_v28.log"
+  usf="$TMP/bitgapps/usf.log"
 }
 
 # Set CTS default properties
@@ -6932,6 +6933,28 @@ usf_v30() {
         cp -f /data/local/bin/keystore $SYSTEM/bin/keystore
         chmod 0755 $SYSTEM/bin/keystore
         chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
+      fi
+      if [ -f "$SYSTEM/etc/init/bootanim.rc" ]; then
+        if [ -n "$(cat $SYSTEM/etc/init/bootanim.rc | grep init.usf.rc)" ]; then
+          echo "ERROR: Bootanim init patched already" >> $usf
+          rm -rf $SYSTEM/etc/init/init.usf.rc
+          cp -f $TMP/init.usf.rc $SYSTEM/etc/init/init.usf.rc
+          chmod 0644 $SYSTEM/etc/init/init.usf.rc
+          chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.usf.rc"
+        else
+          # Check if, bootanim init already patched with boot log
+          if [ -n "$(cat $SYSTEM/etc/init/bootanim.rc | grep init.boot.rc)" ]; then
+            insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.usf.rc" after 'import /system/etc/init/init.boot.rc' "import /system/etc/init/init.usf.rc"
+          else
+            insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.usf.rc" before 'service bootanim /system/bin/bootanimation' "import /system/etc/init/init.usf.rc"
+            sed -i '/init.usf.rc/G' $SYSTEM/etc/init/bootanim.rc
+          fi
+          cp -f $TMP/init.usf.rc $SYSTEM/etc/init/init.usf.rc
+          chmod 0644 $SYSTEM/etc/init/init.usf.rc
+          chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.usf.rc"
+        fi
+      else
+        echo "ERROR: Unable to find bootanim init" >> $usf
       fi
       test -f /data/local/bin/KEYSTORE || echo >> /data/local/bin/KEYSTORE
     fi
