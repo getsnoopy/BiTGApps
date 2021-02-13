@@ -911,21 +911,21 @@ boot_AB() {
 
 boot_A() {
   if [ "$supported_boot_config" == "true" ]; then
-    INIT="/system/etc/init/bootanim.rc"
+    INIT="$SYSTEM/etc/init/bootanim.rc"
     patch_bootanim_init() {
       if [ -f $INIT ]; then
         if [ -n "$(cat $INIT | grep init.boot.rc)" ]; then
           echo "ERROR: Bootanim init patched already" >> $bootA
-          rm -rf /system/etc/init/init.boot.rc
-          cp -f $TMP/init.boot.rc /system/etc/init/init.boot.rc
-          chmod 0644 /system/etc/init/init.boot.rc
-          chcon -h u:object_r:system_file:s0 "/system/etc/init/init.boot.rc"
+          rm -rf $SYSTEM/etc/init/init.boot.rc
+          cp -f $TMP/init.boot.rc $SYSTEM/etc/init/init.boot.rc
+          chmod 0644 $SYSTEM/etc/init/init.boot.rc
+          chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.boot.rc"
         else
           insert_line $INIT "import /system/etc/init/init.boot.rc" before 'service bootanim /system/bin/bootanimation' "import /system/etc/init/init.boot.rc"
           sed -i '/init.boot.rc/G' $INIT
-          cp -f $TMP/init.boot.rc /system/etc/init/init.boot.rc
-          chmod 0644 /system/etc/init/init.boot.rc
-          chcon -h u:object_r:system_file:s0 "/system/etc/init/init.boot.rc"
+          cp -f $TMP/init.boot.rc $SYSTEM/etc/init/init.boot.rc
+          chmod 0644 $SYSTEM/etc/init/init.boot.rc
+          chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.boot.rc"
         fi
       else
         echo "ERROR: Unable to find bootanim init" >> $bootA
