@@ -1482,6 +1482,7 @@ cleanup() {
   rm -rf $TMP/gms_opt_v29.log
   rm -rf $TMP/gms_opt_v30.log
   rm -rf $TMP/init.boot.rc
+  rm -rf $TMP/init.usf.rc
   rm -rf $TMP/SAR.log
   rm -rf $TMP/AB.log
   rm -rf $TMP/A-only.log
@@ -1497,6 +1498,7 @@ cleanup() {
   rm -rf $TMP/sqlite3
   rm -rf $TMP/unzip
   rm -rf $TMP/updater
+  rm -rf $TMP/USF
   rm -rf $TMP/util_functions.sh
   rm -rf $TMP/zip
   rm -rf $TMP/zipalign
@@ -6916,72 +6918,75 @@ usf_v30() {
     unpack_zip
     if [ -f "$SYSTEM/bin/keystore" ]; then
       # Backup system keystore
-      test -d /data/local || mkdir -p /data/local/bin
-      chmod -R 0755 /data/local
-      chcon -Rh u:object_r:system_data_file:s0 "/data/local"
-      cp -f $SYSTEM/bin/keystore /data/local/bin/keystore
+      test -d /data/keystore || mkdir -p /data/keystore
+      chmod 0755 /data/keystore
+      chcon -h u:object_r:unlabeled:s0 "/data/keystore"
+      cp -f $SYSTEM/bin/keystore /data/keystore/keystore
+      chcon -h u:object_r:unlabeled:s0 "/data/keystore/keystore"
+      chmod 0755 /data/keystore/keystore
       # Install patched keystore
-      if [ ! -f "/data/local/bin/KEYSTORE" ]; then
+      if [ ! -f "/data/keystore/keystore.bin" ]; then
         rm -rf $SYSTEM/bin/keystore
-        cp -f $TMP/keystore $SYSTEM/bin/keystore
+        cp -f $TMP/USF/30/bin/keystore $SYSTEM/bin/keystore
         chmod 0755 $SYSTEM/bin/keystore
         chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
       fi
       # Restore, if bootloop occurs
-      if [ -f "/data/local/bin/KEYSTORE" ]; then
+      if [ -f "/data/keystore/keystore.bin" ]; then
         rm -rf $SYSTEM/bin/keystore
-        cp -f /data/local/bin/keystore $SYSTEM/bin/keystore
+        cp -f /data/keystore/keystore $SYSTEM/bin/keystore
         chmod 0755 $SYSTEM/bin/keystore
         chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
       fi
-      if [ -f "$SYSTEM/etc/init/bootanim.rc" ]; then
-        if [ -n "$(cat $SYSTEM/etc/init/bootanim.rc | grep init.usf.rc)" ]; then
-          echo "ERROR: Bootanim init patched already" >> $usf
-          rm -rf $SYSTEM/etc/init/init.usf.rc
-          cp -f $TMP/init.usf.rc $SYSTEM/etc/init/init.usf.rc
-          chmod 0644 $SYSTEM/etc/init/init.usf.rc
-          chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.usf.rc"
-        else
-          # Check if, bootanim init already patched with boot log
-          if [ -n "$(cat $SYSTEM/etc/init/bootanim.rc | grep init.boot.rc)" ]; then
-            insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.usf.rc" after 'import /system/etc/init/init.boot.rc' "import /system/etc/init/init.usf.rc"
-          else
-            insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.usf.rc" before 'service bootanim /system/bin/bootanimation' "import /system/etc/init/init.usf.rc"
-            sed -i '/init.usf.rc/G' $SYSTEM/etc/init/bootanim.rc
-          fi
-          cp -f $TMP/init.usf.rc $SYSTEM/etc/init/init.usf.rc
-          chmod 0644 $SYSTEM/etc/init/init.usf.rc
-          chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.usf.rc"
-        fi
-      else
-        echo "ERROR: Unable to find bootanim init" >> $usf
-      fi
-      test -f /data/local/bin/KEYSTORE || echo >> /data/local/bin/KEYSTORE
+      test -f /data/keystore/keystore.bin || echo >> /data/keystore/keystore.bin
     fi
     if [ -f "$SYSTEM/lib64/libkeystore-attestation-application-id.so" ]; then
       # Backup system libkeystore
-      test -d /data/local || mkdir -p /data/local/lib64
-      chmod -R 0755 /data/local
-      chcon -Rh u:object_r:system_data_file:s0 "/data/local"
-      cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so /data/local/lib64/libkeystore-attestation-application-id.so
+      test -d /data/keystore || mkdir -p /data/keystore
+      chmod 0755 /data/keystore
+      chcon -h u:object_r:unlabeled:s0 "/data/keystore"
+      cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so /data/keystore/libkeystore-attestation-application-id.so
+      chcon -h u:object_r:unlabeled:s0 "/data/keystore/libkeystore-attestation-application-id.so"
+      chmod 0644 /data/keystore/libkeystore-attestation-application-id.so
       # Install patched libkeystore
-      if [ ! -f "/data/local/lib64/LIBKEYSTORE" ]; then
+      if [ ! -f "/data/keystore/keystore.lib" ]; then
         rm -rf $SYSTEM/lib64/libkeystore-attestation-application-id.so
-        cp -f $TMP/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
+        cp -f $TMP/USF/30/lib64/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
         chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so
         chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
       fi
       # Restore, if bootloop occurs
-      if [ -f "/data/local/lib64/LIBKEYSTORE" ]; then
+      if [ -f "/data/keystore/keystore.lib" ]; then
         rm -rf $SYSTEM/lib64/libkeystore-attestation-application-id.so
-        cp -f /data/local/lib64/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
+        cp -f /data/keystore/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
         chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so
         chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
       fi
-      test -f /data/local/lib64/LIBKEYSTORE || echo >> /data/local/lib64/LIBKEYSTORE
+      test -f /data/keystore/keystore.lib || echo >> /data/keystore/keystore.lib
     fi
-    # Wipe keystore backup
-    rm -rf /data/local
+    # Patch bootanimation init
+    if [ -f "$SYSTEM/etc/init/bootanim.rc" ]; then
+      if [ -n "$(cat $SYSTEM/etc/init/bootanim.rc | grep init.usf.rc)" ]; then
+        echo "ERROR: Bootanim init patched already" >> $usf
+        rm -rf $SYSTEM/etc/init/init.usf.rc
+        cp -f $TMP/init.usf.rc $SYSTEM/etc/init/init.usf.rc
+        chmod 0644 $SYSTEM/etc/init/init.usf.rc
+        chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.usf.rc"
+      else
+        # Check if, bootanim init already patched with boot log
+        if [ -n "$(cat $SYSTEM/etc/init/bootanim.rc | grep init.boot.rc)" ]; then
+          insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.usf.rc" after 'import /system/etc/init/init.boot.rc' "import /system/etc/init/init.usf.rc"
+        else
+          insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.usf.rc" before 'service bootanim /system/bin/bootanimation' "import /system/etc/init/init.usf.rc"
+          sed -i '/init.usf.rc/G' $SYSTEM/etc/init/bootanim.rc
+        fi
+        cp -f $TMP/init.usf.rc $SYSTEM/etc/init/init.usf.rc
+        chmod 0644 $SYSTEM/etc/init/init.usf.rc
+        chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.usf.rc"
+      fi
+    else
+      echo "ERROR: Unable to find bootanim init" >> $usf
+    fi
   fi
 }
 
