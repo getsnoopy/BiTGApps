@@ -6909,54 +6909,56 @@ cts_patch_odm() {
 usf_v30() {
   if [ "$supported_usf_config" == "true" ]; then
     # Set defaults and unpack
-    ZIP="USF/30/bin/keystore USF/30/lib64/libkeystore-attestation-application-id.so"
+    ZIP="
+      USF/30/bin/keystore
+      USF/30/lib64/libkeystore-attestation-application-id.so"
     unpack_zip
     if [ -f "$SYSTEM/bin/keystore" ]; then
       # Backup system keystore
-      test -d /dev/local || mkdir -p /dev/local/bin
-      chmod -R 0755 /dev/local
-      chcon -Rh u:object_r:tmpfs:s0 "/dev/local"
-      cp -f $SYSTEM/bin/keystore /dev/local/bin/keystore
+      test -d /data/local || mkdir -p /data/local/bin
+      chmod -R 0755 /data/local
+      chcon -Rh u:object_r:system_data_file:s0 "/data/local"
+      cp -f $SYSTEM/bin/keystore /data/local/bin/keystore
       # Install patched keystore
-      if [ ! -f "/dev/local/KEYSTORE" ]; then
+      if [ ! -f "/data/local/bin/KEYSTORE" ]; then
         rm -rf $SYSTEM/bin/keystore
         cp -f $TMP/keystore $SYSTEM/bin/keystore
         chmod 0755 $SYSTEM/bin/keystore
         chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
       fi
       # Restore, if bootloop occurs
-      if [ -f "/dev/local/KEYSTORE" ]; then
+      if [ -f "/data/local/bin/KEYSTORE" ]; then
         rm -rf $SYSTEM/bin/keystore
-        cp -f /dev/local/bin/keystore $SYSTEM/bin/keystore
+        cp -f /data/local/bin/keystore $SYSTEM/bin/keystore
         chmod 0755 $SYSTEM/bin/keystore
         chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
       fi
-      test -f /dev/local/KEYSTORE || echo >> /dev/local/KEYSTORE
+      test -f /data/local/bin/KEYSTORE || echo >> /data/local/bin/KEYSTORE
     fi
     if [ -f "$SYSTEM/lib64/libkeystore-attestation-application-id.so" ]; then
       # Backup system libkeystore
-      test -d /dev/local || mkdir -p /dev/local/lib64
-      chmod -R 0755 /dev/local
-      chcon -Rh u:object_r:tmpfs:s0 "/dev/local"
-      cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so /dev/local/lib64/libkeystore-attestation-application-id.so
+      test -d /data/local || mkdir -p /data/local/lib64
+      chmod -R 0755 /data/local
+      chcon -Rh u:object_r:system_data_file:s0 "/data/local"
+      cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so /data/local/lib64/libkeystore-attestation-application-id.so
       # Install patched libkeystore
-      if [ ! -f "/dev/local/LIBKEYSTORE" ]; then
+      if [ ! -f "/data/local/lib64/LIBKEYSTORE" ]; then
         rm -rf $SYSTEM/lib64/libkeystore-attestation-application-id.so
         cp -f $TMP/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
         chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so
         chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
       fi
       # Restore, if bootloop occurs
-      if [ -f "/dev/local/LIBKEYSTORE" ]; then
+      if [ -f "/data/local/lib64/LIBKEYSTORE" ]; then
         rm -rf $SYSTEM/lib64/libkeystore-attestation-application-id.so
-        cp -f /dev/local/lib64/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
+        cp -f /data/local/lib64/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
         chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so
         chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
       fi
-      test -f /dev/local/LIBKEYSTORE || echo >> /dev/local/LIBKEYSTORE
+      test -f /data/local/lib64/LIBKEYSTORE || echo >> /data/local/lib64/LIBKEYSTORE
     fi
     # Wipe keystore backup
-    rm -rf /dev/local
+    rm -rf /data/local
   fi
 }
 
