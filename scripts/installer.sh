@@ -649,7 +649,8 @@ mount_all() {
         mount -o rw,remount -t auto /dev/block/mapper/system_ext /system_ext
         is_mounted /system_ext || mount_abort "! Cannot mount /system_ext. Aborting..."
       fi
-    else
+    fi
+    if [ "$device_abpartition" == "false" ]; then
       for block in system system_ext product vendor; do
         blockdev --setrw /dev/block/mapper/$block 2>/dev/null
       done
@@ -678,19 +679,44 @@ mount_all() {
     fi
   fi
   if [ "$SUPER_PARTITION" == "false" ]; then
-    # Set ANDROID_ROOT in the global environment
-    if [ -d /system_root ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
-      export ANDROID_ROOT="/system_root" && echo "$ANDROID_ROOT" >> $TMP/IS_MOUNTED_SAR
-    else
-      export ANDROID_ROOT="/system" && echo "$ANDROID_ROOT" >> $TMP/IS_MOUNTED_SAS
+    if [ "$device_abpartition" == "false" ]; then
+      # Set ANDROID_ROOT in the global environment
+      if [ -d /system_root ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
+        export ANDROID_ROOT="/system_root" && echo "$ANDROID_ROOT" >> $TMP/IS_MOUNTED_SAR
+      else
+        export ANDROID_ROOT="/system" && echo "$ANDROID_ROOT" >> $TMP/IS_MOUNTED_SAS
+      fi
+      ui_print "- Mounting /system"
+      mount -o ro -t auto $ANDROID_ROOT 2>/dev/null
+      mount -o rw,remount -t auto $ANDROID_ROOT
+      is_mounted $ANDROID_ROOT || mount_abort "! Cannot mount $ANDROID_ROOT. Aborting..."
+      if [ "$device_vendorpartition" == "true" ]; then
+        ui_print "- Mounting /vendor"
+        mount -o ro -t auto $VENDOR 2>/dev/null
+        mount -o rw,remount -t auto $VENDOR
+        is_mounted $VENDOR || mount_abort "! Cannot mount $VENDOR. Aborting..."
+      fi
+      if [ -d /product ] && [ -n "$(cat $fstab | grep /product)" ]; then
+        ui_print "- Mounting /product"
+        mount -o ro -t auto /product 2>/dev/null
+        mount -o rw,remount -t auto /product
+        is_mounted /product || mount_abort "! Cannot mount /product. Aborting..."
+      fi
     fi
-    ui_print "- Mounting /system"
-    mount -o ro -t auto $ANDROID_ROOT 2>/dev/null
-    mount -o rw,remount -t auto $ANDROID_ROOT
-    if [ "$system_as_root" == "true" ]; then
-      if [ "$device_abpartition" == "true" ]; then
+    if [ "$device_abpartition" == "true" ]; then
+      # Set ANDROID_ROOT in the global environment
+      if [ -d /system_root ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
+        export ANDROID_ROOT="/system_root" && echo "$ANDROID_ROOT" >> $TMP/IS_MOUNTED_SAR
+      fi
+      if [ -d /system ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
+        export ANDROID_ROOT="/system_root" && echo "$ANDROID_ROOT" >> $TMP/IS_MOUNTED_SAR
+      fi
+      if [ -d /system ] && [ -n "$(cat $fstab | grep /system)" ]; then
+        export ANDROID_ROOT="/system" && echo "$ANDROID_ROOT" >> $TMP/IS_MOUNTED_SAS
+      fi
+      if [ "$system_as_root" == "true" ]; then
         local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
-        umount $ANDROID_ROOT
+        ui_print "- Mounting /system"
         if [ "$ANDROID_ROOT" == "/system_root" ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
           mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot /system_root 2>/dev/null
           mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot /system_root
@@ -703,36 +729,20 @@ mount_all() {
           mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot /system 2>/dev/null
           mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot /system
         fi
-      fi
-    fi
-    is_mounted $ANDROID_ROOT || mount_abort "! Cannot mount $ANDROID_ROOT. Aborting..."
-    if [ "$device_vendorpartition" == "true" ]; then
-      ui_print "- Mounting /vendor"
-      mount -o ro -t auto $VENDOR 2>/dev/null
-      mount -o rw,remount -t auto $VENDOR
-      if [ "$system_as_root" == "true" ]; then
-        if [ "$device_abpartition" == "true" ]; then
-          local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
-          umount $VENDOR
+        is_mounted $ANDROID_ROOT || mount_abort "! Cannot mount $ANDROID_ROOT. Aborting..."
+        if [ "$device_vendorpartition" == "true" ]; then
+          ui_print "- Mounting /vendor"
           mount -o ro -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR 2>/dev/null
           mount -o rw,remount -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR
+          is_mounted $VENDOR || mount_abort "! Cannot mount $VENDOR. Aborting..."
         fi
-      fi
-      is_mounted $VENDOR || mount_abort "! Cannot mount $VENDOR. Aborting..."
-    fi
-    if [ -d /product ] && [ -n "$(cat $fstab | grep /product)" ]; then
-      ui_print "- Mounting /product"
-      mount -o ro -t auto /product 2>/dev/null
-      mount -o rw,remount -t auto /product
-      if [ "$system_as_root" == "true" ]; then
-        if [ "$device_abpartition" == "true" ]; then
-          local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
-          umount /product
+        if [ -d /product ] && [ -n "$(cat $fstab | grep /product)" ]; then
+          ui_print "- Mounting /product"
           mount -o ro -t auto /dev/block/bootdevice/by-name/product$slot /product 2>/dev/null
           mount -o rw,remount -t auto /dev/block/bootdevice/by-name/product$slot /product
+          is_mounted /product || mount_abort "! Cannot mount /product. Aborting..."
         fi
       fi
-      is_mounted /product || mount_abort "! Cannot mount /product. Aborting..."
     fi
   fi
   mount_apex

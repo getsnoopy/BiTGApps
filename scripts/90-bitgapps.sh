@@ -312,7 +312,8 @@ mount_all() {
         mount -o ro -t auto /dev/block/mapper/system_ext /system_ext 2>/dev/null
         mount -o rw,remount -t auto /dev/block/mapper/system_ext /system_ext
       fi
-    else
+    fi
+    if [ "$device_abpartition" == "false" ]; then
       for block in system system_ext product vendor; do
         blockdev --setrw /dev/block/mapper/$block 2>/dev/null
       done
@@ -333,18 +334,37 @@ mount_all() {
     fi
   fi
   if [ "$SUPER_PARTITION" == "false" ]; then
-    # Set ANDROID_ROOT in the global environment
-    if [ -d /system_root ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
-      export ANDROID_ROOT="/system_root"
-    else
-      export ANDROID_ROOT="/system"
+    if [ "$device_abpartition" == "false" ]; then
+      # Set ANDROID_ROOT in the global environment
+      if [ -d /system_root ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
+        export ANDROID_ROOT="/system_root"
+      else
+        export ANDROID_ROOT="/system"
+      fi
+      mount -o ro -t auto $ANDROID_ROOT 2>/dev/null
+      mount -o rw,remount -t auto $ANDROID_ROOT
+      if [ "$device_vendorpartition" == "true" ]; then
+        mount -o ro -t auto $VENDOR 2>/dev/null
+        mount -o rw,remount -t auto $VENDOR
+      fi
+      if [ -d /product ] && [ -n "$(cat $fstab | grep /product)" ]; then
+        mount -o ro -t auto /product 2>/dev/null
+        mount -o rw,remount -t auto /product
+      fi
     fi
-    mount -o ro -t auto $ANDROID_ROOT 2>/dev/null
-    mount -o rw,remount -t auto $ANDROID_ROOT
-    if [ "$system_as_root" == "true" ]; then
-      if [ "$device_abpartition" == "true" ]; then
+    if [ "$device_abpartition" == "true" ]; then
+      # Set ANDROID_ROOT in the global environment
+      if [ -d /system_root ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
+        export ANDROID_ROOT="/system_root"
+      fi
+      if [ -d /system ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
+        export ANDROID_ROOT="/system_root"
+      fi
+      if [ -d /system ] && [ -n "$(cat $fstab | grep /system)" ]; then
+        export ANDROID_ROOT="/system"
+      fi
+      if [ "$system_as_root" == "true" ]; then
         local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
-        umount $ANDROID_ROOT
         if [ "$ANDROID_ROOT" == "/system_root" ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
           mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot /system_root 2>/dev/null
           mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot /system_root
@@ -357,27 +377,11 @@ mount_all() {
           mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot /system 2>/dev/null
           mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot /system
         fi
-      fi
-    fi
-    if [ "$device_vendorpartition" == "true" ]; then
-      mount -o ro -t auto $VENDOR 2>/dev/null
-      mount -o rw,remount -t auto $VENDOR
-      if [ "$system_as_root" == "true" ]; then
-        if [ "$device_abpartition" == "true" ]; then
-          local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
-          umount $VENDOR
+        if [ "$device_vendorpartition" == "true" ]; then
           mount -o ro -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR 2>/dev/null
           mount -o rw,remount -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR
         fi
-      fi
-    fi
-    if [ -d /product ] && [ -n "$(cat $fstab | grep /product)" ]; then
-      mount -o ro -t auto /product 2>/dev/null
-      mount -o rw,remount -t auto /product
-      if [ "$system_as_root" == "true" ]; then
-        if [ "$device_abpartition" == "true" ]; then
-          local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
-          umount /product
+        if [ -d /product ] && [ -n "$(cat $fstab | grep /product)" ]; then
           mount -o ro -t auto /dev/block/bootdevice/by-name/product$slot /product 2>/dev/null
           mount -o rw,remount -t auto /dev/block/bootdevice/by-name/product$slot /product
         fi
