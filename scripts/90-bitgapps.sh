@@ -377,6 +377,15 @@ mount_all() {
           mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot /system 2>/dev/null
           mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot /system
         fi
+        # Retry, if previous mounting failed
+        if [ "$ANDROID_ROOT" == "/system_root" ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
+          mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot /system 2>/dev/null
+          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot /system
+        fi
+        if [ "$ANDROID_ROOT" == "/system" ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
+          mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot /system 2>/dev/null
+          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot /system
+        fi
         if [ "$device_vendorpartition" == "true" ]; then
           mount -o ro -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR 2>/dev/null
           mount -o rw,remount -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR
