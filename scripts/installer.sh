@@ -3700,7 +3700,7 @@ sdk_v30_install() {
       rm -rf $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
       rm -rf $SYSTEM_PRIV_APP/Phonesky/Phonesky.apk
       rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreRvc/PrebuiltGmsCoreRvc.apk
-      rm -rf $SYSTEM_PRIV_APP/PlayStoreOverlay/PlayStoreOverlay.apk
+      rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay/PlayStoreOverlay.apk
     }
 
     add_opt() {
@@ -3711,7 +3711,7 @@ sdk_v30_install() {
       cp -f $ZIPALIGN_OUTFILE/GoogleServicesFramework.apk $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
       cp -f $ZIPALIGN_OUTFILE/Phonesky.apk $SYSTEM_PRIV_APP/Phonesky/Phonesky.apk
       cp -f $ZIPALIGN_OUTFILE/PrebuiltGmsCoreRvc.apk $SYSTEM_PRIV_APP/PrebuiltGmsCoreRvc/PrebuiltGmsCoreRvc.apk
-      cp -f $ZIPALIGN_OUTFILE/PlayStoreOverlay.apk $SYSTEM_PRIV_APP/PlayStoreOverlay/PlayStoreOverlay.apk
+      cp -f $ZIPALIGN_OUTFILE/PlayStoreOverlay.apk $SYSTEM_OVERLAY/PlayStoreOverlay/PlayStoreOverlay.apk
     }
 
     perm_opt() {
@@ -3722,7 +3722,7 @@ sdk_v30_install() {
       chmod 0644 $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
       chmod 0644 $SYSTEM_PRIV_APP/Phonesky/Phonesky.apk
       chmod 0644 $SYSTEM_PRIV_APP/PrebuiltGmsCoreRvc/PrebuiltGmsCoreRvc.apk
-      chmod 0644 $SYSTEM_PRIV_APP/PlayStoreOverlay/PlayStoreOverlay.apk
+      chmod 0644 $SYSTEM_OVERLAY/PlayStoreOverlay/PlayStoreOverlay.apk
     }
 
     # Execute functions
