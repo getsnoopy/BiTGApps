@@ -1759,6 +1759,7 @@ on_setup_check() {
 # Set cts check property
 on_cts_check() {
   supported_cts_config="$(get_prop "ro.config.cts")"
+  supported_spl_config="$(get_prop "ro.config.spl")"
   supported_usf_config="$(get_prop "ro.config.usf")"
 }
 
@@ -6925,142 +6926,124 @@ cts_patch_odm() {
 
 # Update security patch level of system build
 spl_update_system() {
-  # Build security patch
-  if [ -n "$(cat $SYSTEM/build.prop | grep ro.build.version.security_patch)" ]; then
-    # Backup default SPL
-    test -d /data/spl || mkdir -p /data/spl
-    chmod 0755 /data/spl
-    chcon -h u:object_r:unlabeled:s0 "/data/spl"
-    sec="$(get_prop "ro.build.version.security_patch")"
-    if [ ! -f "/data/spl/spl.restore" ]; then
-      echo "export RESTORE_SYSTEM_SPL=$sec" >> /data/spl/spl.sh
-    fi
-    chmod 0755 /data/spl/spl.sh
-    chcon -h u:object_r:unlabeled:s0 "/data/spl/spl.sh"
-    # Apply SPL, if restore file not found
-    if [ ! -f "/data/spl/spl.restore" ]; then
-      grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $SYSTEM/build.prop > $TMP/system.prop
-      rm -rf $SYSTEM/build.prop
-      cp -f $TMP/system.prop $SYSTEM/build.prop
-      chmod 0644 $SYSTEM/build.prop
-      rm -rf $TMP/system.prop
-      insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
-      # Add system SPL property in OTA config
-      insert_line $SYSTEM/config.prop "ro.spl.system=true" after '# Begin build properties' "ro.spl.system=true"
-    fi
-    # Restore default SPL, if bootloop occurs
-    if [ -f "/data/spl/spl.restore" ]; then
-      # Load SPL string
-      . /data/spl/spl.sh
-      grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $SYSTEM/build.prop > $TMP/system.prop
-      rm -rf $SYSTEM/build.prop
-      cp -f $TMP/system.prop $SYSTEM/build.prop
-      chmod 0644 $SYSTEM/build.prop
-      rm -rf $TMP/system.prop
-      # Only add SPL variable
-      insert_line $SYSTEM/build.prop "ro.build.version.security_patch=$RESTORE_SYSTEM_SPL" after 'ro.build.version.release=' "ro.build.version.security_patch=$RESTORE_SYSTEM_SPL"
-      # Remove system SPL property from OTA config
-      grep -v "ro.spl.system=true" $SYSTEM/config.prop > $TMP/config.prop
-      rm -rf $SYSTEM/config.prop
-      cp -f $TMP/config.prop $SYSTEM/config.prop
-      chmod 0644 $SYSTEM/config.prop
-      rm -rf $TMP/config.prop
-    fi
-    test -f /data/spl/spl.restore || echo >> /data/spl/spl.restore
-  else
-    echo "ERROR: Unable to find target property 'ro.build.version.security_patch'" >> $TARGET_SYSTEM
-  fi
-}
-
-# Update security patch level of vendor build
-spl_update_vendor() {
-  if [ "$device_vendorpartition" == "true" ]; then
+  if [ "$supported_spl_config" == "true" ]; then
     # Build security patch
-    if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.security_patch)" ]; then
+    if [ -n "$(cat $SYSTEM/build.prop | grep ro.build.version.security_patch)" ]; then
       # Backup default SPL
       test -d /data/spl || mkdir -p /data/spl
       chmod 0755 /data/spl
       chcon -h u:object_r:unlabeled:s0 "/data/spl"
-      sec="$(get_prop "ro.vendor.build.security_patch")"
+      sec="$(get_prop "ro.build.version.security_patch")"
       if [ ! -f "/data/spl/spl.restore" ]; then
-        echo "export RESTORE_VENDOR_SPL=$sec" >> /data/spl/spl.sh
+        echo "export RESTORE_SYSTEM_SPL=$sec" >> /data/spl/spl.sh
       fi
       chmod 0755 /data/spl/spl.sh
       chcon -h u:object_r:unlabeled:s0 "/data/spl/spl.sh"
       # Apply SPL, if restore file not found
       if [ ! -f "/data/spl/spl.restore" ]; then
-        grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $VENDOR/build.prop > $TMP/vendor.prop
-        rm -rf $VENDOR/build.prop
-        cp -f $TMP/vendor.prop $VENDOR/build.prop
-        chmod 0644 $VENDOR/build.prop
-        rm -rf $TMP/vendor.prop
-        insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
-        # Add vendor SPL property in OTA config
-        insert_line $SYSTEM/config.prop "ro.spl.vendor=true" after '# Begin build properties' "ro.spl.vendor=true"
+        grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $SYSTEM/build.prop > $TMP/system.prop
+        rm -rf $SYSTEM/build.prop
+        cp -f $TMP/system.prop $SYSTEM/build.prop
+        chmod 0644 $SYSTEM/build.prop
+        rm -rf $TMP/system.prop
+        insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
       fi
       # Restore default SPL, if bootloop occurs
       if [ -f "/data/spl/spl.restore" ]; then
         # Load SPL string
         . /data/spl/spl.sh
-        grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $VENDOR/build.prop > $TMP/vendor.prop
-        rm -rf $VENDOR/build.prop
-        cp -f $TMP/vendor.prop $VENDOR/build.prop
-        chmod 0644 $VENDOR/build.prop
-        rm -rf $TMP/vendor.prop
+        grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $SYSTEM/build.prop > $TMP/system.prop
+        rm -rf $SYSTEM/build.prop
+        cp -f $TMP/system.prop $SYSTEM/build.prop
+        chmod 0644 $SYSTEM/build.prop
+        rm -rf $TMP/system.prop
         # Only add SPL variable
-        insert_line $VENDOR/build.prop "ro.vendor.build.security_patch=$RESTORE_VENDOR_SPL" after 'ro.product.first_api_level=' "ro.vendor.build.security_patch=$RESTORE_VENDOR_SPL"
-        # Remove vendor SPL property from OTA config
-        grep -v "ro.spl.vendor=true" $SYSTEM/config.prop > $TMP/config.prop
-        rm -rf $SYSTEM/config.prop
-        cp -f $TMP/config.prop $SYSTEM/config.prop
-        chmod 0644 $SYSTEM/config.prop
-        rm -rf $TMP/config.prop
+        insert_line $SYSTEM/build.prop "ro.build.version.security_patch=$RESTORE_SYSTEM_SPL" after 'ro.build.version.release=' "ro.build.version.security_patch=$RESTORE_SYSTEM_SPL"
       fi
       test -f /data/spl/spl.restore || echo >> /data/spl/spl.restore
     else
-      echo "ERROR: Unable to find target property 'ro.vendor.build.security_patch'" >> $TARGET_VENDOR
+      echo "ERROR: Unable to find target property 'ro.build.version.security_patch'" >> $TARGET_SYSTEM
+    fi
+  fi
+}
+
+# Update security patch level of vendor build
+spl_update_vendor() {
+  if [ "$supported_spl_config" == "true" ]; then
+    if [ "$device_vendorpartition" == "true" ]; then
+      # Build security patch
+      if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.security_patch)" ]; then
+        # Backup default SPL
+        test -d /data/spl || mkdir -p /data/spl
+        chmod 0755 /data/spl
+        chcon -h u:object_r:unlabeled:s0 "/data/spl"
+        sec="$(get_prop "ro.vendor.build.security_patch")"
+        if [ ! -f "/data/spl/spl.restore" ]; then
+          echo "export RESTORE_VENDOR_SPL=$sec" >> /data/spl/spl.sh
+        fi
+        chmod 0755 /data/spl/spl.sh
+        chcon -h u:object_r:unlabeled:s0 "/data/spl/spl.sh"
+        # Apply SPL, if restore file not found
+        if [ ! -f "/data/spl/spl.restore" ]; then
+          grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $VENDOR/build.prop > $TMP/vendor.prop
+          rm -rf $VENDOR/build.prop
+          cp -f $TMP/vendor.prop $VENDOR/build.prop
+          chmod 0644 $VENDOR/build.prop
+          rm -rf $TMP/vendor.prop
+          insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
+        fi
+        # Restore default SPL, if bootloop occurs
+        if [ -f "/data/spl/spl.restore" ]; then
+          # Load SPL string
+          . /data/spl/spl.sh
+          grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $VENDOR/build.prop > $TMP/vendor.prop
+          rm -rf $VENDOR/build.prop
+          cp -f $TMP/vendor.prop $VENDOR/build.prop
+          chmod 0644 $VENDOR/build.prop
+          rm -rf $TMP/vendor.prop
+          # Only add SPL variable
+          insert_line $VENDOR/build.prop "ro.vendor.build.security_patch=$RESTORE_VENDOR_SPL" after 'ro.product.first_api_level=' "ro.vendor.build.security_patch=$RESTORE_VENDOR_SPL"
+        fi
+        test -f /data/spl/spl.restore || echo >> /data/spl/spl.restore
+      else
+        echo "ERROR: Unable to find target property 'ro.vendor.build.security_patch'" >> $TARGET_VENDOR
+      fi
     fi
   fi
 }
 
 spl_boot_complete() {
-  # Patch bootanimation init
-  if [ -f "$SYSTEM/etc/init/bootanim.rc" ]; then
-    if [ -n "$(cat $SYSTEM/etc/init/bootanim.rc | grep init.spl.rc)" ]; then
-      echo "ERROR: Bootanim init patched already" >> $spl
-      rm -rf $SYSTEM/etc/init/init.spl.rc
-      cp -f $TMP/init.spl.rc $SYSTEM/etc/init/init.spl.rc
-      chmod 0644 $SYSTEM/etc/init/init.spl.rc
-      chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.spl.rc"
+  if [ "$supported_spl_config" == "true" ]; then
+    # Patch bootanimation init
+    if [ -f "$SYSTEM/etc/init/bootanim.rc" ]; then
+      if [ -n "$(cat $SYSTEM/etc/init/bootanim.rc | grep init.spl.rc)" ]; then
+        echo "ERROR: Bootanim init patched already" >> $spl
+        rm -rf $SYSTEM/etc/init/init.spl.rc
+        cp -f $TMP/init.spl.rc $SYSTEM/etc/init/init.spl.rc
+        chmod 0644 $SYSTEM/etc/init/init.spl.rc
+        chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.spl.rc"
+      else
+        insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.spl.rc" before 'service bootanim /system/bin/bootanimation' "import /system/etc/init/init.spl.rc"
+        sed -i '/init.spl.rc/G' $SYSTEM/etc/init/bootanim.rc
+        cp -f $TMP/init.spl.rc $SYSTEM/etc/init/init.spl.rc
+        chmod 0644 $SYSTEM/etc/init/init.spl.rc
+        chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.spl.rc"
+      fi
     else
-      insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.spl.rc" before 'service bootanim /system/bin/bootanimation' "import /system/etc/init/init.spl.rc"
-      sed -i '/init.spl.rc/G' $SYSTEM/etc/init/bootanim.rc
-      cp -f $TMP/init.spl.rc $SYSTEM/etc/init/init.spl.rc
-      chmod 0644 $SYSTEM/etc/init/init.spl.rc
-      chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.spl.rc"
+      echo "ERROR: Unable to find bootanim init" >> $spl
     fi
-    # Add SPL init property in OTA config
-    insert_line $SYSTEM/config.prop "ro.spl.init=true" after '# Begin build properties' "ro.spl.init=true"
-  else
-    echo "ERROR: Unable to find bootanim init" >> $spl
+    # Restore bootanimation init
+    if [ -f "/data/spl/init.restore" ]; then
+      grep -v "import /system/etc/init/init.spl.rc" $SYSTEM/etc/init/bootanim.rc > $TMP/bootanim.rc
+      sed -i '/^$/d' $TMP/bootanim.rc
+      rm -rf $SYSTEM/etc/init/bootanim.rc
+      cp -f $TMP/bootanim.rc $SYSTEM/etc/init/bootanim.rc
+      chmod 0644 $SYSTEM/etc/init/bootanim.rc
+      chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/bootanim.rc"
+      rm -rf $TMP/bootanim.rc
+    fi
+    test -f /data/spl/init.restore || echo >> /data/spl/init.restore
   fi
-  # Restore bootanimation init
-  if [ -f "/data/spl/init.restore" ]; then
-    grep -v "import /system/etc/init/init.spl.rc" $SYSTEM/etc/init/bootanim.rc > $TMP/bootanim.rc
-    sed -i '/^$/d' $TMP/bootanim.rc
-    rm -rf $SYSTEM/etc/init/bootanim.rc
-    cp -f $TMP/bootanim.rc $SYSTEM/etc/init/bootanim.rc
-    chmod 0644 $SYSTEM/etc/init/bootanim.rc
-    chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/bootanim.rc"
-    rm -rf $TMP/bootanim.rc
-    # Remove SPL init property from OTA config
-    grep -v "ro.spl.init=true" $SYSTEM/config.prop > $TMP/config.prop
-    rm -rf $SYSTEM/config.prop
-    cp -f $TMP/config.prop $SYSTEM/config.prop
-    chmod 0644 $SYSTEM/config.prop
-    rm -rf $TMP/config.prop
-  fi
-  test -f /data/spl/init.restore || echo >> /data/spl/init.restore
 }
 
 # Universal SafetyNet Fix; Works together with CTS patch
@@ -7119,6 +7102,11 @@ usf_v30() {
       fi
       test -f /data/keystore/keystore.lib || echo >> /data/keystore/keystore.lib
     fi
+  fi
+}
+
+usf_boot_complete() {
+  if [ "$supported_usf_config" == "true" ]; then
     # Patch bootanimation init
     if [ -f "$SYSTEM/etc/init/bootanim.rc" ]; then
       if [ -n "$(cat $SYSTEM/etc/init/bootanim.rc | grep init.usf.rc)" ]; then
@@ -7133,29 +7121,55 @@ usf_v30() {
         chmod 0644 $SYSTEM/etc/init/init.usf.rc
         chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.usf.rc"
       fi
-      # Add USF init property in OTA config
-      insert_line $SYSTEM/config.prop "ro.usf.init=true" after '# Begin build properties' "ro.usf.init=true"
     else
       echo "ERROR: Unable to find bootanim init" >> $usf
     fi
+    # Restore bootanimation init
+    if [ -f "/data/keystore/init.restore" ]; then
+      grep -v "import /system/etc/init/init.usf.rc" $SYSTEM/etc/init/bootanim.rc > $TMP/bootanim.rc
+      sed -i '/^$/d' $TMP/bootanim.rc
+      rm -rf $SYSTEM/etc/init/bootanim.rc
+      cp -f $TMP/bootanim.rc $SYSTEM/etc/init/bootanim.rc
+      chmod 0644 $SYSTEM/etc/init/bootanim.rc
+      chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/bootanim.rc"
+      rm -rf $TMP/bootanim.rc
+    fi
+    test -f /data/keystore/init.restore || echo >> /data/keystore/init.restore
   fi
-  # Restore bootanimation init
-  if [ -f "/keystore/spl/init.restore" ]; then
-    grep -v "import /system/etc/init/init.usf.rc" $SYSTEM/etc/init/bootanim.rc > $TMP/bootanim.rc
-    sed -i '/^$/d' $TMP/bootanim.rc
-    rm -rf $SYSTEM/etc/init/bootanim.rc
-    cp -f $TMP/bootanim.rc $SYSTEM/etc/init/bootanim.rc
-    chmod 0644 $SYSTEM/etc/init/bootanim.rc
-    chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/bootanim.rc"
-    rm -rf $TMP/bootanim.rc
-    # Remove USF init property from OTA config
-    grep -v "ro.usf.init=true" $SYSTEM/config.prop > $TMP/config.prop
-    rm -rf $SYSTEM/config.prop
-    cp -f $TMP/config.prop $SYSTEM/config.prop
-    chmod 0644 $SYSTEM/config.prop
-    rm -rf $TMP/config.prop
+}
+
+spl_ota_conf() {
+  if [ "$supported_spl_config" == "true" ]; then
+    # Add SPL property in OTA config
+    if [ ! -f "/data/spl/spl.restore" ]; then
+      insert_line $SYSTEM/config.prop "ro.spl.update=true" after '# Begin build properties' "ro.spl.update=true"
+    fi
+    # Remove SPL property from OTA config
+    if [ -f "/data/spl/spl.restore" ]; then
+      grep -v "ro.spl.update=true" $SYSTEM/config.prop > $TMP/config.prop
+      rm -rf $SYSTEM/config.prop
+      cp -f $TMP/config.prop $SYSTEM/config.prop
+      chmod 0644 $SYSTEM/config.prop
+      rm -rf $TMP/config.prop
+    fi
   fi
-  test -f /data/keystore/init.restore || echo >> /data/keystore/init.restore
+}
+
+usf_ota_conf() {
+  if [ "$supported_usf_config" == "true" ]; then
+    # Add USF property in OTA config
+    if [ ! -f "/data/keystore/keystore.bin" ]; then
+      insert_line $SYSTEM/config.prop "ro.usf.update=true" after '# Begin build properties' "ro.usf.update=true"
+    fi
+    # Remove USF property from OTA config
+    if [ -f "/data/keystore/keystore.bin" ]; then
+      grep -v "ro.usf.update=true" $SYSTEM/config.prop > $TMP/config.prop
+      rm -rf $SYSTEM/config.prop
+      cp -f $TMP/config.prop $SYSTEM/config.prop
+      chmod 0644 $SYSTEM/config.prop
+      rm -rf $TMP/config.prop
+    fi
+  fi
 }
 
 # Check whether CTS config file present in device or not
@@ -7224,6 +7238,9 @@ cts_patch() {
           spl_update_vendor
           spl_boot_complete
           usf_v30
+          usf_boot_complete
+          spl_ota_conf
+          usf_ota_conf
           insert_line $SYSTEM/config.prop "ro.cts.patch_status=verified" after '# Begin build properties' "ro.cts.patch_status=verified"
         fi
       fi

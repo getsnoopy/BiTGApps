@@ -188,6 +188,7 @@ tmp_dir() {
   test -d $TMP/fboot/priv-app || mkdir $TMP/fboot/priv-app
   test -d $TMP/fboot/lib64 || mkdir $TMP/fboot/lib64
   test -d $TMP/overlay || mkdir $TMP/overlay
+  test -d $TMP/init || mkdir $TMP/init
   test -d $TMP/keystore || mkdir $TMP/keystore
 }
 
@@ -209,6 +210,7 @@ del_tmp_dir() {
   rm -rf $TMP/rwg
   rm -rf $TMP/fboot
   rm -rf $TMP/overlay
+  rm -rf $TMP/init
   rm -rf $TMP/keystore
   rm -rf $TMP/SYS_APP_CP
   rm -rf $TMP/SYS_PRIV_CP
@@ -664,27 +666,21 @@ on_cts_status_check() {
   cts_patch_status="$(get_prop "ro.cts.patch_status")"
 }
 
-on_system_spl_check() {
-  system_spl_status="$(get_prop "ro.spl.system")"
+on_spl_status_check() {
+  spl_patch_status="$(get_prop "ro.spl.update")"
 }
 
-on_vendor_spl_check() {
-  vendor_spl_status="$(get_prop "ro.spl.vendor")"
-}
-
-on_spl_init_status() {
-  spl_init_status="$(get_prop "ro.spl.init")"
-}
-
-on_usf_init_status() {
-  usf_init_status="$(get_prop "ro.usf.init")"
+on_usf_status_check() {
+  usf_patch_status="$(get_prop "ro.usf.update")"
 }
 
 api_dependent_init() {
-  if [ "$spl_init_status" == "true" ]; then
+  API30_SPL="false"
+  if [ "$spl_patch_status" == "true" ]; then
     API30_SPL="true"
   fi
-  if [ "$usf_init_status" == "true" ]; then
+  API30_USF="false"
+  if [ "$usf_patch_status" == "true" ]; then
     API30_USF="true"
   fi
 }
@@ -959,27 +955,31 @@ cts_patch_odm() {
 # Update security patch level of system build
 spl_update_system() {
   # Build security patch
-  if [ -n "$(cat $SYSTEM/build.prop | grep ro.build.version.security_patch)" ]; then
-    grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $SYSTEM/build.prop > $TMP/system.prop
-    rm -rf $SYSTEM/build.prop
-    cp -f $TMP/system.prop $SYSTEM/build.prop
-    chmod 0644 $SYSTEM/build.prop
-    rm -rf $TMP/system.prop
-    insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
+  if [ "$spl_patch_status" == "true" ]; then
+    if [ -n "$(cat $SYSTEM/build.prop | grep ro.build.version.security_patch)" ]; then
+      grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $SYSTEM/build.prop > $TMP/system.prop
+      rm -rf $SYSTEM/build.prop
+      cp -f $TMP/system.prop $SYSTEM/build.prop
+      chmod 0644 $SYSTEM/build.prop
+      rm -rf $TMP/system.prop
+      insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
+    fi
   fi
 }
 
 # Update security patch level of vendor build
 spl_update_vendor() {
-  if [ "$device_vendorpartition" == "true" ]; then
-    # Build security patch
-    if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.security_patch)" ]; then
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $VENDOR/build.prop > $TMP/vendor.prop
-      rm -rf $VENDOR/build.prop
-      cp -f $TMP/vendor.prop $VENDOR/build.prop
-      chmod 0644 $VENDOR/build.prop
-      rm -rf $TMP/vendor.prop
-      insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
+  if [ "$spl_patch_status" == "true" ]; then
+    if [ "$device_vendorpartition" == "true" ]; then
+      # Build security patch
+      if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.security_patch)" ]; then
+        grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $VENDOR/build.prop > $TMP/vendor.prop
+        rm -rf $VENDOR/build.prop
+        cp -f $TMP/vendor.prop $VENDOR/build.prop
+        chmod 0644 $VENDOR/build.prop
+        rm -rf $TMP/vendor.prop
+        insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
+      fi
     fi
   fi
 }
@@ -993,26 +993,8 @@ cts_patch() {
       cts_patch_ext
       cts_patch_vendor
       cts_patch_odm
-      if [ "$system_spl_status" == "true" ]; then
-        spl_update_system
-      fi
-      if [ "$vendor_spl_status" == "true" ]; then
-        spl_update_vendor
-      fi
-    fi
-  fi
-}
-
-patch_bootanim_init() {
-  if [ "$spl_init_status" == "true" ]; then
-    if [ -f "$SYSTEM/etc/init/bootanim.rc" ]; then
-      insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.spl.rc" before 'service bootanim /system/bin/bootanimation' "import /system/etc/init/init.spl.rc"
-      sed -i '/init.spl.rc/G' $SYSTEM/etc/init/bootanim.rc
-    fi
-  fi
-  if [ "$usf_init_status" == "true" ]; then
-    if [ -f "$SYSTEM/etc/init/bootanim.rc" ]; then
-      insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.usf.rc" after 'import /system/etc/init/init.spl.rc' "import /system/etc/init/init.usf.rc"
+      spl_update_system
+      spl_update_vendor
     fi
   fi
 }
@@ -1985,6 +1967,7 @@ backupdirSYSOverlay() {
 
 backupdirSYSInit() {
   SYS_INIT="
+    $SYSTEM/etc/init/bootanim.rc
     $SYSTEM/etc/init/init.spl.rc
     $SYSTEM/etc/init/init.usf.rc"
 }
@@ -2142,6 +2125,7 @@ restoredirTMPOverlay() {
 
 restoredirTMPInit() {
   TMP_INIT="
+    $TMP/init/bootanim.rc
     $TMP/init/init.spl.rc
     $TMP/init/init.usf.rc"
 }
@@ -2654,8 +2638,8 @@ case "$1" in
     trigger_rwg_backup
     $API30 && backupdirSYSOverlay
     $API30 && mv $SYS_OVERLAY $TMP/overlay 2>/dev/null
-    on_spl_init_status
-    on_usf_init_status
+    on_spl_status_check
+    on_usf_status_check
     api_dependent_init
     $API30_SPL && backupdirSYSInit
     $API30_SPL && mv $SYS_INIT $TMP/init 2>/dev/null
@@ -2688,13 +2672,17 @@ case "$1" in
     mv $TMP_XBIN $S/xbin 2>/dev/null
     $API30 && restoredirTMPOverlay
     $API30 && mv $TMP_OVERLAY $SYSTEM/overlay 2>/dev/null
-    on_spl_init_status
-    on_usf_init_status
+    on_spl_status_check
+    on_usf_status_check
     api_dependent_init
     $API30_SPL && restoredirTMPInit
     $API30_SPL && mv $TMP_INIT $SYSTEM/etc/init 2>/dev/null
+    $API30_SPL && chmod 0644 $SYSTEM/etc/init/bootanim.rc 2>/dev/null
     $API30_SPL && chmod 0644 $SYSTEM/etc/init/init.spl.rc 2>/dev/null
     $API30_SPL && chmod 0644 $SYSTEM/etc/init/init.usf.rc 2>/dev/null
+    $API30_SPL && chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/bootanim.rc"
+    $API30_SPL && chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.spl.rc"
+    $API30_SPL && chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.usf.rc"
     $API30_USF && restoredirTMPKeystore
     $API30_USF && mv $TMP_KEYSTORE_BIN $SYSTEM/bin 2>/dev/null
     $API30_USF && mv $TMP_KEYSTORE_LIB $SYSTEM/lib64 2>/dev/null
@@ -2714,10 +2702,9 @@ case "$1" in
     set_release_tag
     cts_defaults
     on_cts_status_check
-    on_system_spl_check
-    on_vendor_spl_check
+    on_spl_status_check
+    on_usf_status_check
     cts_patch
-    patch_bootanim_init
     sdk_fix
     selinux_fix
     bind_facelock_lib

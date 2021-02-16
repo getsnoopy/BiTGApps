@@ -20,4 +20,5 @@
 
 # Property for installing safetynet patch
 ro.config.cts=true
+ro.config.spl=true
 ro.config.usf=true
