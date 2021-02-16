@@ -936,8 +936,14 @@ boot_A() {
           chmod 0644 $SYSTEM/etc/init/init.boot.rc
           chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.boot.rc"
         else
-          insert_line $INIT "import /system/etc/init/init.boot.rc" before 'service bootanim /system/bin/bootanimation' "import /system/etc/init/init.boot.rc"
-          sed -i '/init.boot.rc/G' $INIT
+          if [ -n "$(cat $INIT | grep init.spl.rc)" ]; then
+            insert_line $INIT "import /system/etc/init/init.boot.rc" after 'import /system/etc/init/init.spl.rc' "import /system/etc/init/init.boot.rc"
+          elif [ -n "$(cat $INIT | grep init.usf.rc)" ]; then
+            insert_line $INIT "import /system/etc/init/init.boot.rc" before 'import /system/etc/init/init.usf.rc' "import /system/etc/init/init.boot.rc"
+          else
+            insert_line $INIT "import /system/etc/init/init.boot.rc" before 'service bootanim /system/bin/bootanimation' "import /system/etc/init/init.boot.rc"
+            sed -i '/init.boot.rc/G' $INIT
+          fi
           cp -f $TMP/init.boot.rc $SYSTEM/etc/init/init.boot.rc
           chmod 0644 $SYSTEM/etc/init/init.boot.rc
           chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.boot.rc"
