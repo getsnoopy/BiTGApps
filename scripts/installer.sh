@@ -1361,6 +1361,7 @@ on_install_failed() {
   cp -f $SYSTEM/config.prop $TMP/bitgapps/config.prop 2>/dev/null
   cp -f $SYSTEM/product/build.prop $TMP/bitgapps/product.prop 2>/dev/null
   cp -f $SYSTEM/system_ext/build.prop $TMP/bitgapps/ext.prop 2>/dev/null
+  cp -f $ANDROID_ROOT/odm/etc/build.prop $TMP/bitgapps/odm.prop 2>/dev/null
   if [ "$device_vendorpartition" == "true" ]; then
     cp -f $VENDOR/build.prop $TMP/bitgapps/vendor.prop 2>/dev/null
     cp -f $VENDOR/default.prop $TMP/bitgapps/vendor.default 2>/dev/null
@@ -1398,6 +1399,7 @@ on_conf_error() {
   cp -f $SYSTEM/config.prop $TMP/bitgapps/config.prop 2>/dev/null
   cp -f $SYSTEM/product/build.prop $TMP/bitgapps/product.prop 2>/dev/null
   cp -f $SYSTEM/system_ext/build.prop $TMP/bitgapps/ext.prop 2>/dev/null
+  cp -f $ANDROID_ROOT/odm/etc/build.prop $TMP/bitgapps/odm.prop 2>/dev/null
   if [ "$device_vendorpartition" == "true" ]; then
     cp -f $VENDOR/build.prop $TMP/bitgapps/vendor.prop 2>/dev/null
     cp -f $VENDOR/default.prop $TMP/bitgapps/vendor.default 2>/dev/null
@@ -1440,6 +1442,7 @@ on_install_complete() {
   cp -f $SYSTEM/config.prop $TMP/bitgapps/config.prop 2>/dev/null
   cp -f $SYSTEM/product/build.prop $TMP/bitgapps/product.prop 2>/dev/null
   cp -f $SYSTEM/system_ext/build.prop $TMP/bitgapps/ext.prop 2>/dev/null
+  cp -f $ANDROID_ROOT/odm/etc/build.prop $TMP/bitgapps/odm.prop 2>/dev/null
   if [ "$device_vendorpartition" == "true" ]; then
     cp -f $VENDOR/build.prop $TMP/bitgapps/vendor.prop 2>/dev/null
     cp -f $VENDOR/default.prop $TMP/bitgapps/vendor.default 2>/dev/null
