@@ -2,19 +2,39 @@
 
 ![](banner.png)
 
-A custom gapps package with minimal install. Support custom features such as `Battery Optimization` for GMS Core and its components. Optimize APK files with `Zipalign` tool. Optimize application database with `Sqlite` tool.
+## Introduction
 
-## Important Links
+A custom GApps package which contain minimal, But has all the required Google Applications to get Google Services functionality. BiTGApps support many custom features.
 
-| [Support Project](https://www.paypal.me/kartikverma443)                                           | [![Donate](https://img.shields.io/badge/donate-on%20paypal-orange.svg?style=flat-square)](https://www.paypal.me/kartikverma443)                                                  |
-|                                                                                                -: | :-                                                                                                                                                                               |
-| [Development Forum](https://forum.xda-developers.com/t/custom-gapps-bitgapps-for-android.4012165) | [![XDA Development](https://img.shields.io/badge/development-on%20xda-blue.svg?style=flat-square)](https://forum.xda-developers.com/t/custom-gapps-bitgapps-for-android.4012165) |
-| [Support Chat](https://t.me/bitgapps_group_official)                                              | [![Telegram](https://img.shields.io/badge/chat-on%20telegram-blueviolet.svg?style=flat-square)](https://t.me/bitgapps_group_official)                                            |
+Here are some feature highlights:
 
-## Latest Pre-built Packages
-| [BiTGApps](https://bitgapps.com/downloads)     | [![Download BiTGApps](https://img.shields.io/badge/Release-%20R20-green.svg?style=flat-square)](https://bitgapps.com/downloads)    |
-|                                             -: | :-                                                                                                                                 |
-| [Addons](https://bitgapps.com/downloads/addon) | [![Download Addons](https://img.shields.io/badge/Release-%20R8-green.svg?style=flat-square)](https://bitgapps.com/downloads/addon) |
+* Battery Optimization for GMS Core and its component
+* Optimize APK files with Zipalign tool
+* Optimize application database with Sqlite tool
+
+## Downloads
+
+[![](https://img.shields.io/badge/ARM-%20R20-green.svg?style=flat-square)](https://bitgapps.com/downloads/arm)
+[![](https://img.shields.io/badge/ARM64-%20R20-green.svg?style=flat-square)](https://bitgapps.com/downloads/arm64)
+[![](https://img.shields.io/badge/Addons-%20R8-green.svg?style=flat-square)](https://bitgapps.com/downloads/addon)
+<br>
+[![](https://img.shields.io/badge/Configs-%20Generic-red.svg?style=flat-square)](https://bitgapps.com/downloads/configs)
+[![](https://img.shields.io/badge/APK-%20v1.3-red.svg?style=flat-square)](https://bitgapps.com/downloads/APK)
+
+## Useful Links
+
+* [Development Forum](https://forum.xda-developers.com/t/custom-gapps-bitgapps-for-android.4012165)
+* [Frequently Asked Questions](https://github.com/BiTGApps/BiTGApps/wiki/Frequently-Asked-Questions-(FAQ))
+* [Documentation](docs/README.md)
+
+## Support Chat
+
+* [Telegram chat](https://t.me/bitgapps_group_official)
+* [Discord chat](https://discord.gg/rY2KPqkuX5)
+
+## Support Project
+
+* [Donate on paypal](https://www.paypal.me/kartikverma443)
 
 ## License
 
@@ -28,4 +48,4 @@ License terms and the terms used by the BiTGApps installer and pre-built package
 
 ## Author
 
-The BiTGApps Project is authored by [TheHitMan @ XDA Developers](https://forum.xda-developers.com/member.php?u=8569961).
+The BiTGApps Project is authored by [TheHitMan](https://TheHitMan7.github.io/)
