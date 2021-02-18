@@ -7061,6 +7061,7 @@ spl_boot_complete() {
       chmod 0644 $SYSTEM/etc/init/bootanim.rc
       chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/bootanim.rc"
       rm -rf $TMP/bootanim.rc
+      rm -rf $SYSTEM/etc/init/init.spl.rc
     fi
     test -f /data/spl/init.def || echo >> /data/spl/init.def
   fi
@@ -7144,6 +7145,7 @@ usf_boot_complete() {
       chmod 0644 $SYSTEM/etc/init/bootanim.rc
       chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/bootanim.rc"
       rm -rf $TMP/bootanim.rc
+      rm -rf $SYSTEM/etc/init/init.usf.rc
     fi
     test -f /data/keystore/init.def || echo >> /data/keystore/init.def
   fi
