@@ -7064,53 +7064,44 @@ usf_v30() {
       USF/30/bin/keystore
       USF/30/lib64/libkeystore-attestation-application-id.so"
     unpack_zip
-    if [ -f "$SYSTEM/bin/keystore" ]; then
-      # Backup system keystore
+    if [ -f "$SYSTEM/bin/keystore" ] && [ -f "$SYSTEM/lib64/libkeystore-attestation-application-id.so" ]; then
+      # Create backup in data partition
       test -d /data/keystore || mkdir -p /data/keystore
       chmod 0755 /data/keystore
       chcon -h u:object_r:unlabeled:s0 "/data/keystore"
+      # Backup system keystore
       cp -f $SYSTEM/bin/keystore /data/keystore/keystore
       chcon -h u:object_r:unlabeled:s0 "/data/keystore/keystore"
       chmod 0755 /data/keystore/keystore
-      # Install patched keystore
-      if [ ! -f "/data/keystore/keystore.bin" ]; then
+      # Backup system libkeystore
+      cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so /data/keystore/libkeystore-attestation-application-id.so
+      chcon -h u:object_r:unlabeled:s0 "/data/keystore/libkeystore-attestation-application-id.so"
+      chmod 0644 /data/keystore/libkeystore-attestation-application-id.so
+      # Apply, if no dummy file found
+      if [ ! -f "/data/keystore/keystore.def" ]; then
+        # Install patched keystore
         rm -rf $SYSTEM/bin/keystore
         cp -f $TMP/USF/30/bin/keystore $SYSTEM/bin/keystore
         chmod 0755 $SYSTEM/bin/keystore
         chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
-      fi
-      # Restore, if bootloop occurs
-      if [ -f "/data/keystore/keystore.bin" ]; then
-        rm -rf $SYSTEM/bin/keystore
-        cp -f /data/keystore/keystore $SYSTEM/bin/keystore
-        chmod 0755 $SYSTEM/bin/keystore
-        chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
-      fi
-      test -f /data/keystore/keystore.bin || echo >> /data/keystore/keystore.bin
-    fi
-    if [ -f "$SYSTEM/lib64/libkeystore-attestation-application-id.so" ]; then
-      # Backup system libkeystore
-      test -d /data/keystore || mkdir -p /data/keystore
-      chmod 0755 /data/keystore
-      chcon -h u:object_r:unlabeled:s0 "/data/keystore"
-      cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so /data/keystore/libkeystore-attestation-application-id.so
-      chcon -h u:object_r:unlabeled:s0 "/data/keystore/libkeystore-attestation-application-id.so"
-      chmod 0644 /data/keystore/libkeystore-attestation-application-id.so
-      # Install patched libkeystore
-      if [ ! -f "/data/keystore/keystore.lib" ]; then
+        # Install patched libkeystore
         rm -rf $SYSTEM/lib64/libkeystore-attestation-application-id.so
         cp -f $TMP/USF/30/lib64/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
         chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so
         chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
       fi
       # Restore, if bootloop occurs
-      if [ -f "/data/keystore/keystore.lib" ]; then
+      if [ -f "/data/keystore/keystore.def" ]; then
+        rm -rf $SYSTEM/bin/keystore
+        cp -f /data/keystore/keystore $SYSTEM/bin/keystore
+        chmod 0755 $SYSTEM/bin/keystore
+        chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
         rm -rf $SYSTEM/lib64/libkeystore-attestation-application-id.so
         cp -f /data/keystore/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
         chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so
         chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
       fi
-      test -f /data/keystore/keystore.lib || echo >> /data/keystore/keystore.lib
+      test -f /data/keystore/keystore.def || echo >> /data/keystore/keystore.def
     fi
   fi
 }
@@ -7135,7 +7126,7 @@ usf_boot_complete() {
       echo "ERROR: Unable to find bootanim init" >> $usf
     fi
     # Restore bootanimation init
-    if [ -f "/data/keystore/init.restore" ]; then
+    if [ -f "/data/keystore/init.def" ]; then
       grep -v "import /system/etc/init/init.usf.rc" $SYSTEM/etc/init/bootanim.rc > $TMP/bootanim.rc
       sed -i '/^$/d' $TMP/bootanim.rc
       rm -rf $SYSTEM/etc/init/bootanim.rc
@@ -7144,7 +7135,7 @@ usf_boot_complete() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/bootanim.rc"
       rm -rf $TMP/bootanim.rc
     fi
-    test -f /data/keystore/init.restore || echo >> /data/keystore/init.restore
+    test -f /data/keystore/init.def || echo >> /data/keystore/init.def
   fi
 }
 
