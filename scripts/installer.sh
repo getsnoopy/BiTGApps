@@ -6944,13 +6944,13 @@ spl_update_system() {
       chmod 0755 /data/spl
       chcon -h u:object_r:unlabeled:s0 "/data/spl"
       sec="$(get_prop "ro.build.version.security_patch")"
-      if [ ! -f "/data/spl/spl.restore" ]; then
+      if [ ! -f "/data/spl/spl.system" ]; then
         echo "export RESTORE_SYSTEM_SPL=$sec" >> /data/spl/spl.sh
       fi
       chmod 0755 /data/spl/spl.sh
       chcon -h u:object_r:unlabeled:s0 "/data/spl/spl.sh"
-      # Apply SPL, if restore file not found
-      if [ ! -f "/data/spl/spl.restore" ]; then
+      # Apply SPL, if no dummy file found
+      if [ ! -f "/data/spl/spl.system" ]; then
         grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $SYSTEM/build.prop > $TMP/system.prop
         rm -rf $SYSTEM/build.prop
         cp -f $TMP/system.prop $SYSTEM/build.prop
@@ -6959,7 +6959,7 @@ spl_update_system() {
         insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
       fi
       # Restore default SPL, if bootloop occurs
-      if [ -f "/data/spl/spl.restore" ]; then
+      if [ -f "/data/spl/spl.system" ]; then
         # Load SPL string
         . /data/spl/spl.sh
         grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $SYSTEM/build.prop > $TMP/system.prop
@@ -6970,7 +6970,7 @@ spl_update_system() {
         # Only add SPL variable
         insert_line $SYSTEM/build.prop "ro.build.version.security_patch=$RESTORE_SYSTEM_SPL" after 'ro.build.version.release=' "ro.build.version.security_patch=$RESTORE_SYSTEM_SPL"
       fi
-      test -f /data/spl/spl.restore || echo >> /data/spl/spl.restore
+      test -f /data/spl/spl.system || echo >> /data/spl/spl.system
     else
       echo "ERROR: Unable to find target property 'ro.build.version.security_patch'" >> $TARGET_SYSTEM
     fi
@@ -6988,13 +6988,13 @@ spl_update_vendor() {
         chmod 0755 /data/spl
         chcon -h u:object_r:unlabeled:s0 "/data/spl"
         sec="$(get_prop "ro.vendor.build.security_patch")"
-        if [ ! -f "/data/spl/spl.restore" ]; then
+        if [ ! -f "/data/spl/spl.vendor" ]; then
           echo "export RESTORE_VENDOR_SPL=$sec" >> /data/spl/spl.sh
         fi
         chmod 0755 /data/spl/spl.sh
         chcon -h u:object_r:unlabeled:s0 "/data/spl/spl.sh"
-        # Apply SPL, if restore file not found
-        if [ ! -f "/data/spl/spl.restore" ]; then
+        # Apply SPL, if no dummy file found
+        if [ ! -f "/data/spl/spl.vendor" ]; then
           grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $VENDOR/build.prop > $TMP/vendor.prop
           rm -rf $VENDOR/build.prop
           cp -f $TMP/vendor.prop $VENDOR/build.prop
@@ -7003,7 +7003,7 @@ spl_update_vendor() {
           insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
         fi
         # Restore default SPL, if bootloop occurs
-        if [ -f "/data/spl/spl.restore" ]; then
+        if [ -f "/data/spl/spl.vendor" ]; then
           # Load SPL string
           . /data/spl/spl.sh
           grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $VENDOR/build.prop > $TMP/vendor.prop
@@ -7014,7 +7014,7 @@ spl_update_vendor() {
           # Only add SPL variable
           insert_line $VENDOR/build.prop "ro.vendor.build.security_patch=$RESTORE_VENDOR_SPL" after 'ro.product.first_api_level=' "ro.vendor.build.security_patch=$RESTORE_VENDOR_SPL"
         fi
-        test -f /data/spl/spl.restore || echo >> /data/spl/spl.restore
+        test -f /data/spl/spl.vendor || echo >> /data/spl/spl.vendor
       else
         echo "ERROR: Unable to find target property 'ro.vendor.build.security_patch'" >> $TARGET_VENDOR
       fi
@@ -7043,7 +7043,7 @@ spl_boot_complete() {
       echo "ERROR: Unable to find bootanim init" >> $spl
     fi
     # Restore bootanimation init
-    if [ -f "/data/spl/init.restore" ]; then
+    if [ -f "/data/spl/init.def" ]; then
       grep -v "import /system/etc/init/init.spl.rc" $SYSTEM/etc/init/bootanim.rc > $TMP/bootanim.rc
       sed -i '/^$/d' $TMP/bootanim.rc
       rm -rf $SYSTEM/etc/init/bootanim.rc
@@ -7052,7 +7052,7 @@ spl_boot_complete() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/bootanim.rc"
       rm -rf $TMP/bootanim.rc
     fi
-    test -f /data/spl/init.restore || echo >> /data/spl/init.restore
+    test -f /data/spl/init.def || echo >> /data/spl/init.def
   fi
 }
 
