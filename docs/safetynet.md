@@ -15,11 +15,6 @@ Patched keystore used for passing **CTS profile**.
 
 Only Android R can used safetynet patch from BiTGApps.
 
-## Usage
-
-You need to place config file before installing BiTGApps. If you install first and place config file later. It will be ineffective.
-If you forgot about config file. You can add config file and re-install BiTGApps again.
-
 ## Boot Conflicts
 
 * Security Patch Level

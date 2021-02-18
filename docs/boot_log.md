@@ -1,8 +1,7 @@
 # Generating Boot Logs
 
-You can generate logcat and dmesg log using BiTGApps itself. For that you need **boot-config.prop** file, for enabling boot log functionality.
-The config file should be placed in any storage before you install BiTGApps. If you install first and place config file later. It will be,
-ineffective. You will see some texts regarding this during installation, if config file not found.
+You can generate logcat and dmesg log using BiTGApps itself. Boot log functionality is not enabled by default. For that you need **boot-config.prop** file.
+When this config file not present in device, at the time of installation you will be notified with following texts.
 
 ```! Boot config not found```
 

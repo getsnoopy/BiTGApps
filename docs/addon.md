@@ -24,8 +24,3 @@ By default everything inside config file is set to false. You need change `false
 **Example:**
 
 * `ro.config.assistant=false` to `ro.config.assistant=true`
-
-## Usage
-
-You need to place config file before installing BiTGApps. If you install first and place config file later. It will be ineffective.
-If you forgot about config file. You can add config file and re-install BiTGApps again.
