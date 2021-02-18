@@ -20,5 +20,7 @@
 
 # Do not restore default SPL on re-install
 on property:sys.boot_completed=1
-    rm /data/spl/spl.restore
     rm /data/spl/spl.sh
+    rm /data/spl/spl.system
+    rm /data/spl/spl.vendor
+    rm /data/spl/init.def

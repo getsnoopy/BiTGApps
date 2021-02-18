@@ -21,6 +21,6 @@
 # Do not restore system keystore on re-install
 on property:sys.boot_completed=1
     rm /data/keystore/keystore
-    rm /data/keystore/keystore.bin
     rm /data/keystore/libkeystore-attestation-application-id.so
-    rm /data/keystore/keystore.lib
+    rm /data/keystore/keystore.def
+    rm /data/keystore/init.def
