@@ -7152,11 +7152,11 @@ usf_boot_complete() {
 spl_ota_conf() {
   if [ "$supported_spl_config" == "true" ]; then
     # Add SPL property in OTA config
-    if [ ! -f "/data/spl/spl.restore" ]; then
+    if [ ! -f "/data/spl/spl.sh" ]; then
       insert_line $SYSTEM/config.prop "ro.spl.update=true" after '# Begin build properties' "ro.spl.update=true"
     fi
     # Remove SPL property from OTA config
-    if [ -f "/data/spl/spl.restore" ]; then
+    if [ -f "/data/spl/spl.sh" ]; then
       grep -v "ro.spl.update=true" $SYSTEM/config.prop > $TMP/config.prop
       rm -rf $SYSTEM/config.prop
       cp -f $TMP/config.prop $SYSTEM/config.prop
@@ -7169,11 +7169,11 @@ spl_ota_conf() {
 usf_ota_conf() {
   if [ "$supported_usf_config" == "true" ]; then
     # Add USF property in OTA config
-    if [ ! -f "/data/keystore/keystore.bin" ]; then
+    if [ ! -f "/data/keystore/keystore.def" ]; then
       insert_line $SYSTEM/config.prop "ro.usf.update=true" after '# Begin build properties' "ro.usf.update=true"
     fi
     # Remove USF property from OTA config
-    if [ -f "/data/keystore/keystore.bin" ]; then
+    if [ -f "/data/keystore/keystore.def" ]; then
       grep -v "ro.usf.update=true" $SYSTEM/config.prop > $TMP/config.prop
       rm -rf $SYSTEM/config.prop
       cp -f $TMP/config.prop $SYSTEM/config.prop
