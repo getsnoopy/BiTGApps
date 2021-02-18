@@ -1506,6 +1506,7 @@ cleanup() {
   rm -rf $TMP/gms_opt_v29.log
   rm -rf $TMP/gms_opt_v30.log
   rm -rf $TMP/init.boot.rc
+  rm -rf $TMP/init.spl.rc
   rm -rf $TMP/init.usf.rc
   rm -rf $TMP/SAR.log
   rm -rf $TMP/AB.log
