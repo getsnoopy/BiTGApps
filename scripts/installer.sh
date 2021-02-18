@@ -130,6 +130,9 @@ set_bb() {
       rm -rf $TMP/data.prop
       rm -rf $TMP/g.prop
       rm -rf $TMP/installer.sh
+      rm -rf $TMP/init.boot.rc
+      rm -rf $TMP/init.spl.rc
+      rm -rf $TMP/init.usf.rc
       rm -rf $TMP/pm.sh
       rm -rf $TMP/sqlite3
       rm -rf $TMP/util_functions.sh
