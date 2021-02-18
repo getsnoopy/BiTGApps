@@ -1723,7 +1723,8 @@ get_addon_config_path() {
 }
 
 profile() {
-  BUILD_PROPFILE="$SYSTEM/build.prop"
+  SYSTEM_PROPFILE="$SYSTEM/build.prop"
+  VENDOR_PROPFILE="$VENDOR/build.prop"
   BOOT_PROPFILE="$BOOT_CONFIG_DEST"
   SETUP_PROPFILE="$SETUP_CONFIG_DEST"
   CTS_PROPFILE="$CTS_CONFIG_DEST"
@@ -1737,7 +1738,13 @@ get_file_prop() {
 
 get_prop() {
   # Check known .prop files using get_file_prop
-  for f in $BUILD_PROPFILE $BOOT_PROPFILE $SETUP_PROPFILE $CTS_PROPFILE $ADDON_PROPFILE $DATA_PROPFILE; do
+  for f in $SYSTEM_PROPFILE \
+           $VENDOR_PROPFILE \
+           $BOOT_PROPFILE \
+           $SETUP_PROPFILE \
+           $CTS_PROPFILE \
+           $ADDON_PROPFILE \
+           $DATA_PROPFILE; do
     if [ -e "$f" ]; then
       prop="$(get_file_prop "$f" "$1")"
       if [ -n "$prop" ]; then
