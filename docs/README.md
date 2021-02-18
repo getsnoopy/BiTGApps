@@ -1,6 +1,6 @@
 # BiTGApps Documentation
 
-* [Config Usage](config.md)
+* [Config Usage](configs.md)
 * [Generating Boot Logs](boot_log.md)
 * [SetupWizard](setupwizard.md)
 * [Safetynet Patch](safetynet.md)
