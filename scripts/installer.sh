@@ -7049,6 +7049,8 @@ spl_boot_complete() {
         chmod 0644 $SYSTEM/etc/init/init.spl.rc
         chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.spl.rc"
       fi
+      # Wipe temporary backup
+      WIPE_SPL_BACKUP="false"
     else
       echo "ERROR: Unable to find bootanim init" >> $spl
     fi
@@ -7135,6 +7137,8 @@ usf_boot_complete() {
         chmod 0644 $SYSTEM/etc/init/init.usf.rc
         chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.usf.rc"
       fi
+      # Wipe temporary backup
+      WIPE_USF_BACKUP="false"
     else
       echo "ERROR: Unable to find bootanim init" >> $usf
     fi
