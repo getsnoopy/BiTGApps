@@ -7062,6 +7062,8 @@ spl_boot_complete() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/bootanim.rc"
       rm -rf $TMP/bootanim.rc
       rm -rf $SYSTEM/etc/init/init.spl.rc
+      # Wipe temporary backup
+      WIPE_SPL_BACKUP="true"
     fi
     test -f /data/spl/init.def || echo >> /data/spl/init.def
   fi
@@ -7146,6 +7148,8 @@ usf_boot_complete() {
       chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/bootanim.rc"
       rm -rf $TMP/bootanim.rc
       rm -rf $SYSTEM/etc/init/init.usf.rc
+      # Wipe temporary backup
+      WIPE_USF_BACKUP="true"
     fi
     test -f /data/keystore/init.def || echo >> /data/keystore/init.def
   fi
@@ -7183,6 +7187,11 @@ usf_ota_conf() {
       rm -rf $TMP/config.prop
     fi
   fi
+}
+
+Wipe_tmp_backup() {
+  $WIPE_SPL_BACKUP && rm -rf /data/spl
+  $WIPE_USF_BACKUP && rm -rf /data/keystore
 }
 
 # Check whether CTS config file present in device or not
@@ -7572,6 +7581,7 @@ post_install() {
     get_cts_config
     print_title_cts
     cts_patch
+    Wipe_tmp_backup
     sdk_fix
     selinux_fix
     set_release_tag
