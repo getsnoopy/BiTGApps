@@ -418,11 +418,11 @@ system_layout() {
     elif [ -f /system/system/build.prop ] && [ -n "$(cat $fstab | grep /system)" ]; then
       S="/system/system"
     elif [ "$device_abpartition" == "true" ]; then
-      S="/system/system"
+      S="/system_root/system"
     elif [ "$device_abpartition" == "true" ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
       S="/system_root/system"
     elif [ "$device_abpartition" == "true" ] && [ -n "$(cat $fstab | grep /system)" ]; then
-      S="/system/system"
+      S="/system_root/system"
     elif [ -f /system/build.prop ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
       S="/system"
     elif [ -f /system/build.prop ] && [ -n "$(cat $fstab | grep /system)" ]; then
