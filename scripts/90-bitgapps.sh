@@ -1967,15 +1967,15 @@ backupdirSYSOverlay() {
 
 backupdirSYSInit() {
   SYS_INIT="
-    $SYSTEM/etc/init/bootanim.rc
-    $SYSTEM/etc/init/init.spl.rc
-    $SYSTEM/etc/init/init.usf.rc"
+    $S/etc/init/bootanim.rc
+    $S/etc/init/init.spl.rc
+    $S/etc/init/init.usf.rc"
 }
 
 backupdirSYSKeystore() {
   SYS_KEYSTORE="
-    $SYSTEM/bin/keystore
-    $SYSTEM/lib64/libkeystore-attestation-application-id.so"
+    $S/bin/keystore
+    $S/lib64/libkeystore-attestation-application-id.so"
 }
 
 # Set restore function
@@ -2676,20 +2676,20 @@ case "$1" in
     on_usf_status_check
     api_dependent_init
     $API30_SPL && restoredirTMPInit
-    $API30_SPL && mv $TMP_INIT $SYSTEM/etc/init 2>/dev/null
-    $API30_SPL && chmod 0644 $SYSTEM/etc/init/bootanim.rc 2>/dev/null
-    $API30_SPL && chmod 0644 $SYSTEM/etc/init/init.spl.rc 2>/dev/null
-    $API30_SPL && chmod 0644 $SYSTEM/etc/init/init.usf.rc 2>/dev/null
-    $API30_SPL && chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/bootanim.rc"
-    $API30_SPL && chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.spl.rc"
-    $API30_SPL && chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.usf.rc"
+    $API30_SPL && mv $TMP_INIT $S/etc/init 2>/dev/null
+    $API30_SPL && chmod 0644 $S/etc/init/bootanim.rc 2>/dev/null
+    $API30_SPL && chmod 0644 $S/etc/init/init.spl.rc 2>/dev/null
+    $API30_SPL && chmod 0644 $S/etc/init/init.usf.rc 2>/dev/null
+    $API30_SPL && chcon -h u:object_r:system_file:s0 "$S/etc/init/bootanim.rc"
+    $API30_SPL && chcon -h u:object_r:system_file:s0 "$S/etc/init/init.spl.rc"
+    $API30_SPL && chcon -h u:object_r:system_file:s0 "$S/etc/init/init.usf.rc"
     $API30_USF && restoredirTMPKeystore
-    $API30_USF && mv $TMP_KEYSTORE_BIN $SYSTEM/bin 2>/dev/null
-    $API30_USF && mv $TMP_KEYSTORE_LIB $SYSTEM/lib64 2>/dev/null
-    $API30_USF && chmod 0755 $SYSTEM/bin/keystore 2>/dev/null
-    $API30_USF && chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so 2>/dev/null
-    $API30_USF && chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
-    $API30_USF && chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
+    $API30_USF && mv $TMP_KEYSTORE_BIN $S/bin 2>/dev/null
+    $API30_USF && mv $TMP_KEYSTORE_LIB $S/lib64 2>/dev/null
+    $API30_USF && chmod 0755 $S/bin/keystore 2>/dev/null
+    $API30_USF && chmod 0644 $S/lib64/libkeystore-attestation-application-id.so 2>/dev/null
+    $API30_USF && chcon -h u:object_r:keystore_exec:s0 "$S/bin/keystore"
+    $API30_USF && chcon -h u:object_r:system_lib_file:s0 "$S/lib64/libkeystore-attestation-application-id.so"
   ;;
   restore)
     # Stub
