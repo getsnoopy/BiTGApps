@@ -1788,6 +1788,13 @@ on_cts_check() {
   supported_usf_config="$(get_prop "ro.config.usf")"
 }
 
+# Set security patch level property
+on_security_patch_check_v30() {
+  system_security_patch="$(get_prop "ro.build.version.security_patch")";
+  vendor_security_patch="$(get_prop "ro.vendor.build.security_patch")";
+  supported_security_patch="2021-02-05";
+}
+
 # Set addon check property
 on_addon_check() {
   supported_assistant_config="$(get_prop "ro.config.assistant")"
@@ -7260,7 +7267,6 @@ cts_patch() {
       fi
       if [ ! "$android_product" == "$supported_product" ]; then
         if [ "$android_sdk" == "$supported_sdk_v30" ]; then
-          ui_print "- CTS patch status: Verified"
           patch_v30
           cts_patch_system
           cts_patch_product
@@ -7274,7 +7280,23 @@ cts_patch() {
           usf_boot_complete
           spl_ota_conf
           usf_ota_conf
-          insert_line $SYSTEM/config.prop "ro.cts.patch_status=verified" after '# Begin build properties' "ro.cts.patch_status=verified"
+          insert_line $SYSTEM/config.prop "ro.cts.install_status=conf" after '# Begin build properties' "ro.system.install_status=conf"
+          # Detect required security patch level
+          on_security_patch_check_v30
+          # System SPL
+          status_system="enforced"
+          if [ "$system_security_patch" == "$supported_security_patch" ]; then
+            status_system="verified"
+          fi
+          insert_line $SYSTEM/config.prop "ro.system.patch_status=$status_system" after '# Begin build properties' "ro.system.patch_status=$status_system"
+          # Vendor SPL
+          status_vendor="enforced"
+          if [ "$device_vendorpartition" == "true" ]; then
+            if [ "$vendor_security_patch" == "$supported_security_patch" ]; then
+              status_vendor="verified"
+            fi
+            insert_line $SYSTEM/config.prop "ro.vendor.patch_status=$status_vendor" after '# Begin build properties' "ro.vendor.patch_status=$status_vendor"
+          fi
         fi
       fi
     else

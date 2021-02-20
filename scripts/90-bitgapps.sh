@@ -661,9 +661,9 @@ on_addon_status_check() {
   addon_install_status="$(get_prop "ro.addon.install_status")"
 }
 
-# Check CTS status
+# Check CTS install status
 on_cts_status_check() {
-  cts_patch_status="$(get_prop "ro.cts.patch_status")"
+  cts_install_status="$(get_prop "ro.cts.install_status")"
 }
 
 on_spl_status_check() {
@@ -985,7 +985,7 @@ spl_update_vendor() {
 }
 
 cts_patch() {
-  if [ "$cts_patch_status" == "verified" ]; then
+  if [ "$cts_install_status" == "conf" ]; then
     if [ "$android_sdk" == "$supported_sdk_v30" ]; then
       patch_v30
       cts_patch_system
