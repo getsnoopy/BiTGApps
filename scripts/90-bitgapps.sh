@@ -956,13 +956,13 @@ cts_patch_odm() {
 spl_update_system() {
   # Build security patch
   if [ "$spl_patch_status" == "true" ]; then
-    if [ -n "$(cat $SYSTEM/build.prop | grep ro.build.version.security_patch)" ]; then
-      grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $SYSTEM/build.prop > $TMP/system.prop
-      rm -rf $SYSTEM/build.prop
-      cp -f $TMP/system.prop $SYSTEM/build.prop
-      chmod 0644 $SYSTEM/build.prop
+    if [ -n "$(cat $S/build.prop | grep ro.build.version.security_patch)" ]; then
+      grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $S/build.prop > $TMP/system.prop
+      rm -rf $S/build.prop
+      cp -f $TMP/system.prop $S/build.prop
+      chmod 0644 $S/build.prop
       rm -rf $TMP/system.prop
-      insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
+      insert_line $S/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
     fi
   fi
 }
