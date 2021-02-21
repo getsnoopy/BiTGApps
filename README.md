@@ -25,16 +25,16 @@ Here are some feature highlights:
 
 * [Development Forum](https://forum.xda-developers.com/t/custom-gapps-bitgapps-for-android.4012165)
 * [Frequently Asked Questions](https://github.com/BiTGApps/BiTGApps/wiki/Frequently-Asked-Questions-(FAQ))
-* [Documentation](docs/README.md)
+* [BiTGApps Documentation](docs/README.md)
 
-## Support Chat
+## Discussion Group
 
 * [Telegram chat](https://t.me/bitgapps_group_official)
 * [Discord chat](https://discord.gg/rY2KPqkuX5)
 
 ## Support Project
 
-* [Donate on paypal](https://www.paypal.me/kartikverma443)
+* [Paypal](https://www.paypal.me/kartikverma443)
 
 ## License
 

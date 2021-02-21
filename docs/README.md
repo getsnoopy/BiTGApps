@@ -7,3 +7,4 @@
 * [ROM With GApps](rwg.md)
 * [Additional Packages](addon.md)
 * [Known Issue](bug.md)
+* [Device Partition](partitions.md)
