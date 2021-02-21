@@ -653,17 +653,17 @@ on_pixel_check() {
 
 # Check SetupWizard install status
 on_setup_status_check() {
-  setup_install_status="$(get_prop "ro.setup.install_status")"
+  setup_install_status="$(get_prop "ro.setup.enabled")"
 }
 
 # Check Addon install status
 on_addon_status_check() {
-  addon_install_status="$(get_prop "ro.addon.install_status")"
+  addon_install_status="$(get_prop "ro.addon.enabled")"
 }
 
 # Check CTS install status
 on_cts_status_check() {
-  cts_install_status="$(get_prop "ro.cts.install_status")"
+  cts_install_status="$(get_prop "ro.cts.enabled")"
 }
 
 on_spl_status_check() {
@@ -985,7 +985,7 @@ spl_update_vendor() {
 }
 
 cts_patch() {
-  if [ "$cts_install_status" == "conf" ]; then
+  if [ "$cts_install_status" == "true" ]; then
     if [ "$android_sdk" == "$supported_sdk_v30" ]; then
       patch_v30
       cts_patch_system
@@ -2136,7 +2136,7 @@ restoredirTMPKeystore() {
 }
 
 backup_conflicting_packages() {
-  if [ "$addon_install_status" == "conf" ] || [ "$addon_install_status" == "sep" ]; then
+  if [ "$addon_install_status" == "true" ]; then
     # Backup CalendarProvider
     test -d $S/app/CalendarProvider && SYS_APP_CP="true" || SYS_APP_CP="false"
     test -d $S/priv-app/CalendarProvider && SYS_PRIV_CP="true" || SYS_PRIV_CP="false"
@@ -2203,14 +2203,14 @@ backup_conflicting_packages() {
 }
 
 trigger_fboot_backup() {
-  if [ "$setup_install_status" == "conf" ]; then
+  if [ "$setup_install_status" == "true" ]; then
     mv $SYS_PRIVAPP_SETUP $TMP/fboot/priv-app 2>/dev/null
     mv $SYS_LIB64_SETUP $TMP/fboot/lib64 2>/dev/null
   fi
 }
 
 trigger_fboot_restore() {
-  if [ "$setup_install_status" == "conf" ]; then
+  if [ "$setup_install_status" == "true" ]; then
     mv $TMP_PRIVAPP_SETUP $SYSTEM/priv-app 2>/dev/null
     mv $TMP_LIB64_SETUP $SYSTEM/lib64 2>/dev/null
   fi
@@ -2233,7 +2233,7 @@ trigger_rwg_restore() {
 }
 
 trigger_addon_backup() {
-  if [ "$addon_install_status" == "conf" ] || [ "$addon_install_status" == "sep" ]; then
+  if [ "$addon_install_status" == "true" ]; then
     mv $SYS_APP_ADDON $TMP/addon/app 2>/dev/null
     mv $SYS_PRIVAPP_ADDON $TMP/addon/priv-app 2>/dev/null
     mv $SYS_LIB_ADDON $TMP/addon/lib 2>/dev/null
@@ -2242,7 +2242,7 @@ trigger_addon_backup() {
 }
 
 trigger_addon_restore() {
-  if [ "$addon_install_status" == "conf" ] || [ "$addon_install_status" == "sep" ]; then
+  if [ "$addon_install_status" == "true" ]; then
     mv $TMP_APP_ADDON $SYSTEM/app 2>/dev/null
     mv $TMP_PRIVAPP_ADDON $SYSTEM/priv-app 2>/dev/null
     mv $TMP_LIB_ADDON $SYSTEM/lib 2>/dev/null
@@ -2315,7 +2315,7 @@ conf_package() {
 
 # Wipe conflicting packages
 fix_addon_conflict() {
-  if [ "$addon_install_status" == "conf" ] || [ "$addon_install_status" == "sep" ]; then
+  if [ "$addon_install_status" == "true" ]; then
     if [ -n "$(cat $S/config.prop | grep ro.config.assistant)" ]; then
       rm -rf $S/app/Velvet*
       rm -rf $S/app/velvet*
@@ -2544,7 +2544,7 @@ fix_addon_conflict() {
 }
 
 restore_conflicting_packages() {
-  if [ "$addon_install_status" == "conf" ] || [ "$addon_install_status" == "sep" ]; then
+  if [ "$addon_install_status" == "true" ]; then
     # Restore CalendarProvider
     if [ -f "$TMP/SYS_APP_CP" ]; then
       mv $TMP/addon/core/CalendarProvider $S/app/CalendarProvider

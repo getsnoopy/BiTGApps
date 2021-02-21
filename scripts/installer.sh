@@ -5476,7 +5476,7 @@ set_setup_install() {
 on_setup_install() {
   if [ "$setup_config" == "true" ]; then
     set_setup_install
-    insert_line $SYSTEM/config.prop "ro.setup.install_status=conf" after '# Begin build properties' "ro.setup.install_status=conf"
+    insert_line $SYSTEM/config.prop "ro.setup.enabled=true" after '# Begin build properties' "ro.setup.enabled=true"
   else
     echo "ERROR: Config file not found" >> $SETUP_CONFIG
   fi
@@ -6481,7 +6481,6 @@ set_addon_install() {
   if [ "$ADDON" == "conf" ]; then
     if [ "$addon_config" == "true" ]; then
       set_addon_zip_conf
-      insert_line $SYSTEM/config.prop "ro.addon.install_status=conf" after '# Begin build properties' "ro.addon.install_status=conf"
     fi
     if [ "$addon_config" == "false" ]; then
       echo "ERROR: Config file not found" >> $ADDON_CONFIG
@@ -6490,7 +6489,9 @@ set_addon_install() {
   fi
   if [ "$ADDON" == "sep" ]; then
     set_addon_zip_sep
-    insert_line $SYSTEM/config.prop "ro.addon.install_status=sep" after '# Begin build properties' "ro.addon.install_status=sep"
+  fi
+  if [ "$addon_config" == "true" ] || [ "$ADDON" == "sep" ]; then
+    insert_line $SYSTEM/config.prop "ro.addon.enabled=true" after '# Begin build properties' "ro.addon.enabled=true"
   fi
 }
 
@@ -7267,6 +7268,20 @@ cts_patch() {
       fi
       if [ ! "$android_product" == "$supported_product" ]; then
         if [ "$android_sdk" == "$supported_sdk_v30" ]; then
+          # Detect required security patch level
+          on_security_patch_check_v30
+          status="enforced"
+          if [ "$device_vendorpartition" == "true" ]; then
+            if [ "$system_security_patch" == "$supported_security_patch" ] && [ "$vendor_security_patch" == "$supported_security_patch" ]; then
+              status="verified"
+            fi
+          fi
+          if [ "$device_vendorpartition" == "false" ]; then
+            if [ "$system_security_patch" == "$supported_security_patch" ]; then
+              status="verified"
+            fi
+          fi
+          ui_print "- CTS patch status: $status"
           patch_v30
           cts_patch_system
           cts_patch_product
@@ -7280,23 +7295,7 @@ cts_patch() {
           usf_boot_complete
           spl_ota_conf
           usf_ota_conf
-          insert_line $SYSTEM/config.prop "ro.cts.install_status=conf" after '# Begin build properties' "ro.system.install_status=conf"
-          # Detect required security patch level
-          on_security_patch_check_v30
-          # System SPL
-          status_system="enforced"
-          if [ "$system_security_patch" == "$supported_security_patch" ]; then
-            status_system="verified"
-          fi
-          insert_line $SYSTEM/config.prop "ro.system.patch_status=$status_system" after '# Begin build properties' "ro.system.patch_status=$status_system"
-          # Vendor SPL
-          status_vendor="enforced"
-          if [ "$device_vendorpartition" == "true" ]; then
-            if [ "$vendor_security_patch" == "$supported_security_patch" ]; then
-              status_vendor="verified"
-            fi
-            insert_line $SYSTEM/config.prop "ro.vendor.patch_status=$status_vendor" after '# Begin build properties' "ro.vendor.patch_status=$status_vendor"
-          fi
+          insert_line $SYSTEM/config.prop "ro.cts.enabled=true" after '# Begin build properties' "ro.cts.enabled=true"
         fi
       fi
     else
