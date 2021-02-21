@@ -1,8 +1,6 @@
 #
 # ADDITIONAL BITGAPPS BUILD PROPERTIES
 #
-# During installation additional build properties will be
-# written to this file and used by OTA survival script
 
 # Begin build properties
 # End build properties
