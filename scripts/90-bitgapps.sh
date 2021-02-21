@@ -81,13 +81,60 @@ cts_defaults() {
   CTS_DEFAULT_VENDOR_BUILD_TAG="ro.vendor.build.tags="
   CTS_DEFAULT_VENDOR_BUILD_TYPE="ro.vendor.build.type="
   CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint="
+  CTS_DEFAULT_VENDOR_DLKM_BUILD_FINGERPRINT="ro.vendor_dlkm.build.fingerprint="
+  CTS_DEFAULT_VENDOR_DLKM_BUILD_ID="ro.vendor_dlkm.build.id="
+  CTS_DEFAULT_VENDOR_DLKM_BUILD_TAG="ro.vendor_dlkm.build.tags="
+  CTS_DEFAULT_VENDOR_DLKM_BUILD_TYPE="ro.vendor_dlkm.build.type="
   CTS_DEFAULT_ODM_BUILD_FINGERPRINT="ro.odm.build.fingerprint="
   CTS_DEFAULT_ODM_BUILD_ID="ro.odm.build.id="
   CTS_DEFAULT_ODM_BUILD_TAG="ro.odm.build.tags="
   CTS_DEFAULT_ODM_BUILD_TYPE="ro.odm.build.type="
+  CTS_DEFAULT_ODM_DLKM_BUILD_FINGERPRINT="ro.odm_dlkm.build.fingerprint="
+  CTS_DEFAULT_ODM_DLKM_BUILD_ID="ro.odm_dlkm.build.id="
+  CTS_DEFAULT_ODM_DLKM_BUILD_TAG="ro.odm_dlkm.build.tags="
+  CTS_DEFAULT_ODM_DLKM_BUILD_TYPE="ro.odm_dlkm.build.type="
 }
 
 # CTS patch
+patch_v31() {
+  CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_SYSTEM_EXT_BUILD_ID="ro.system.build.id=SPP1.210122.020.A3"
+  CTS_SYSTEM_EXT_BUILD_TAG="ro.system.build.tags=release-keys"
+  CTS_SYSTEM_EXT_BUILD_TYPE="ro.system.build.type=user"
+  CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-02-05";
+  CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_SYSTEM_BUILD_TYPE="ro.build.type=user"
+  CTS_SYSTEM_BUILD_TAG="ro.build.tags=release-keys"
+  CTS_SYSTEM_BUILD_DESC="ro.build.description=coral-user 11 RQ1A.210205.004 7038034 release-keys"
+  CTS_PRODUCT_BUILD_FINGERPRINT="ro.product.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_PRODUCT_BUILD_ID="ro.product.build.id=SPP1.210122.020.A3"
+  CTS_PRODUCT_BUILD_TAG="ro.product.build.tags=release-keys"
+  CTS_PRODUCT_BUILD_TYPE="ro.product.build.type=user"
+  CTS_EXT_BUILD_FINGERPRINT="ro.system_ext.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_EXT_BUILD_ID="ro.system_ext.build.id=SPP1.210122.020.A3"
+  CTS_EXT_BUILD_TAG="ro.system_ext.build.tags=release-keys"
+  CTS_EXT_BUILD_TYPE="ro.system_ext.build.type=user"
+  CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-02-05";
+  CTS_VENDOR_EXT_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_VENDOR_BUILD_ID="ro.vendor.build.id=SPP1.210122.020.A3"
+  CTS_VENDOR_BUILD_TAG="ro.vendor.build.tags=release-keys"
+  CTS_VENDOR_BUILD_TYPE="ro.vendor.build.type=user"
+  CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_VENDOR_DLKM_BUILD_FINGERPRINT="ro.vendor_dlkm.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_VENDOR_DLKM_BUILD_ID="ro.vendor_dlkm.build.id=SPP1.210122.020.A3"
+  CTS_VENDOR_DLKM_BUILD_TAG="ro.vendor_dlkm.build.tags=release-keys"
+  CTS_VENDOR_DLKM_BUILD_TYPE="ro.vendor_dlkm.build.type=user"
+  CTS_ODM_BUILD_FINGERPRINT="ro.odm.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_ODM_BUILD_ID="ro.odm.build.id=SPP1.210122.020.A3"
+  CTS_ODM_BUILD_TAG="ro.odm.build.tags=release-keys"
+  CTS_ODM_BUILD_TYPE="ro.odm.build.type=user"
+  CTS_ODM_DLKM_BUILD_FINGERPRINT="ro.odm_dlkm.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_ODM_DLKM_BUILD_ID="ro.odm_dlkm.build.id=SPP1.210122.020.A3"
+  CTS_ODM_DLKM_BUILD_TAG="ro.odm_dlkm.build.tags=release-keys"
+  CTS_ODM_DLKM_BUILD_TYPE="ro.odm_dlkm.build.type=user"
+}
+
 patch_v30() {
   CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
   CTS_SYSTEM_EXT_BUILD_ID="ro.system.build.id=RQ1A.210205.004"
@@ -228,6 +275,7 @@ del_tmp_dir() {
 
 # Set supported Android SDK Version
 on_sdk() {
+  supported_sdk_v31="31"
   supported_sdk_v30="30"
   supported_sdk_v29="29"
   supported_sdk_v28="28"
@@ -460,7 +508,7 @@ on_version_check() {
 }
 
 api_dependent_overlay() {
-  if [ "$android_sdk" == "30" ]; then
+  if [ "$android_sdk" -ge "30" ]; then
     API30="true"
   fi
 }
@@ -522,7 +570,7 @@ ensure_dir() {
 
 # Set installation layout
 set_pathmap() {
-  if [ "$android_sdk" == "$supported_sdk_v30" ]; then
+  if [ "$android_sdk" -ge "$supported_sdk_v30" ]; then
     SYSTEM="$S/system_ext"
     ensure_dir
   elif [ "$android_sdk" == "$supported_sdk_v29" ]; then
@@ -551,6 +599,14 @@ opt_v29() {
 # Delete existing GMS Doze entry from all XML files
 opt_v30() {
   if [ "$android_sdk" == "$supported_sdk_v30" ]; then
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/permissions/*.xml
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/sysconfig/*.xml
+  fi
+}
+
+# Delete existing GMS Doze entry from all XML files
+opt_v31() {
+  if [ "$android_sdk" == "$supported_sdk_v31" ]; then
     sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/permissions/*.xml
     sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/sysconfig/*.xml
   fi
@@ -910,44 +966,134 @@ cts_patch_vendor() {
   fi
 }
 
+# Apply safetynet patch on vendor dlkm build
+cts_patch_vendor_dlkm() {
+  if [ "$device_vendorpartition" == "true" ]; then
+    if [ -f "$ANDROID_ROOT/vendor_dlkm/etc/build.prop" ]; then
+      # Build fingerprint
+      if [ -n "$(cat $ANDROID_ROOT/vendor_dlkm/etc/build.prop | grep ro.vendor_dlkm.build.fingerprint)" ]; then
+        grep -v "$CTS_DEFAULT_VENDOR_DLKM_BUILD_FINGERPRINT" $ANDROID_ROOT/vendor_dlkm/etc/build.prop > $TMP/vendor_dlkm.prop
+        rm -rf $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        cp -f $TMP/vendor_dlkm.prop $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        rm -rf $TMP/vendor_dlkm.prop
+        insert_line $ANDROID_ROOT/vendor_dlkm/etc/build.prop "$CTS_VENDOR_DLKM_BUILD_FINGERPRINT" after 'ro.vendor_dlkm.build.date.utc=' "$CTS_VENDOR_DLKM_BUILD_FINGERPRINT"
+      fi
+      # Build id
+      if [ -n "$(cat $ANDROID_ROOT/vendor_dlkm/etc/build.prop | grep ro.vendor_dlkm.build.id)" ]; then
+        grep -v "$CTS_DEFAULT_VENDOR_DLKM_BUILD_ID" $ANDROID_ROOT/vendor_dlkm/etc/build.prop > $TMP/vendor_dlkm.prop
+        rm -rf $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        cp -f $TMP/vendor_dlkm.prop $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        rm -rf $TMP/vendor_dlkm.prop
+        insert_line $ANDROID_ROOT/vendor_dlkm/etc/build.prop "$CTS_VENDOR_DLKM_BUILD_ID" after 'ro.vendor_dlkm.build.fingerprint=' "$CTS_VENDOR_DLKM_BUILD_ID"
+      fi
+      # Build tags
+      if [ -n "$(cat $ANDROID_ROOT/vendor_dlkm/etc/build.prop | grep ro.vendor_dlkm.build.tags)" ]; then
+        grep -v "$CTS_DEFAULT_VENDOR_DLKM_BUILD_TAG" $ANDROID_ROOT/vendor_dlkm/etc/build.prop > $TMP/vendor_dlkm.prop
+        rm -rf $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        cp -f $TMP/vendor_dlkm.prop $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        rm -rf $TMP/vendor_dlkm.prop
+        insert_line $ANDROID_ROOT/vendor_dlkm/etc/build.prop "$CTS_VENDOR_DLKM_BUILD_TAG" after 'ro.vendor_dlkm.build.id=' "$CTS_VENDOR_DLKM_BUILD_TAG"
+      fi
+      # Build type
+      if [ -n "$(cat $ANDROID_ROOT/vendor_dlkm/etc/build.prop | grep ro.vendor_dlkm.build.type=userdebug)" ]; then
+        grep -v "$CTS_DEFAULT_VENDOR_DLKM_BUILD_TYPE" $ANDROID_ROOT/vendor_dlkm/etc/build.prop > $TMP/vendor_dlkm.prop
+        rm -rf $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        cp -f $TMP/vendor_dlkm.prop $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        rm -rf $TMP/vendor_dlkm.prop
+        insert_line $ANDROID_ROOT/vendor_dlkm/etc/build.prop "$CTS_VENDOR_DLKM_BUILD_TYPE" after 'ro.vendor_dlkm.build.tags=' "$CTS_VENDOR_DLKM_BUILD_TYPE"
+      fi
+    fi
+  fi
+}
+
 # Apply safetynet patch on odm build
 cts_patch_odm() {
-  if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
-    # Build fingerprint
-    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.fingerprint)" ]; then
-      grep -v "$CTS_DEFAULT_ODM_BUILD_FINGERPRINT" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
-      rm -rf $ANDROID_ROOT/odm/etc/build.prop
-      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
-      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
-      rm -rf $TMP/odm.prop
-      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_FINGERPRINT" after 'ro.odm.build.date.utc=' "$CTS_ODM_BUILD_FINGERPRINT"
+  if [ "$device_vendorpartition" == "true" ]; then
+    if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
+      # Build fingerprint
+      if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.fingerprint)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_BUILD_FINGERPRINT" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+        rm -rf $ANDROID_ROOT/odm/etc/build.prop
+        cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+        rm -rf $TMP/odm.prop
+        insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_FINGERPRINT" after 'ro.odm.build.date.utc=' "$CTS_ODM_BUILD_FINGERPRINT"
+      fi
+      # Build id
+      if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.id)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_BUILD_ID" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+        rm -rf $ANDROID_ROOT/odm/etc/build.prop
+        cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+        rm -rf $TMP/odm.prop
+        insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_ID" after 'ro.odm.build.fingerprint=' "$CTS_ODM_BUILD_ID"
+      fi
+      # Build tags
+      if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.tags)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_BUILD_TAG" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+        rm -rf $ANDROID_ROOT/odm/etc/build.prop
+        cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+        rm -rf $TMP/odm.prop
+        insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_TAG" after 'ro.odm.build.id=' "$CTS_ODM_BUILD_TAG"
+      fi
+      # Build type
+      if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.type=userdebug)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_BUILD_TYPE" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+        rm -rf $ANDROID_ROOT/odm/etc/build.prop
+        cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+        rm -rf $TMP/odm.prop
+        insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_TYPE" after 'ro.odm.build.tags=' "$CTS_ODM_BUILD_TYPE"
+      fi
     fi
-    # Build id
-    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.id)" ]; then
-      grep -v "$CTS_DEFAULT_ODM_BUILD_ID" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
-      rm -rf $ANDROID_ROOT/odm/etc/build.prop
-      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
-      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
-      rm -rf $TMP/odm.prop
-      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_ID" after 'ro.odm.build.fingerprint=' "$CTS_ODM_BUILD_ID"
-    fi
-    # Build tags
-    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.tags)" ]; then
-      grep -v "$CTS_DEFAULT_ODM_BUILD_TAG" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
-      rm -rf $ANDROID_ROOT/odm/etc/build.prop
-      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
-      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
-      rm -rf $TMP/odm.prop
-      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_TAG" after 'ro.odm.build.id=' "$CTS_ODM_BUILD_TAG"
-    fi
-    # Build type
-    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.type=userdebug)" ]; then
-      grep -v "$CTS_DEFAULT_ODM_BUILD_TYPE" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
-      rm -rf $ANDROID_ROOT/odm/etc/build.prop
-      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
-      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
-      rm -rf $TMP/odm.prop
-      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_TYPE" after 'ro.odm.build.tags=' "$CTS_ODM_BUILD_TYPE"
+  fi
+}
+
+# Apply safetynet patch on odm dlkm build
+cts_patch_odm_dlkm() {
+  if [ "$device_vendorpartition" == "true" ]; then
+    if [ -f "$ANDROID_ROOT/odm_dlkm/etc/build.prop" ]; then
+      # Build fingerprint
+      if [ -n "$(cat $ANDROID_ROOT/odm_dlkm/etc/build.prop | grep ro.odm_dlkm.build.fingerprint)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_DLKM_BUILD_FINGERPRINT" $ANDROID_ROOT/odm_dlkm/etc/build.prop > $TMP/odm_dlkm.prop
+        rm -rf $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        cp -f $TMP/odm_dlkm.prop $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        rm -rf $TMP/odm_dlkm.prop
+        insert_line $ANDROID_ROOT/odm_dlkm/etc/build.prop "$CTS_ODM_DLKM_BUILD_FINGERPRINT" after 'ro.odm_dlkm.build.date.utc=' "$CTS_ODM_DLKM_BUILD_FINGERPRINT"
+      fi
+      # Build id
+      if [ -n "$(cat $ANDROID_ROOT/odm_dlkm/etc/build.prop | grep ro.odm_dlkm.build.id)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_DLKM_BUILD_ID" $ANDROID_ROOT/odm_dlkm/etc/build.prop > $TMP/odm_dlkm.prop
+        rm -rf $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        cp -f $TMP/odm_dlkm.prop $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        rm -rf $TMP/odm_dlkm.prop
+        insert_line $ANDROID_ROOT/odm_dlkm/etc/build.prop "$CTS_ODM_DLKM_BUILD_ID" after 'ro.odm_dlkm.build.fingerprint=' "$CTS_ODM_DLKM_BUILD_ID"
+      fi
+      # Build tags
+      if [ -n "$(cat $ANDROID_ROOT/odm_dlkm/etc/build.prop | grep ro.odm_dlkm.build.tags)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_DLKM_BUILD_TAG" $ANDROID_ROOT/odm_dlkm/etc/build.prop > $TMP/odm_dlkm.prop
+        rm -rf $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        cp -f $TMP/odm_dlkm.prop $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        rm -rf $TMP/odm_dlkm.prop
+        insert_line $ANDROID_ROOT/odm_dlkm/etc/build.prop "$CTS_ODM_DLKM_BUILD_TAG" after 'ro.odm_dlkm.build.id=' "$CTS_ODM_DLKM_BUILD_TAG"
+      fi
+      # Build type
+      if [ -n "$(cat $ANDROID_ROOT/odm_dlkm/etc/build.prop | grep ro.odm_dlkm.build.type=userdebug)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_DLKM_BUILD_TYPE" $ANDROID_ROOT/odm_dlkm/etc/build.prop > $TMP/odm_dlkm.prop
+        rm -rf $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        cp -f $TMP/odm_dlkm.prop $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        rm -rf $TMP/odm_dlkm.prop
+        insert_line $ANDROID_ROOT/odm_dlkm/etc/build.prop "$CTS_ODM_DLKM_BUILD_TYPE" after 'ro.odm_dlkm.build.tags=' "$CTS_ODM_DLKM_BUILD_TYPE"
+      fi
     fi
   fi
 }
@@ -986,6 +1132,18 @@ spl_update_vendor() {
 
 cts_patch() {
   if [ "$cts_install_status" == "true" ]; then
+    if [ "$android_sdk" == "$supported_sdk_v31" ]; then
+      patch_v31
+      cts_patch_system
+      cts_patch_product
+      cts_patch_ext
+      cts_patch_vendor
+      cts_patch_vendor_dlkm
+      cts_patch_odm
+      cts_patch_odm_dlkm
+      spl_update_system
+      spl_update_vendor
+    fi
     if [ "$android_sdk" == "$supported_sdk_v30" ]; then
       patch_v30
       cts_patch_system
@@ -1018,9 +1176,15 @@ sdk_fix() {
     if [ "$device_vendorpartition" = "true" ]; then
       chmod 0600 $VENDOR/build.prop
       chmod 0600 $VENDOR/default.prop
-    fi
-    if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
-      chmod 0600 $ANDROID_ROOT/odm/etc/build.prop
+      if [ -f "$ANDROID_ROOT/vendor_dlkm/etc/build.prop" ]; then
+        chmod 0600 $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+      fi
+      if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
+        chmod 0600 $ANDROID_ROOT/odm/etc/build.prop
+      fi
+      if [ -f "$ANDROID_ROOT/odm_dlkm/etc/build.prop" ]; then
+        chmod 0600 $ANDROID_ROOT/odm_dlkm/etc/build.prop
+      fi
     fi
   fi
 }
@@ -1043,6 +1207,15 @@ selinux_fix() {
   if [ "$device_vendorpartition" == "true" ]; then
     chcon -h u:object_r:vendor_file:s0 "$VENDOR/build.prop"
     chcon -h u:object_r:vendor_file:s0 "$VENDOR/default.prop"
+    if [ -f "$ANDROID_ROOT/vendor_dlkm/etc/build.prop" ]; then
+      chcon -h u:object_r:vendor_configs_file:s0 "$ANDROID_ROOT/vendor_dlkm/etc/build.prop"
+    fi
+    if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
+      chcon -h u:object_r:vendor_configs_file:s0 "$ANDROID_ROOT/odm/etc/build.prop"
+    fi
+    if [ -f "$ANDROID_ROOT/odm_dlkm/etc/build.prop" ]; then
+      chcon -h u:object_r:vendor_configs_file:s0 "$ANDROID_ROOT/odm_dlkm/etc/build.prop"
+    fi
   fi
 }
 
@@ -1844,7 +2017,8 @@ backupdirSYS() {
     $SYSTEM/priv-app/PrebuiltGmsCorePix
     $SYSTEM/priv-app/PrebuiltGmsCorePi
     $SYSTEM/priv-app/PrebuiltGmsCoreQt
-    $SYSTEM/priv-app/PrebuiltGmsCoreRvc"
+    $SYSTEM/priv-app/PrebuiltGmsCoreRvc
+    $SYSTEM/priv-app/PrebuiltGmsCoreSvc"
 
   SYS_PRIVAPP_JAR="
     $S/priv-app/GoogleExtServices"
@@ -2002,7 +2176,8 @@ restoredirTMP() {
     $TMP/priv-app/PrebuiltGmsCorePix
     $TMP/priv-app/PrebuiltGmsCorePi
     $TMP/priv-app/PrebuiltGmsCoreQt
-    $TMP/priv-app/PrebuiltGmsCoreRvc"
+    $TMP/priv-app/PrebuiltGmsCoreRvc
+    $TMP/priv-app/PrebuiltGmsCoreSvc"
 
   TMP_PRIVAPP_JAR="
     $TMP/priv-app/GoogleExtServices"
@@ -2695,6 +2870,7 @@ case "$1" in
     # Stub
     opt_v29
     opt_v30
+    opt_v31
     on_whitelist_check
     purge_whitelist_permission
     set_whitelist_permission

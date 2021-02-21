@@ -215,6 +215,7 @@ remove_line() {
 opt_defaults() {
   OPTv29="$TMP/gms_opt_v29.log"
   OPTv30="$TMP/gms_opt_v30.log"
+  OPTv31="$TMP/gms_opt_v31.log"
 }
 
 boot_defaults() {
@@ -270,6 +271,7 @@ build_defaults() {
   ZIPALIGN_LOG="$TMP/bitgapps/zipalign.log"
   ZIPALIGN_TOOL="$TMP/zipalign"
   ZIPALIGN_OUTFILE="$TMP/out"
+  sdk_v31="$TMP/bitgapps/sdk_v31.log"
   sdk_v30="$TMP/bitgapps/sdk_v30.log"
   sdk_v29="$TMP/bitgapps/sdk_v29.log"
   sdk_v28="$TMP/bitgapps/sdk_v28.log"
@@ -285,7 +287,9 @@ build_defaults() {
   TARGET_PRODUCT="$TMP/bitgapps/cts-product.log"
   TARGET_EXT="$TMP/bitgapps/cts-ext.log"
   TARGET_VENDOR="$TMP/bitgapps/cts-vendor.log"
+  TARGET_VENDOR_DLKM="$TMP/bitgapps/cts-vendor-dlkm.log"
   TARGET_ODM="$TMP/bitgapps/cts-odm.log"
+  TARGET_ODM_DLKM="$TMP/bitgapps/cts-odm-dlkm.log"
   OPTv28="$TMP/bitgapps/gms_opt_v28.log"
   usf="$TMP/bitgapps/usf.log"
   spl="$TMP/bitgapps/spl.log"
@@ -317,13 +321,60 @@ cts_defaults() {
   CTS_DEFAULT_VENDOR_BUILD_TAG="ro.vendor.build.tags="
   CTS_DEFAULT_VENDOR_BUILD_TYPE="ro.vendor.build.type="
   CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint="
+  CTS_DEFAULT_VENDOR_DLKM_BUILD_FINGERPRINT="ro.vendor_dlkm.build.fingerprint="
+  CTS_DEFAULT_VENDOR_DLKM_BUILD_ID="ro.vendor_dlkm.build.id="
+  CTS_DEFAULT_VENDOR_DLKM_BUILD_TAG="ro.vendor_dlkm.build.tags="
+  CTS_DEFAULT_VENDOR_DLKM_BUILD_TYPE="ro.vendor_dlkm.build.type="
   CTS_DEFAULT_ODM_BUILD_FINGERPRINT="ro.odm.build.fingerprint="
   CTS_DEFAULT_ODM_BUILD_ID="ro.odm.build.id="
   CTS_DEFAULT_ODM_BUILD_TAG="ro.odm.build.tags="
   CTS_DEFAULT_ODM_BUILD_TYPE="ro.odm.build.type="
+  CTS_DEFAULT_ODM_DLKM_BUILD_FINGERPRINT="ro.odm_dlkm.build.fingerprint="
+  CTS_DEFAULT_ODM_DLKM_BUILD_ID="ro.odm_dlkm.build.id="
+  CTS_DEFAULT_ODM_DLKM_BUILD_TAG="ro.odm_dlkm.build.tags="
+  CTS_DEFAULT_ODM_DLKM_BUILD_TYPE="ro.odm_dlkm.build.type="
 }
 
 # CTS patch
+patch_v31() {
+  CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_SYSTEM_EXT_BUILD_ID="ro.system.build.id=SPP1.210122.020.A3"
+  CTS_SYSTEM_EXT_BUILD_TAG="ro.system.build.tags=release-keys"
+  CTS_SYSTEM_EXT_BUILD_TYPE="ro.system.build.type=user"
+  CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-02-05";
+  CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_SYSTEM_BUILD_TYPE="ro.build.type=user"
+  CTS_SYSTEM_BUILD_TAG="ro.build.tags=release-keys"
+  CTS_SYSTEM_BUILD_DESC="ro.build.description=coral-user 11 RQ1A.210205.004 7038034 release-keys"
+  CTS_PRODUCT_BUILD_FINGERPRINT="ro.product.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_PRODUCT_BUILD_ID="ro.product.build.id=SPP1.210122.020.A3"
+  CTS_PRODUCT_BUILD_TAG="ro.product.build.tags=release-keys"
+  CTS_PRODUCT_BUILD_TYPE="ro.product.build.type=user"
+  CTS_EXT_BUILD_FINGERPRINT="ro.system_ext.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_EXT_BUILD_ID="ro.system_ext.build.id=SPP1.210122.020.A3"
+  CTS_EXT_BUILD_TAG="ro.system_ext.build.tags=release-keys"
+  CTS_EXT_BUILD_TYPE="ro.system_ext.build.type=user"
+  CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-02-05";
+  CTS_VENDOR_EXT_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_VENDOR_BUILD_ID="ro.vendor.build.id=SPP1.210122.020.A3"
+  CTS_VENDOR_BUILD_TAG="ro.vendor.build.tags=release-keys"
+  CTS_VENDOR_BUILD_TYPE="ro.vendor.build.type=user"
+  CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_VENDOR_DLKM_BUILD_FINGERPRINT="ro.vendor_dlkm.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_VENDOR_DLKM_BUILD_ID="ro.vendor_dlkm.build.id=SPP1.210122.020.A3"
+  CTS_VENDOR_DLKM_BUILD_TAG="ro.vendor_dlkm.build.tags=release-keys"
+  CTS_VENDOR_DLKM_BUILD_TYPE="ro.vendor_dlkm.build.type=user"
+  CTS_ODM_BUILD_FINGERPRINT="ro.odm.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_ODM_BUILD_ID="ro.odm.build.id=SPP1.210122.020.A3"
+  CTS_ODM_BUILD_TAG="ro.odm.build.tags=release-keys"
+  CTS_ODM_BUILD_TYPE="ro.odm.build.type=user"
+  CTS_ODM_DLKM_BUILD_FINGERPRINT="ro.odm_dlkm.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
+  CTS_ODM_DLKM_BUILD_ID="ro.odm_dlkm.build.id=SPP1.210122.020.A3"
+  CTS_ODM_DLKM_BUILD_TAG="ro.odm_dlkm.build.tags=release-keys"
+  CTS_ODM_DLKM_BUILD_TYPE="ro.odm_dlkm.build.type=user"
+}
+
 patch_v30() {
   CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
   CTS_SYSTEM_EXT_BUILD_ID="ro.system.build.id=RQ1A.210205.004"
@@ -490,13 +541,19 @@ mount_apex() {
     /apex/com.android.runtime/javalib/bouncycastle.jar:\
     /apex/com.android.runtime/javalib/apache-xml.jar:\
     /system/framework/framework.jar:\
+    /system/framework/framework-graphics.jar:\
     /system/framework/ext.jar:\
     /system/framework/telephony-common.jar:\
     /system/framework/voip-common.jar:\
     /system/framework/ims-common.jar:\
+    /system/framework/framework-atb-backward-compatibility.jar:\
     /system/framework/android.test.base.jar:\
     /apex/com.android.conscrypt/javalib/conscrypt.jar:\
-    /apex/com.android.media/javalib/updatable-media.jar"
+    /apex/com.android.media/javalib/updatable-media.jar:\
+    /apex/com.android.mediaprovider/javalib/framework-mediaprovider.jar:\
+    /apex/com.android.os.statsd/javalib/framework-statsd.jar:\
+    /apex/com.android.permission/javalib/framework-permission.jar:\
+    /apex/com.android.sdkext/javalib/framework-sdkextensions.jar"
   fi
   if [ "$APEX" == "false" ]; then
     ui_print "! Cannot mount /apex"
@@ -1369,10 +1426,12 @@ on_install_failed() {
   cp -f $SYSTEM/config.prop $TMP/bitgapps/config.prop 2>/dev/null
   cp -f $SYSTEM/product/build.prop $TMP/bitgapps/product.prop 2>/dev/null
   cp -f $SYSTEM/system_ext/build.prop $TMP/bitgapps/ext.prop 2>/dev/null
-  cp -f $ANDROID_ROOT/odm/etc/build.prop $TMP/bitgapps/odm.prop 2>/dev/null
   if [ "$device_vendorpartition" == "true" ]; then
+    cp -f $ANDROID_ROOT/odm/etc/build.prop $TMP/bitgapps/odm.prop 2>/dev/null
+    cp -f $ANDROID_ROOT/odm_dlkm/etc/build.prop $TMP/bitgapps/odm_dlkm.prop 2>/dev/null
     cp -f $VENDOR/build.prop $TMP/bitgapps/vendor.prop 2>/dev/null
     cp -f $VENDOR/default.prop $TMP/bitgapps/vendor.default 2>/dev/null
+    cp -f $ANDROID_ROOT/vendor_dlkm/etc/build.prop $TMP/bitgapps/vendor_dlkm.prop 2>/dev/null
   fi
   if [ -f $SYSTEM/etc/prop.default ]; then
     cp -f $SYSTEM/etc/prop.default $TMP/bitgapps/system.default 2>/dev/null
@@ -1407,10 +1466,12 @@ on_conf_error() {
   cp -f $SYSTEM/config.prop $TMP/bitgapps/config.prop 2>/dev/null
   cp -f $SYSTEM/product/build.prop $TMP/bitgapps/product.prop 2>/dev/null
   cp -f $SYSTEM/system_ext/build.prop $TMP/bitgapps/ext.prop 2>/dev/null
-  cp -f $ANDROID_ROOT/odm/etc/build.prop $TMP/bitgapps/odm.prop 2>/dev/null
   if [ "$device_vendorpartition" == "true" ]; then
+    cp -f $ANDROID_ROOT/odm/etc/build.prop $TMP/bitgapps/odm.prop 2>/dev/null
+    cp -f $ANDROID_ROOT/odm_dlkm/etc/build.prop $TMP/bitgapps/odm_dlkm.prop 2>/dev/null
     cp -f $VENDOR/build.prop $TMP/bitgapps/vendor.prop 2>/dev/null
     cp -f $VENDOR/default.prop $TMP/bitgapps/vendor.default 2>/dev/null
+    cp -f $ANDROID_ROOT/vendor_dlkm/etc/build.prop $TMP/bitgapps/vendor_dlkm.prop 2>/dev/null
   fi
   if [ -f $SYSTEM/etc/prop.default ]; then
     cp -f $SYSTEM/etc/prop.default $TMP/bitgapps/system.default 2>/dev/null
@@ -1450,10 +1511,12 @@ on_install_complete() {
   cp -f $SYSTEM/config.prop $TMP/bitgapps/config.prop 2>/dev/null
   cp -f $SYSTEM/product/build.prop $TMP/bitgapps/product.prop 2>/dev/null
   cp -f $SYSTEM/system_ext/build.prop $TMP/bitgapps/ext.prop 2>/dev/null
-  cp -f $ANDROID_ROOT/odm/etc/build.prop $TMP/bitgapps/odm.prop 2>/dev/null
   if [ "$device_vendorpartition" == "true" ]; then
+    cp -f $ANDROID_ROOT/odm/etc/build.prop $TMP/bitgapps/odm.prop 2>/dev/null
+    cp -f $ANDROID_ROOT/odm_dlkm/etc/build.prop $TMP/bitgapps/odm_dlkm.prop 2>/dev/null
     cp -f $VENDOR/build.prop $TMP/bitgapps/vendor.prop 2>/dev/null
     cp -f $VENDOR/default.prop $TMP/bitgapps/vendor.default 2>/dev/null
+    cp -f $ANDROID_ROOT/vendor_dlkm/etc/build.prop $TMP/bitgapps/vendor_dlkm.prop 2>/dev/null
   fi
   if [ -f $SYSTEM/etc/prop.default ]; then
     cp -f $SYSTEM/etc/prop.default $TMP/bitgapps/system.default 2>/dev/null
@@ -1513,6 +1576,7 @@ cleanup() {
   rm -rf $TMP/g.prop
   rm -rf $TMP/gms_opt_v29.log
   rm -rf $TMP/gms_opt_v30.log
+  rm -rf $TMP/gms_opt_v31.log
   rm -rf $TMP/init.boot.rc
   rm -rf $TMP/init.spl.rc
   rm -rf $TMP/init.usf.rc
@@ -1789,7 +1853,7 @@ on_cts_check() {
 }
 
 # Set security patch level property
-on_security_patch_check_v30() {
+on_security_patch_check() {
   system_security_patch="$(get_prop "ro.build.version.security_patch")";
   vendor_security_patch="$(get_prop "ro.vendor.build.security_patch")";
   supported_security_patch="2021-02-05";
@@ -1823,7 +1887,14 @@ on_whitelist_check() {
 on_version_check() {
   if [ "$ZIPTYPE" == "addon" ]; then
     android_sdk="$(get_prop "ro.build.version.sdk")"
-  else
+  fi
+  if [ "$ZIPTYPE" == "basic" ]; then
+    if [ "$TARGET_ANDROID_SDK" == "31" ]; then
+      android_sdk="$(get_prop "ro.build.version.sdk")"
+      supported_sdk="31"
+      android_version="$(get_prop "ro.build.version.release")"
+      supported_version="12"
+    fi
     if [ "$TARGET_ANDROID_SDK" == "30" ]; then
       android_sdk="$(get_prop "ro.build.version.sdk")"
       supported_sdk="30"
@@ -1888,6 +1959,7 @@ on_platform_check() {
 
 # Set supported Android SDK Version
 on_sdk() {
+  supported_sdk_v31="31"
   supported_sdk_v30="30"
   supported_sdk_v29="29"
   supported_sdk_v28="28"
@@ -1999,7 +2071,7 @@ RTP_v30() {
         RTP_DEST="$RTP"
       fi
     done
-    # Did this 11.0 system already boot and generated runtime permissions
+    # Did this 11.0+ system already boot and generated runtime permissions
     if [ -e "$RTP_DEST" ]; then
       # Check if permissions were granted to Google Playstore, this permissions should always be set in the file if GApps were installed before
       if ! grep -q "com.android.vending" $RTP_DEST; then
@@ -2015,7 +2087,7 @@ clean_inst() {
   if [ "$android_sdk" -le "$supported_sdk_v29" ]; then
     RTP_v29
   fi
-  if [ "$android_sdk" == "$supported_sdk_v30" ]; then
+  if [ "$android_sdk" -ge "$supported_sdk_v30" ]; then
     RTP_v30
   fi
 }
@@ -2130,7 +2202,7 @@ set_aosp_default() {
 
 # Set pathmap
 ext_pathmap() {
-  if [ "$android_sdk" == "$supported_sdk_v30" ]; then
+  if [ "$android_sdk" -ge "$supported_sdk_v30" ]; then
     SYSTEM_ADDOND="$SYSTEM/addon.d"
     SYSTEM_APP="$SYSTEM/system_ext/app"
     SYSTEM_PRIV_APP="$SYSTEM/system_ext/priv-app"
@@ -3095,6 +3167,53 @@ lim_aosp_install() {
 }
 
 # Remove pre-installed system files
+pre_installed_v31() {
+  if [ "$android_sdk" == "$supported_sdk_v31" ]; then
+    zip_pkg() {
+      rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter
+      rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter
+      rm -rf $SYSTEM_APP/ExtShared
+      rm -rf $SYSTEM_APP/GoogleExtShared
+      rm -rf $SYSTEM_PRIV_APP/AndroidPlatformServices
+      rm -rf $SYSTEM_PRIV_APP/ConfigUpdater
+      rm -rf $SYSTEM_PRIV_APP/GoogleServicesFramework
+      rm -rf $SYSTEM_PRIV_APP/Phonesky
+      rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreSvc
+      rm -rf $SYSTEM_FRAMEWORK/com.google.android.dialer.support.jar
+      rm -rf $SYSTEM_FRAMEWORK/com.google.android.maps.jar
+      rm -rf $SYSTEM_FRAMEWORK/com.google.android.media.effects.jar
+      rm -rf $SYSTEM_ETC_CONFIG/dialer_experience.xml
+      rm -rf $SYSTEM_ETC_CONFIG/google.xml
+      rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
+      rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
+      rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
+      rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
+      rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
+      rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
+      rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
+      rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.xml
+      rm -rf $SYSTEM_ETC_PERM/com.google.android.media.effects.xml
+      rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
+      rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
+      rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
+      rm -rf $SYSTEM_ETC_PREF/google.xml
+      rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay
+    }
+    # Delete pre-installed APKs from system_ext
+    zip_pkg
+    # Temporary set product pathmap
+    on_product
+    # Delete pre-installed APKs from product
+    zip_pkg
+    # Temporary set system pathmap
+    on_system
+    # Delete pre-installed APKs from system
+    zip_pkg
+    # Set system_ext pathmap for installation
+    ext_pathmap
+  fi
+}
+
 pre_installed_v30() {
   if [ "$android_sdk" == "$supported_sdk_v30" ]; then
     zip_pkg() {
@@ -3589,6 +3708,209 @@ on_pkg_inst() {
     pkg_TMPPerm
     pkg_TMPPermAosp
     pkg_TMPOverlay
+  fi
+}
+
+# Set installation functions for Android SDK 31
+sdk_v31_install() {
+  if [ "$android_sdk" == "$supported_sdk_v31" ]; then
+    # Set default packages and unpack
+    ZIP="
+      zip/core/ConfigUpdater.tar.xz
+      zip/core/GoogleServicesFramework.tar.xz
+      zip/core/Phonesky.tar.xz
+      zip/core/PrebuiltGmsCoreSvc.tar.xz
+      zip/sys/GoogleCalendarSyncAdapter.tar.xz
+      zip/sys/GoogleContactsSyncAdapter.tar.xz
+      zip/sys/GoogleExtShared.tar.xz
+      zip/Sysconfig.tar.xz
+      zip/Default.tar.xz
+      zip/Framework.tar.xz
+      zip/Permissions.tar.xz
+      zip/Preferred.tar.xz
+      zip/overlay/PlayStoreOverlay.tar.xz" && unpack_zip
+
+    # Unpack system files
+    extract_app() {
+      echo "-----------------------------------" >> $LOG
+      echo "- Unpack SYS-APP Files" >> $LOG
+      tar tvf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz >> $LOG
+      tar tvf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz >> $LOG
+      tar tvf $ZIP_FILE/sys/GoogleExtShared.tar.xz >> $LOG
+      tar -xf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz -C $TMP_SYS
+      tar -xf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz -C $TMP_SYS
+      tar -xf $ZIP_FILE/sys/GoogleExtShared.tar.xz -C $TMP_SYS_JAR
+      echo "- Done" >> $LOG
+      echo "-----------------------------------" >> $LOG
+      echo "- Unpack PRIV-APP Files" >> $LOG
+      tar tvf $ZIP_FILE/core/ConfigUpdater.tar.xz >> $LOG
+      tar tvf $ZIP_FILE/core/GoogleServicesFramework.tar.xz >> $LOG
+      tar tvf $ZIP_FILE/core/Phonesky.tar.xz >> $LOG
+      tar tvf $ZIP_FILE/core/PrebuiltGmsCoreSvc.tar.xz >> $LOG
+      tar -xf $ZIP_FILE/core/ConfigUpdater.tar.xz -C $TMP_PRIV
+      tar -xf $ZIP_FILE/core/GoogleServicesFramework.tar.xz -C $TMP_PRIV
+      tar -xf $ZIP_FILE/core/Phonesky.tar.xz -C $TMP_PRIV
+      tar -xf $ZIP_FILE/core/PrebuiltGmsCoreRvc.tar.xz -C $TMP_PRIV
+      echo "- Done" >> $LOG
+      echo "-----------------------------------" >> $LOG
+      echo "- Unpack Framework Files" >> $LOG
+      tar tvf $ZIP_FILE/Framework.tar.xz >> $LOG
+      tar -xf $ZIP_FILE/Framework.tar.xz -C $TMP_FRAMEWORK
+      echo "- Done" >> $LOG
+      echo "-----------------------------------" >> $LOG
+      echo "- Unpack System Lib" >> $LOG
+      echo "- Done" >> $LOG
+      echo "-----------------------------------" >> $LOG
+      echo "- Unpack System Lib64" >> $LOG
+      echo "- Done" >> $LOG
+      echo "-----------------------------------" >> $LOG
+      echo "- Unpack System Files" >> $LOG
+      tar tvf $ZIP_FILE/Sysconfig.tar.xz >> $LOG
+      tar tvf $ZIP_FILE/Default.tar.xz >> $LOG
+      tar tvf $ZIP_FILE/Permissions.tar.xz >> $LOG
+      tar tvf $ZIP_FILE/Preferred.tar.xz >> $LOG
+      tar -xf $ZIP_FILE/Sysconfig.tar.xz -C $TMP_CONFIG
+      tar -xf $ZIP_FILE/Default.tar.xz -C $TMP_DEFAULT_PERM
+      tar -xf $ZIP_FILE/Permissions.tar.xz -C $TMP_G_PERM
+      tar -xf $ZIP_FILE/Preferred.tar.xz -C $TMP_G_PREF
+      echo "- Done" >> $LOG
+      echo "-----------------------------------" >> $LOG
+      echo "- Unpack System Overlay" >> $LOG
+      tar tvf $ZIP_FILE/overlay/PlayStoreOverlay.tar.xz >> $LOG
+      tar -xf $ZIP_FILE/overlay/PlayStoreOverlay.tar.xz -C $TMP_OVERLAY
+      echo "- Done" >> $LOG
+      echo "-----------------------------------" >> $LOG
+    }
+
+    # Set selinux context
+    selinux_context_sa() {
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleCalendarSyncAdapter"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleContactsSyncAdapter"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP_SHARED/GoogleExtShared"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk"
+    }
+
+    selinux_context_sp() {
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/ConfigUpdater"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleServicesFramework"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/Phonesky"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/PrebuiltGmsCoreSvc"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/Phonesky/Phonesky.apk"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/PrebuiltGmsCoreSvc/PrebuiltGmsCoreSvc.apk"
+    }
+
+    selinux_context_sf() {
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_FRAMEWORK/com.google.android.dialer.support.jar"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_FRAMEWORK/com.google.android.maps.jar"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_FRAMEWORK/com.google.android.media.effects.jar"
+    }
+
+    selinux_context_sl() {
+      return 0
+    }
+
+    selinux_context_sl64() {
+      return 0
+    }
+
+    selinux_context_se() {
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT/default-permissions.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.dialer.support.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.maps.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.media.effects.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/privapp-permissions-atv.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/privapp-permissions-google.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/split-permissions-google.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF/google.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/dialer_experience.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_build.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google_exclusives_enable.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml"
+    }
+
+    selinux_context_so() {
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY/PlayStoreOverlay"
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY/PlayStoreOverlay/PlayStoreOverlay.apk"
+    }
+
+    # APK optimization using zipalign tool
+    apk_opt() {
+      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk >> $ZIPALIGN_LOG
+      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk >> $ZIPALIGN_LOG
+      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk $ZIPALIGN_OUTFILE/GoogleExtShared.apk >> $ZIPALIGN_LOG
+      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk $ZIPALIGN_OUTFILE/ConfigUpdater.apk >> $ZIPALIGN_LOG
+      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk $ZIPALIGN_OUTFILE/GoogleServicesFramework.apk >> $ZIPALIGN_LOG
+      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/Phonesky/Phonesky.apk $ZIPALIGN_OUTFILE/Phonesky.apk >> $ZIPALIGN_LOG
+      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/PrebuiltGmsCoreSvc/PrebuiltGmsCoreSvc.apk $ZIPALIGN_OUTFILE/PrebuiltGmsCoreSvc.apk >> $ZIPALIGN_LOG
+      $ZIPALIGN_TOOL -p -v 4 $SYSTEM_OVERLAY/PlayStoreOverlay/PlayStoreOverlay.apk $ZIPALIGN_OUTFILE/PlayStoreOverlay.apk >> $ZIPALIGN_LOG
+    }
+
+    pre_opt() {
+      rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
+      rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
+      rm -rf $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
+      rm -rf $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
+      rm -rf $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
+      rm -rf $SYSTEM_PRIV_APP/Phonesky/Phonesky.apk
+      rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreSvc/PrebuiltGmsCoreSvc.apk
+      rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay/PlayStoreOverlay.apk
+    }
+
+    add_opt() {
+      cp -f $ZIPALIGN_OUTFILE/GoogleCalendarSyncAdapter.apk $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
+      cp -f $ZIPALIGN_OUTFILE/GoogleContactsSyncAdapter.apk $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
+      cp -f $ZIPALIGN_OUTFILE/GoogleExtShared.apk $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
+      cp -f $ZIPALIGN_OUTFILE/ConfigUpdater.apk $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
+      cp -f $ZIPALIGN_OUTFILE/GoogleServicesFramework.apk $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
+      cp -f $ZIPALIGN_OUTFILE/Phonesky.apk $SYSTEM_PRIV_APP/Phonesky/Phonesky.apk
+      cp -f $ZIPALIGN_OUTFILE/PrebuiltGmsCoreSvc.apk $SYSTEM_PRIV_APP/PrebuiltGmsCoreSvc/PrebuiltGmsCoreSvc.apk
+      cp -f $ZIPALIGN_OUTFILE/PlayStoreOverlay.apk $SYSTEM_OVERLAY/PlayStoreOverlay/PlayStoreOverlay.apk
+    }
+
+    perm_opt() {
+      chmod 0644 $SYSTEM_APP/GoogleCalendarSyncAdapter/GoogleCalendarSyncAdapter.apk
+      chmod 0644 $SYSTEM_APP/GoogleContactsSyncAdapter/GoogleContactsSyncAdapter.apk
+      chmod 0644 $SYSTEM_APP_SHARED/GoogleExtShared/GoogleExtShared.apk
+      chmod 0644 $SYSTEM_PRIV_APP/ConfigUpdater/ConfigUpdater.apk
+      chmod 0644 $SYSTEM_PRIV_APP/GoogleServicesFramework/GoogleServicesFramework.apk
+      chmod 0644 $SYSTEM_PRIV_APP/Phonesky/Phonesky.apk
+      chmod 0644 $SYSTEM_PRIV_APP/PrebuiltGmsCoreSvc/PrebuiltGmsCoreSvc.apk
+      chmod 0644 $SYSTEM_OVERLAY/PlayStoreOverlay/PlayStoreOverlay.apk
+    }
+
+    # Execute functions
+    sdk_v31() {
+      extract_app
+      on_pkg_inst
+      selinux_context_sa
+      selinux_context_sp
+      selinux_context_sf
+      selinux_context_sl
+      selinux_context_sl64
+      selinux_context_se
+      selinux_context_so
+      apk_opt
+      pre_opt
+      add_opt
+      perm_opt
+      selinux_context_sa
+      selinux_context_sp
+      selinux_context_so
+    }
+    ui_print "- Installing GApps"
+    sdk_v31
+    cat $LOG >> $sdk_v31
+  else
+    echo "Target Android SDK Version : $android_sdk" >> $sdk_v31
   fi
 }
 
@@ -6537,6 +6859,16 @@ opt_v30() {
   fi
 }
 
+# Delete existing GMS Doze entry from all XML files
+opt_v31() {
+  if [ "$android_sdk" == "$supported_sdk_v31" ]; then
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/etc/permissions/*.xml
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/etc/sysconfig/*.xml
+  else
+    echo "ERROR: Unsupported component for Android SDK $android_sdk" >> $OPTv31
+  fi
+}
+
 # Remove Privileged App Whitelist property with flag enforce
 purge_whitelist_permission() {
   if [ -n "$(cat $SYSTEM/build.prop | grep control_privapp_permissions)" ]; then
@@ -6905,55 +7237,171 @@ cts_patch_vendor() {
   fi
 }
 
-# Apply safetynet patch on odm build
-cts_patch_odm() {
-  if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
-    # Build fingerprint
-    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.fingerprint)" ]; then
-      grep -v "$CTS_DEFAULT_ODM_BUILD_FINGERPRINT" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
-      rm -rf $ANDROID_ROOT/odm/etc/build.prop
-      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
-      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
-      rm -rf $TMP/odm.prop
-      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_FINGERPRINT" after 'ro.odm.build.date.utc=' "$CTS_ODM_BUILD_FINGERPRINT"
+# Apply safetynet patch on vendor dlkm build
+cts_patch_vendor_dlkm() {
+  if [ "$device_vendorpartition" == "true" ]; then
+    if [ -f "$ANDROID_ROOT/vendor_dlkm/etc/build.prop" ]; then
+      # Build fingerprint
+      if [ -n "$(cat $ANDROID_ROOT/vendor_dlkm/etc/build.prop | grep ro.vendor_dlkm.build.fingerprint)" ]; then
+        grep -v "$CTS_DEFAULT_VENDOR_DLKM_BUILD_FINGERPRINT" $ANDROID_ROOT/vendor_dlkm/etc/build.prop > $TMP/vendor_dlkm.prop
+        rm -rf $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        cp -f $TMP/vendor_dlkm.prop $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        rm -rf $TMP/vendor_dlkm.prop
+        insert_line $ANDROID_ROOT/vendor_dlkm/etc/build.prop "$CTS_VENDOR_DLKM_BUILD_FINGERPRINT" after 'ro.vendor_dlkm.build.date.utc=' "$CTS_VENDOR_DLKM_BUILD_FINGERPRINT"
+      else
+        echo "ERROR: Unable to find target property 'ro.vendor_dlkm.build.fingerprint'" >> $TARGET_VENDOR_DLKM
+      fi
+      # Build id
+      if [ -n "$(cat $ANDROID_ROOT/vendor_dlkm/etc/build.prop | grep ro.vendor_dlkm.build.id)" ]; then
+        grep -v "$CTS_DEFAULT_VENDOR_DLKM_BUILD_ID" $ANDROID_ROOT/vendor_dlkm/etc/build.prop > $TMP/vendor_dlkm.prop
+        rm -rf $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        cp -f $TMP/vendor_dlkm.prop $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        rm -rf $TMP/vendor_dlkm.prop
+        insert_line $ANDROID_ROOT/vendor_dlkm/etc/build.prop "$CTS_VENDOR_DLKM_BUILD_ID" after 'ro.vendor_dlkm.build.fingerprint=' "$CTS_VENDOR_DLKM_BUILD_ID"
+      else
+        echo "ERROR: Unable to find target property 'ro.vendor_dlkm.build.id'" >> $TARGET_VENDOR_DLKM
+      fi
+      # Build tags
+      if [ -n "$(cat $ANDROID_ROOT/vendor_dlkm/etc/build.prop | grep ro.vendor_dlkm.build.tags)" ]; then
+        grep -v "$CTS_DEFAULT_VENDOR_DLKM_BUILD_TAG" $ANDROID_ROOT/vendor_dlkm/etc/build.prop > $TMP/vendor_dlkm.prop
+        rm -rf $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        cp -f $TMP/vendor_dlkm.prop $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        rm -rf $TMP/vendor_dlkm.prop
+        insert_line $ANDROID_ROOT/vendor_dlkm/etc/build.prop "$CTS_VENDOR_DLKM_BUILD_TAG" after 'ro.vendor_dlkm.build.id=' "$CTS_VENDOR_DLKM_BUILD_TAG"
+      else
+        echo "ERROR: Unable to find target property 'ro.vendor_dlkm.build.tags'" >> $TARGET_VENDOR_DLKM
+      fi
+      # Build type
+      if [ -n "$(cat $ANDROID_ROOT/vendor_dlkm/etc/build.prop | grep ro.vendor_dlkm.build.type=userdebug)" ]; then
+        grep -v "$CTS_DEFAULT_VENDOR_DLKM_BUILD_TYPE" $ANDROID_ROOT/vendor_dlkm/etc/build.prop > $TMP/vendor_dlkm.prop
+        rm -rf $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        cp -f $TMP/vendor_dlkm.prop $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+        rm -rf $TMP/vendor_dlkm.prop
+        insert_line $ANDROID_ROOT/vendor_dlkm/etc/build.prop "$CTS_VENDOR_DLKM_BUILD_TYPE" after 'ro.vendor_dlkm.build.tags=' "$CTS_VENDOR_DLKM_BUILD_TYPE"
+      else
+        echo "ERROR: Unable to find target property with type 'userdebug'" >> $TARGET_ODM_DLKM
+      fi
     else
-      echo "ERROR: Unable to find target property 'ro.odm.build.fingerprint'" >> $TARGET_ODM
-    fi
-    # Build id
-    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.id)" ]; then
-      grep -v "$CTS_DEFAULT_ODM_BUILD_ID" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
-      rm -rf $ANDROID_ROOT/odm/etc/build.prop
-      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
-      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
-      rm -rf $TMP/odm.prop
-      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_ID" after 'ro.odm.build.fingerprint=' "$CTS_ODM_BUILD_ID"
-    else
-      echo "ERROR: Unable to find target property 'ro.odm.build.id'" >> $TARGET_ODM
-    fi
-    # Build tags
-    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.tags)" ]; then
-      grep -v "$CTS_DEFAULT_ODM_BUILD_TAG" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
-      rm -rf $ANDROID_ROOT/odm/etc/build.prop
-      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
-      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
-      rm -rf $TMP/odm.prop
-      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_TAG" after 'ro.odm.build.id=' "$CTS_ODM_BUILD_TAG"
-    else
-      echo "ERROR: Unable to find target property 'ro.odm.build.tags'" >> $TARGET_ODM
-    fi
-    # Build type
-    if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.type=userdebug)" ]; then
-      grep -v "$CTS_DEFAULT_ODM_BUILD_TYPE" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
-      rm -rf $ANDROID_ROOT/odm/etc/build.prop
-      cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
-      chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
-      rm -rf $TMP/odm.prop
-      insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_TYPE" after 'ro.odm.build.tags=' "$CTS_ODM_BUILD_TYPE"
-    else
-      echo "ERROR: Unable to find target property with type 'userdebug'" >> $TARGET_ODM
+      echo "ERROR: unable to find vendor dlkm 'build.prop'" >> $TARGET_VENDOR_DLKM
     fi
   else
-    echo "ERROR: unable to find odm 'build.prop'" >> $TARGET_ODM
+    echo "ERROR: No vendor partition present" >> $PARTITION
+  fi
+}
+
+# Apply safetynet patch on odm build
+cts_patch_odm() {
+  if [ "$device_vendorpartition" == "true" ]; then
+    if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
+      # Build fingerprint
+      if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.fingerprint)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_BUILD_FINGERPRINT" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+        rm -rf $ANDROID_ROOT/odm/etc/build.prop
+        cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+        rm -rf $TMP/odm.prop
+        insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_FINGERPRINT" after 'ro.odm.build.date.utc=' "$CTS_ODM_BUILD_FINGERPRINT"
+      else
+        echo "ERROR: Unable to find target property 'ro.odm.build.fingerprint'" >> $TARGET_ODM
+      fi
+      # Build id
+      if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.id)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_BUILD_ID" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+        rm -rf $ANDROID_ROOT/odm/etc/build.prop
+        cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+        rm -rf $TMP/odm.prop
+        insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_ID" after 'ro.odm.build.fingerprint=' "$CTS_ODM_BUILD_ID"
+      else
+        echo "ERROR: Unable to find target property 'ro.odm.build.id'" >> $TARGET_ODM
+      fi
+      # Build tags
+      if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.tags)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_BUILD_TAG" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+        rm -rf $ANDROID_ROOT/odm/etc/build.prop
+        cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+        rm -rf $TMP/odm.prop
+        insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_TAG" after 'ro.odm.build.id=' "$CTS_ODM_BUILD_TAG"
+      else
+        echo "ERROR: Unable to find target property 'ro.odm.build.tags'" >> $TARGET_ODM
+      fi
+      # Build type
+      if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.type=userdebug)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_BUILD_TYPE" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
+        rm -rf $ANDROID_ROOT/odm/etc/build.prop
+        cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
+        rm -rf $TMP/odm.prop
+        insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_TYPE" after 'ro.odm.build.tags=' "$CTS_ODM_BUILD_TYPE"
+      else
+        echo "ERROR: Unable to find target property with type 'userdebug'" >> $TARGET_ODM
+      fi
+    else
+      echo "ERROR: unable to find odm 'build.prop'" >> $TARGET_ODM
+    fi
+  else
+    echo "ERROR: No vendor partition present" >> $PARTITION
+  fi
+}
+
+# Apply safetynet patch on odm dlkm build
+cts_patch_odm_dlkm() {
+  if [ "$device_vendorpartition" == "true" ]; then
+    if [ -f "$ANDROID_ROOT/odm_dlkm/etc/build.prop" ]; then
+      # Build fingerprint
+      if [ -n "$(cat $ANDROID_ROOT/odm_dlkm/etc/build.prop | grep ro.odm_dlkm.build.fingerprint)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_DLKM_BUILD_FINGERPRINT" $ANDROID_ROOT/odm_dlkm/etc/build.prop > $TMP/odm_dlkm.prop
+        rm -rf $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        cp -f $TMP/odm_dlkm.prop $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        rm -rf $TMP/odm_dlkm.prop
+        insert_line $ANDROID_ROOT/odm_dlkm/etc/build.prop "$CTS_ODM_DLKM_BUILD_FINGERPRINT" after 'ro.odm_dlkm.build.date.utc=' "$CTS_ODM_DLKM_BUILD_FINGERPRINT"
+      else
+        echo "ERROR: Unable to find target property 'ro.odm_dlkm.build.fingerprint'" >> $TARGET_ODM_DLKM
+      fi
+      # Build id
+      if [ -n "$(cat $ANDROID_ROOT/odm_dlkm/etc/build.prop | grep ro.odm_dlkm.build.id)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_DLKM_BUILD_ID" $ANDROID_ROOT/odm_dlkm/etc/build.prop > $TMP/odm_dlkm.prop
+        rm -rf $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        cp -f $TMP/odm_dlkm.prop $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        rm -rf $TMP/odm_dlkm.prop
+        insert_line $ANDROID_ROOT/odm_dlkm/etc/build.prop "$CTS_ODM_DLKM_BUILD_ID" after 'ro.odm_dlkm.build.fingerprint=' "$CTS_ODM_DLKM_BUILD_ID"
+      else
+        echo "ERROR: Unable to find target property 'ro.odm_dlkm.build.id'" >> $TARGET_ODM_DLKM
+      fi
+      # Build tags
+      if [ -n "$(cat $ANDROID_ROOT/odm_dlkm/etc/build.prop | grep ro.odm_dlkm.build.tags)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_DLKM_BUILD_TAG" $ANDROID_ROOT/odm_dlkm/etc/build.prop > $TMP/odm_dlkm.prop
+        rm -rf $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        cp -f $TMP/odm_dlkm.prop $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        rm -rf $TMP/odm_dlkm.prop
+        insert_line $ANDROID_ROOT/odm_dlkm/etc/build.prop "$CTS_ODM_DLKM_BUILD_TAG" after 'ro.odm_dlkm.build.id=' "$CTS_ODM_DLKM_BUILD_TAG"
+      else
+        echo "ERROR: Unable to find target property 'ro.odm_dlkm.build.tags'" >> $TARGET_ODM_DLKM
+      fi
+      # Build type
+      if [ -n "$(cat $ANDROID_ROOT/odm_dlkm/etc/build.prop | grep ro.odm_dlkm.build.type=userdebug)" ]; then
+        grep -v "$CTS_DEFAULT_ODM_DLKM_BUILD_TYPE" $ANDROID_ROOT/odm_dlkm/etc/build.prop > $TMP/odm_dlkm.prop
+        rm -rf $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        cp -f $TMP/odm_dlkm.prop $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        chmod 0644 $ANDROID_ROOT/odm_dlkm/etc/build.prop
+        rm -rf $TMP/odm_dlkm.prop
+        insert_line $ANDROID_ROOT/odm_dlkm/etc/build.prop "$CTS_ODM_DLKM_BUILD_TYPE" after 'ro.odm_dlkm.build.tags=' "$CTS_ODM_DLKM_BUILD_TYPE"
+      else
+        echo "ERROR: Unable to find target property with type 'userdebug'" >> $TARGET_ODM_DLKM
+      fi
+    else
+      echo "ERROR: unable to find odm dlkm 'build.prop'" >> $TARGET_ODM_DLKM
+    fi
+  else
+    echo "ERROR: No vendor partition present" >> $PARTITION
   fi
 }
 
@@ -7088,9 +7536,16 @@ spl_boot_complete() {
 usf_v30() {
   if [ "$supported_usf_config" == "true" ]; then
     # Set defaults and unpack
-    ZIP="
-      USF/30/bin/keystore
-      USF/30/lib64/libkeystore-attestation-application-id.so"
+    if [ "$android_sdk" == "$supported_sdk_v31" ]; then
+      ZIP="
+        USF/31/bin/keystore
+        USF/31/lib64/libkeystore-attestation-application-id.so"
+    fi
+    if [ "$android_sdk" == "$supported_sdk_v30" ]; then
+      ZIP="
+        USF/30/bin/keystore
+        USF/30/lib64/libkeystore-attestation-application-id.so"
+    fi
     unpack_zip
     if [ -f "$SYSTEM/bin/keystore" ] && [ -f "$SYSTEM/lib64/libkeystore-attestation-application-id.so" ]; then
       # Create backup in data partition
@@ -7269,7 +7724,7 @@ cts_patch() {
       if [ ! "$android_product" == "$supported_product" ]; then
         if [ "$android_sdk" == "$supported_sdk_v30" ]; then
           # Detect required security patch level
-          on_security_patch_check_v30
+          on_security_patch_check
           status="enforced"
           if [ "$device_vendorpartition" == "true" ]; then
             if [ "$system_security_patch" == "$supported_security_patch" ] && [ "$vendor_security_patch" == "$supported_security_patch" ]; then
@@ -7288,6 +7743,40 @@ cts_patch() {
           cts_patch_ext
           cts_patch_vendor
           cts_patch_odm
+          spl_update_system
+          spl_update_vendor
+          spl_boot_complete
+          usf_v30
+          usf_boot_complete
+          spl_ota_conf
+          usf_ota_conf
+          insert_line $SYSTEM/config.prop "ro.cts.enabled=true" after '# Begin build properties' "ro.cts.enabled=true"
+        fi
+      fi
+      if [ ! "$android_product" == "$supported_product" ]; then
+        if [ "$android_sdk" == "$supported_sdk_v31" ]; then
+          # Detect required security patch level
+          on_security_patch_check
+          status="enforced"
+          if [ "$device_vendorpartition" == "true" ]; then
+            if [ "$system_security_patch" == "$supported_security_patch" ] && [ "$vendor_security_patch" == "$supported_security_patch" ]; then
+              status="verified"
+            fi
+          fi
+          if [ "$device_vendorpartition" == "false" ]; then
+            if [ "$system_security_patch" == "$supported_security_patch" ]; then
+              status="verified"
+            fi
+          fi
+          ui_print "- CTS patch status: $status"
+          patch_v31
+          cts_patch_system
+          cts_patch_product
+          cts_patch_ext
+          cts_patch_vendor
+          cts_patch_vendor_dlkm
+          cts_patch_odm
+          cts_patch_odm_dlkm
           spl_update_system
           spl_update_vendor
           spl_boot_complete
@@ -7325,9 +7814,15 @@ sdk_fix() {
     if [ "$device_vendorpartition" = "true" ]; then
       chmod 0600 $VENDOR/build.prop
       chmod 0600 $VENDOR/default.prop
-    fi
-    if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
-      chmod 0600 $ANDROID_ROOT/odm/etc/build.prop
+      if [ -f "$ANDROID_ROOT/vendor_dlkm/etc/build.prop" ]; then
+        chmod 0600 $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+      fi
+      if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
+        chmod 0600 $ANDROID_ROOT/odm/etc/build.prop
+      fi
+      if [ -f "$ANDROID_ROOT/odm_dlkm/etc/build.prop" ]; then
+        chmod 0600 $ANDROID_ROOT/odm_dlkm/etc/build.prop
+      fi
     fi
   fi
 }
@@ -7350,6 +7845,15 @@ selinux_fix() {
   if [ "$device_vendorpartition" == "true" ]; then
     chcon -h u:object_r:vendor_file:s0 "$VENDOR/build.prop"
     chcon -h u:object_r:vendor_file:s0 "$VENDOR/default.prop"
+    if [ -f "$ANDROID_ROOT/vendor_dlkm/etc/build.prop" ]; then
+      chcon -h u:object_r:vendor_configs_file:s0 "$ANDROID_ROOT/vendor_dlkm/etc/build.prop"
+    fi
+    if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
+      chcon -h u:object_r:vendor_configs_file:s0 "$ANDROID_ROOT/odm/etc/build.prop"
+    fi
+    if [ -f "$ANDROID_ROOT/odm_dlkm/etc/build.prop" ]; then
+      chcon -h u:object_r:vendor_configs_file:s0 "$ANDROID_ROOT/odm_dlkm/etc/build.prop"
+    fi
   fi
 }
 
@@ -7441,6 +7945,7 @@ pre_install() {
     opt_defaults
     opt_v29
     opt_v30
+    opt_v31
   fi
 }
 
@@ -7581,12 +8086,14 @@ post_install() {
     on_rwg_check
     set_aosp_default
     lim_aosp_install
+    pre_installed_v31
     pre_installed_v30
     pre_installed_v29
     pre_installed_v28
     pre_installed_v27
     pre_installed_v26
     pre_installed_v25
+    sdk_v31_install
     sdk_v30_install
     sdk_v29_install
     sdk_v28_install
