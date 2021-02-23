@@ -1067,20 +1067,6 @@ boot_SYSHW() {
   fi
 }
 
-# Bind mountpoint /system to /system_root if we have system-as-root
-on_AB() {
-  if [ -f /system/init.rc ]; then
-    system_as_root="true"
-    [ -L /system_root ] && rm -f /system_root
-    mkdir /system_root 2>/dev/null
-    mount --move /system /system_root
-    mount -o bind /system_root/system /system
-  else
-    grep ' / ' /proc/mounts | grep -qv 'rootfs' || grep -q ' /system_root ' /proc/mounts \
-    && system_as_root="true" || system_as_root="false"
-  fi
-}
-
 # Check mount status
 mount_status() {
   if [ -f "$SYSTEM/build.prop" ]; then
@@ -8098,10 +8084,5 @@ pre_install
 chk_disk
 post_install
 # end installation
-
-# Disabled functions
-pre_opt() {
-  on_AB
-}
 
 # end method
