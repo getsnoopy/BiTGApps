@@ -8086,6 +8086,8 @@ post_install() {
     sdk_fix
     selinux_fix
     set_release_tag
+    sqlite_opt
+    sqlite_backup
     on_installed
   fi
 }
@@ -8100,11 +8102,6 @@ post_install
 # Disabled functions
 pre_opt() {
   on_AB
-}
-
-post_opt() {
-  sqlite_opt
-  sqlite_backup
 }
 
 # end method
