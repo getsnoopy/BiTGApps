@@ -8017,6 +8017,52 @@ chk_disk() {
   fi
 }
 
+# check various partitions size before install
+disk_space_before() {
+  if [ -d "$ANDROID/system" ]; then
+    OLD_SIZE_SYSTEM=$(du -h -s $ANDROID_ROOT/system)
+    echo $OLD_SIZE_SYSTEM >> $TMP/bitgapps/old_system_size.log
+  else
+    OLD_SIZE_SYSTEM=$(du -h -s /system)
+    echo $OLD_SIZE_SYSTEM >> $TMP/bitgapps/old_system_size.log
+  fi
+  if [ -d "/product" ]; then
+    OLD_SIZE_PRODUCT=$(du -h -s /product)
+    echo $OLD_SIZE_PRODUCT >> $TMP/bitgapps/old_product_size.log
+  fi
+  if [ -d "/system_ext" ]; then
+    OLD_SIZE_SYSTEM_EXT=$(du -h -s /system_ext)
+    echo $OLD_SIZE_SYSTEM_EXT >> $TMP/bitgapps/old_system_ext_size.log
+  fi
+  if [ "$device_vendorpartition" == "true" ]; then
+    OLD_SIZE_VENDOR=$(du -h -s /vendor)
+    echo $OLD_SIZE_VENDOR >> $TMP/bitgapps/old_vendor_size.log
+  fi
+}
+
+# check various partitions size after install
+disk_space_after() {
+  if [ -d "$ANDROID/system" ]; then
+    NEW_SIZE_SYSTEM=$(du -h -s $ANDROID_ROOT/system)
+    echo $NEW_SIZE_SYSTEM >> $TMP/bitgapps/new_system_size.log
+  else
+    NEW_SIZE_SYSTEM=$(du -h -s /system)
+    echo $NEW_SIZE_SYSTEM >> $TMP/bitgapps/new_system_size.log
+  fi
+  if [ -d "/product" ]; then
+    NEW_SIZE_PRODUCT=$(du -h -s /product)
+    echo $NEW_SIZE_PRODUCT >> $TMP/bitgapps/new_product_size.log
+  fi
+  if [ -d "/system_ext" ]; then
+    NEW_SIZE_SYSTEM_EXT=$(du -h -s /system_ext)
+    echo $NEW_SIZE_SYSTEM_EXT >> $TMP/bitgapps/new_system_ext_size.log
+  fi
+  if [ "$device_vendorpartition" == "true" ]; then
+    NEW_SIZE_VENDOR=$(du -h -s /vendor)
+    echo $NEW_SIZE_VENDOR >> $TMP/bitgapps/new_vendor_size.log
+  fi
+}
+
 # Do not merge 'pre_install' functions here
 post_install() {
   if [ "$ZIPTYPE" == "addon" ]; then
@@ -8033,6 +8079,7 @@ post_install() {
   fi
   if [ "$ZIPTYPE" == "basic" ]; then
     build_defaults
+    disk_space_before
     on_boot_check
     get_boot_config
     print_title_boot
@@ -8091,6 +8138,7 @@ post_install() {
     set_release_tag
     sqlite_opt
     sqlite_backup
+    disk_space_after
     on_installed
   fi
 }
