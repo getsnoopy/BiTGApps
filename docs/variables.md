@@ -44,6 +44,18 @@ _Note: Usable only, if you are building BiTGApps package_
 
 * `Example: 21`
 
+### GAPPS_RELEASE_TAG
+
+* This is used by build script and update GApps package release tag in OTA script
+
+* `Example: 21`
+
+### COMMON_SYSTEM_LAYOUT
+
+* This is used by build script and works together with GAPPS_RELEASE_TAG
+
+* `Example: $S` or [commit](https://github.com/BiTGApps/BiTGApps-Build/commit/7e38891fe62b2bb02c0ec02a132d9995cbfc70fb)
+
 ### BuildDate
 
 * Set release date in GApps property file and used by BiTGApps APK
