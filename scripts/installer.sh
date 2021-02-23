@@ -212,12 +212,6 @@ remove_line() {
 }
 
 # Set package defaults
-opt_defaults() {
-  OPTv29="$TMP/gms_opt_v29.log"
-  OPTv30="$TMP/gms_opt_v30.log"
-  OPTv31="$TMP/gms_opt_v31.log"
-}
-
 boot_defaults() {
   bootSAR="$TMP/SAR.log"
   bootAB="$TMP/AB.log"
@@ -290,7 +284,6 @@ build_defaults() {
   TARGET_VENDOR_DLKM="$TMP/bitgapps/cts-vendor-dlkm.log"
   TARGET_ODM="$TMP/bitgapps/cts-odm.log"
   TARGET_ODM_DLKM="$TMP/bitgapps/cts-odm-dlkm.log"
-  OPTv28="$TMP/bitgapps/gms_opt_v28.log"
   usf="$TMP/bitgapps/usf.log"
   spl="$TMP/bitgapps/spl.log"
 }
@@ -6828,44 +6821,20 @@ set_assistant() {
   insert_line $SYSTEM/build.prop "ro.opa.eligible_device=true" after 'net.bt.name=Android' 'ro.opa.eligible_device=true'
 }
 
-# Battery Optimization for GMS Core and its components
+# Delete existing GMS Doze entry from Android 7.1+
+opt_v25() {
+  if [ "$android_sdk" -ge "$supported_sdk_v25" ]; then
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/etc/permissions/*.xml
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/etc/sysconfig/*.xml
+  fi
+}
+
+# Enable Battery Optimization for GMS Core and its components by executing optimization script
 opt_v28() {
   if [ "$android_sdk" == "$supported_sdk_v28" ]; then
     cp -f $TMP/pm.sh $SYSTEM/bin/pm.sh
     chmod 0755 $SYSTEM/bin/pm.sh
     chcon -h u:object_r:system_file:s0 "$SYSTEM/bin/pm.sh"
-  else
-    echo "ERROR: Unsupported component for Android SDK $android_sdk" >> $OPTv28
-  fi
-}
-
-# Delete existing GMS Doze entry from all XML files
-opt_v29() {
-  if [ "$android_sdk" == "$supported_sdk_v29" ]; then
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/etc/permissions/*.xml
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/etc/sysconfig/*.xml
-  else
-    echo "ERROR: Unsupported component for Android SDK $android_sdk" >> $OPTv29
-  fi
-}
-
-# Delete existing GMS Doze entry from all XML files
-opt_v30() {
-  if [ "$android_sdk" == "$supported_sdk_v30" ]; then
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/etc/permissions/*.xml
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/etc/sysconfig/*.xml
-  else
-    echo "ERROR: Unsupported component for Android SDK $android_sdk" >> $OPTv30
-  fi
-}
-
-# Delete existing GMS Doze entry from all XML files
-opt_v31() {
-  if [ "$android_sdk" == "$supported_sdk_v31" ]; then
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/etc/permissions/*.xml
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/etc/sysconfig/*.xml
-  else
-    echo "ERROR: Unsupported component for Android SDK $android_sdk" >> $OPTv31
   fi
 }
 
@@ -7942,10 +7911,6 @@ pre_install() {
     boot_SYSHW
     on_data_check
     clean_inst
-    opt_defaults
-    opt_v29
-    opt_v30
-    opt_v31
   fi
 }
 
@@ -8111,6 +8076,7 @@ post_install() {
     on_setup_install
     backup_script
     set_assistant
+    opt_v25
     opt_v28
     on_whitelist_check
     whitelist_patch
