@@ -126,17 +126,20 @@ set_bb() {
     rm -rf $TMP/busybox-arm
     rm -rf $TMP/updater
     if [ "$ZIPTYPE" == "basic" ]; then
-      rm -rf $TMP/config.prop
-      rm -rf $TMP/data.prop
-      rm -rf $TMP/g.prop
-      rm -rf $TMP/installer.sh
-      rm -rf $TMP/init.boot.rc
-      rm -rf $TMP/init.spl.rc
-      rm -rf $TMP/init.usf.rc
-      rm -rf $TMP/pm.sh
-      rm -rf $TMP/sqlite3
-      rm -rf $TMP/util_functions.sh
-      rm -rf $TMP/zipalign
+      for f in $TMP/config.prop \
+               $TMP/data.prop \
+               $TMP/g.prop \
+               $TMP/installer.sh \
+               $TMP/init.boot.rc \
+               $TMP/init.spl.rc \
+               $TMP/init.usf.rc \
+               $TMP/pm.sh \
+               $TMP/sqlite3 \
+               $TMP/util_functions.sh \
+               $TMP/zipalign
+      do
+        rm -rf "$f"
+      done
     fi
     ui_print "! Wrong architecture detected. Aborting..."
     ui_print "! Installation failed"
