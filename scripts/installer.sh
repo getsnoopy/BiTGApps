@@ -139,6 +139,7 @@ set_bb() {
       rm -rf $TMP/zipalign
     fi
     ui_print "! Wrong architecture detected. Aborting..."
+    ui_print "! Installation failed"
     ui_print " "
     exit 1
   fi
@@ -283,6 +284,8 @@ build_defaults() {
   bootA="$TMP/bitgapps/A-only.log"
   bootSARHW="$TMP/bitgapps/SARHW.log"
   bootSYSHW="$TMP/bitgapps/SYSHW.log"
+  OPTv25="$TMP/bitgapps/gms_opt_v25.log"
+  OPTv28="$TMP/bitgapps/gms_opt_v28.log"
 }
 
 # Set CTS default properties
@@ -942,6 +945,7 @@ boot_SAR() {
         chmod 0750 /system_root/init.boot.rc
         chcon -h u:object_r:rootfs:s0 "/system_root/init.boot.rc"
       else
+        echo "Kernel init patched" >> $bootSAR
         sed -i '/init.${ro.zygote}.rc/a\\import /init.boot.rc' /system_root/init.rc
         cp -f $TMP/init.boot.rc /system_root/init.boot.rc
         chmod 0750 /system_root/init.boot.rc
@@ -963,6 +967,7 @@ boot_AB() {
         chmod 0750 /system/init.boot.rc
         chcon -h u:object_r:rootfs:s0 "/system/init.boot.rc"
       else
+        echo "Kernel init patched" >> $bootAB
         sed -i '/init.${ro.zygote}.rc/a\\import /init.boot.rc' /system/init.rc
         cp -f $TMP/init.boot.rc /system/init.boot.rc
         chmod 0750 /system/init.boot.rc
@@ -986,6 +991,7 @@ boot_A() {
           chmod 0644 $SYSTEM/etc/init/init.boot.rc
           chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.boot.rc"
         else
+          echo "Bootanim init patched" >> $bootA
           if [ -n "$(cat $INIT | grep init.spl.rc)" ] && [ -n "$(cat $INIT | grep init.usf.rc)" ]; then
             insert_line $INIT "import /system/etc/init/init.boot.rc" after 'import /system/etc/init/init.usf.rc' "import /system/etc/init/init.boot.rc"
           fi
@@ -1034,6 +1040,7 @@ boot_SARHW() {
         chmod 0644 /system_root/system/etc/init/hw/init.boot.rc
         chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.boot.rc"
       else
+        echo "Kernel init patched" >> $bootSARHW
         sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.boot.rc' $INIT
         cp -f $TMP/init.boot.rc /system_root/system/etc/init/hw/init.boot.rc
         chmod 0644 /system_root/system/etc/init/hw/init.boot.rc
@@ -1056,6 +1063,7 @@ boot_SYSHW() {
         chmod 0644 /system/system/etc/init/hw/init.boot.rc
         chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.boot.rc"
       else
+        echo "Kernel init patched" >> $bootSYSHW
         sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.boot.rc' $INIT
         cp -f $TMP/init.boot.rc /system/system/etc/init/hw/init.boot.rc
         chmod 0644 /system/system/etc/init/hw/init.boot.rc
@@ -6807,6 +6815,7 @@ set_assistant() {
 # Delete existing GMS Doze entry from Android 7.1+
 opt_v25() {
   if [ "$android_sdk" -ge "$supported_sdk_v25" ]; then
+    echo "GMS Doze preventing configuration removed" >> $OPTv25
     sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/etc/permissions/*.xml
     sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/etc/sysconfig/*.xml
   fi
@@ -6815,6 +6824,7 @@ opt_v25() {
 # Enable Battery Optimization for GMS Core and its components by executing optimization script
 opt_v28() {
   if [ "$android_sdk" == "$supported_sdk_v28" ]; then
+    echo "GMS optimization script installed" >> $OPTv28
     cp -f $TMP/pm.sh $SYSTEM/bin/pm.sh
     chmod 0755 $SYSTEM/bin/pm.sh
     chcon -h u:object_r:system_file:s0 "$SYSTEM/bin/pm.sh"
@@ -7456,6 +7466,7 @@ spl_boot_complete() {
         chmod 0644 $SYSTEM/etc/init/init.spl.rc
         chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.spl.rc"
       else
+        echo "Bootanim init patched" >> $spl
         insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.spl.rc" before 'service bootanim /system/bin/bootanimation' "import /system/etc/init/init.spl.rc"
         sed -i '/init.spl.rc/G' $SYSTEM/etc/init/bootanim.rc
         cp -f $TMP/init.spl.rc $SYSTEM/etc/init/init.spl.rc
@@ -7469,6 +7480,7 @@ spl_boot_complete() {
     fi
     # Restore bootanimation init
     if [ -f "/data/spl/init.def" ]; then
+      echo "Bootanim init restored" >> $spl
       grep -v "import /system/etc/init/init.spl.rc" $SYSTEM/etc/init/bootanim.rc > $TMP/bootanim.rc
       sed -i '/^$/d' $TMP/bootanim.rc
       rm -rf $SYSTEM/etc/init/bootanim.rc
@@ -7552,6 +7564,7 @@ usf_boot_complete() {
         chmod 0644 $SYSTEM/etc/init/init.usf.rc
         chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.usf.rc"
       else
+        echo "Bootanim init patched" >> $usf
         insert_line $SYSTEM/etc/init/bootanim.rc "import /system/etc/init/init.usf.rc" after 'import /system/etc/init/init.spl.rc' "import /system/etc/init/init.usf.rc"
         cp -f $TMP/init.usf.rc $SYSTEM/etc/init/init.usf.rc
         chmod 0644 $SYSTEM/etc/init/init.usf.rc
@@ -7564,6 +7577,7 @@ usf_boot_complete() {
     fi
     # Restore bootanimation init
     if [ -f "/data/keystore/init.def" ]; then
+      echo "Bootanim init restored" >> $usf
       grep -v "import /system/etc/init/init.usf.rc" $SYSTEM/etc/init/bootanim.rc > $TMP/bootanim.rc
       sed -i '/^$/d' $TMP/bootanim.rc
       rm -rf $SYSTEM/etc/init/bootanim.rc
