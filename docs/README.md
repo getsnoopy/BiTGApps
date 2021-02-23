@@ -9,3 +9,4 @@
 * [Known Issue](bug.md)
 * [Device Partition](partitions.md)
 * [File Structure](structure.md)
+* [Environmental Variables](variables.md)
