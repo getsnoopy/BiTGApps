@@ -212,14 +212,6 @@ remove_line() {
 }
 
 # Set package defaults
-boot_defaults() {
-  bootSAR="$TMP/SAR.log"
-  bootAB="$TMP/AB.log"
-  bootA="$TMP/A-only.log"
-  bootSARHW="$TMP/SARHW.log"
-  bootSYSHW="$TMP/SYSHW.log"
-}
-
 build_defaults() {
   # Set temporary zip directory
   ZIP_FILE="$TMP/zip"
@@ -286,6 +278,11 @@ build_defaults() {
   TARGET_ODM_DLKM="$TMP/bitgapps/cts-odm-dlkm.log"
   usf="$TMP/bitgapps/usf.log"
   spl="$TMP/bitgapps/spl.log"
+  bootSAR="$TMP/bitgapps/SAR.log"
+  bootAB="$TMP/bitgapps/AB.log"
+  bootA="$TMP/bitgapps/A-only.log"
+  bootSARHW="$TMP/bitgapps/SARHW.log"
+  bootSYSHW="$TMP/bitgapps/SYSHW.log"
 }
 
 # Set CTS default properties
@@ -7900,15 +7897,6 @@ pre_install() {
     on_platform
     build_platform
     check_platform
-    boot_defaults
-    on_boot_check
-    get_boot_config
-    print_title_boot
-    boot_SAR
-    boot_AB
-    boot_A
-    boot_SARHW
-    boot_SYSHW
     on_data_check
     clean_inst
   fi
@@ -8042,6 +8030,14 @@ post_install() {
   fi
   if [ "$ZIPTYPE" == "basic" ]; then
     build_defaults
+    on_boot_check
+    get_boot_config
+    print_title_boot
+    boot_SAR
+    boot_AB
+    boot_A
+    boot_SARHW
+    boot_SYSHW
     ext_pathmap
     product_pathmap
     system_pathmap
