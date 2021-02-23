@@ -588,25 +588,9 @@ conf_addon_backup() {
   fi
 }
 
-# Delete existing GMS Doze entry from all XML files
-opt_v29() {
-  if [ "$android_sdk" == "$supported_sdk_v29" ]; then
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/permissions/*.xml
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/sysconfig/*.xml
-  fi
-}
-
-# Delete existing GMS Doze entry from all XML files
-opt_v30() {
-  if [ "$android_sdk" == "$supported_sdk_v30" ]; then
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/permissions/*.xml
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/sysconfig/*.xml
-  fi
-}
-
-# Delete existing GMS Doze entry from all XML files
-opt_v31() {
-  if [ "$android_sdk" == "$supported_sdk_v31" ]; then
+# Delete existing GMS Doze entry from Android 7.1+
+opt_v25() {
+  if [ "$android_sdk" -ge "$supported_sdk_v25" ]; then
     sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/permissions/*.xml
     sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/sysconfig/*.xml
   fi
