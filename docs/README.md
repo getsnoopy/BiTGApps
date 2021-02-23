@@ -8,3 +8,4 @@
 * [Additional Packages](addon.md)
 * [Known Issue](bug.md)
 * [Device Partition](partitions.md)
+* [File Structure](structure.md)
