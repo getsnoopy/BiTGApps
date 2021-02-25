@@ -68,16 +68,6 @@ _Note: Usable only, if you are building BiTGApps package_
 
 * `Example: R21`
 
-### TARGET_ARCH
-
-* This is used by build script and set architecture for Markup lib
-
-* Note: Without this Markup lib won't install and Markup package will crash
-
-* `Example: arm or arm64`
-
-* Note: `uname -m` with this you can check your device archtecture in commandline
-
 ### SERVER
 
 * Set hosting server and used by release script

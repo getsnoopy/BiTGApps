@@ -6621,6 +6621,9 @@ set_addon_zip_sep() {
     fi
     if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
       insert_line $SYSTEM/config.prop "ro.config.markup" after '# Begin addon properties' "ro.config.markup"
+      # Set required architecture
+      if [ "$arch" == "armv7l" ]; then ARMEABI="true"; AARCH64="false"; fi
+      if [ "$arch" == "aarch64" ]; then ARMEABI="false"; AARCH64="true"; fi
       ui_print "- Installing Markup Google"
       # Remove pre-install Markup
       rm -rf $SYSTEM/app/MarkupGoogle*
