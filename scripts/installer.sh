@@ -815,7 +815,7 @@ system_property() {
   elif [ "$device_abpartition" == "true" ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
     ANDROID_PROPERTY="/system_root/system"
   elif [ "$device_abpartition" == "true" ] && [ -n "$(cat $fstab | grep /system)" ]; then
-    ANDROID_PROPERTY="/system_root/system"
+    ANDROID_PROPERTY="/system"
   elif [ -f /system/build.prop ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
     ANDROID_PROPERTY="/system"
   elif [ -f /system/build.prop ] && [ -n "$(cat $fstab | grep /system)" ]; then
@@ -843,7 +843,7 @@ system_layout() {
     elif [ "$device_abpartition" == "true" ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
       export SYSTEM="/system_root/system"
     elif [ "$device_abpartition" == "true" ] && [ -n "$(cat $fstab | grep /system)" ]; then
-      export SYSTEM="/system_root/system"
+      export SYSTEM="/system"
     elif [ -f /system/build.prop ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
       export SYSTEM="/system"
     elif [ -f /system/build.prop ] && [ -n "$(cat $fstab | grep /system)" ]; then
