@@ -13,7 +13,39 @@ Patched keystore used for passing **CTS profile**.
 
 ## Android Version Support
 
-Only Android R can used safetynet patch from BiTGApps.
+* 11.0.0
+
+* 12.0.0
+
+## Usage
+
+These three properties required for installing full safetynet patch:
+
+* `ro.config.cts`
+
+* `ro.config.spl`
+
+* `ro.config.usf`
+
+**Note:** By default all properties are enabled.
+
+_**ro.config.cts** patch build property from system, vendor, product, odm, system_ext._
+
+_**ro.config.spl** update security patch level in system, vendor._
+
+_**ro.config.usf** install patched keystore in system._
+
+Either `ro.config.spl` or `ro.config.usf` can cause bootloop. So you need to test before. You can try booting,
+with all enabled or try with two properties enabled and check CTS profile, if boots to system. If CTS profile
+failing then enable `ro.config.usf` and re-install BiTGApps.
+
+If device is booting with safetynet patch, SPL/Keystore backup will wipe after boot is completed. By this way,
+you can install whatever patch left from safetynet patch itself.
+In this case, restore function won't trigger. You will know more about it in **Installation Conflicts** section.
+
+All properties set to **true**, if you want to disable any set **false**.
+
+For some device, only using `ro.config.cts` and `ro.config.spl` does the job of passing CTS profile.
 
 ## Boot Conflicts
 
@@ -27,7 +59,7 @@ The Keymaster trusted app in TrustZone refuses to work if `system`, `vendor` and
 
 Failure of patched keystore can cause bootloop.
 
-# Installation Conflicts
+## Installation Conflicts
 
 As we don't know that device will boot with SPL and Keystore patches or not. Backup of default `SPL` and `Keystore`, taken at the time of installation and stored in data partition.
 If you re-install BiTGApps for whatever reasons, it will restore default SPL and original keystore back in system. To keep safetynet patch, you need to re-install BiTGApps.
