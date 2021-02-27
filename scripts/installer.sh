@@ -954,6 +954,8 @@ boot_SAR() {
         chmod 0750 /system_root/init.boot.rc
         chcon -h u:object_r:rootfs:s0 "/system_root/init.boot.rc"
       fi
+      # Keep patched kernel init
+      cp -f /system_root/init.rc $TMP/bitgapps/init.rc
     else
       echo "ERROR: Unable to find kernel init" >> $bootSAR
     fi
@@ -976,6 +978,8 @@ boot_AB() {
         chmod 0750 /system/init.boot.rc
         chcon -h u:object_r:rootfs:s0 "/system/init.boot.rc"
       fi
+      # Keep patched kernel init
+      cp -f /system/init.rc $TMP/bitgapps/init.rc
     else
       echo "ERROR: Unable to find kernel init" >> $bootAB
     fi
@@ -1012,6 +1016,8 @@ boot_A() {
           chmod 0644 $SYSTEM/etc/init/init.boot.rc
           chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/init/init.boot.rc"
         fi
+        # Keep patched bootanim init
+        cp -f $INIT $TMP/bitgapps/init.rc
       else
         echo "ERROR: Unable to find bootanim init" >> $bootA
       fi
@@ -1049,6 +1055,8 @@ boot_SARHW() {
         chmod 0644 /system_root/system/etc/init/hw/init.boot.rc
         chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.boot.rc"
       fi
+      # Keep patched kernel init
+      cp -f $INIT $TMP/bitgapps/init.rc
     else
       echo "ERROR: Unable to find kernel init" >> $bootSARHW
     fi
@@ -1072,6 +1080,8 @@ boot_SYSHW() {
         chmod 0644 /system/system/etc/init/hw/init.boot.rc
         chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.boot.rc"
       fi
+      # Keep patched kernel init
+      cp -f $INIT $TMP/bitgapps/init.rc
     else
       echo "ERROR: Unable to find kernel init" >> $bootSYSHW
     fi
@@ -7481,6 +7491,8 @@ spl_boot_complete() {
       fi
       # Wipe temporary backup
       WIPE_SPL_BACKUP="false"
+      # Keep patched bootanim init
+      cp -f $SYSTEM/etc/init/bootanim.rc $TMP/bitgapps/bootanim.rc
     else
       echo "ERROR: Unable to find bootanim init" >> $spl
     fi
@@ -7497,6 +7509,8 @@ spl_boot_complete() {
       rm -rf $SYSTEM/etc/init/init.spl.rc
       # Wipe temporary backup
       WIPE_SPL_BACKUP="true"
+      # Keep restored bootanim init
+      cp -f $SYSTEM/etc/init/bootanim.rc $TMP/bitgapps/bootanim.rc
     fi
     test -f /data/spl/init.def || echo >> /data/spl/init.def
   fi
@@ -7578,6 +7592,8 @@ usf_boot_complete() {
       fi
       # Wipe temporary backup
       WIPE_USF_BACKUP="false"
+      # Keep patched bootanim init
+      cp -f $SYSTEM/etc/init/bootanim.rc $TMP/bitgapps/bootanim.rc
     else
       echo "ERROR: Unable to find bootanim init" >> $usf
     fi
@@ -7594,6 +7610,8 @@ usf_boot_complete() {
       rm -rf $SYSTEM/etc/init/init.usf.rc
       # Wipe temporary backup
       WIPE_USF_BACKUP="true"
+      # Keep restored bootanim init
+      cp -f $SYSTEM/etc/init/bootanim.rc $TMP/bitgapps/bootanim.rc
     fi
     test -f /data/keystore/init.def || echo >> /data/keystore/init.def
   fi
