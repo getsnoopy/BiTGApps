@@ -7968,47 +7968,96 @@ chk_system_Ext() {
 
 # Set partitions for checking available space
 df_system() {
-  if [ "$SUPER_PARTITION" == "false" ]; then
-    # Get the available space left on the device
-    size=`df -k $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    CAPACITY="170000"
+  if [ "$ZIPTYPE" == "basic" ]; then
+    if [ "$SUPER_PARTITION" == "false" ]; then
+      # Get the available space left on the device
+      size=`df -k $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+      CAPACITY="170000"
 
-    # Disk space in human readable format (k=1024)
-    ds_hr=`df -h $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+      # Disk space in human readable format (k=1024)
+      ds_hr=`df -h $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
 
-    # Print partition type
-    partition="System"
+      # Print partition type
+      partition="System"
+    fi
+  fi
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ]; then
+    if [ "$SUPER_PARTITION" == "false" ]; then
+      # Get the available space left on the device
+      size=`df -k $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+      CAPACITY="450000"
+
+      # Disk space in human readable format (k=1024)
+      ds_hr=`df -h $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+
+      # Print partition type
+      partition="System"
+    fi
   fi
 }
 
 df_product() {
-  if [ "$SUPER_PARTITION" == "true" ]; then
-    if [ "$android_sdk" == "$supported_sdk_v29" ]; then
-      # Get the available space left on the device
-      size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-      CAPACITY="170000"
+  if [ "$ZIPTYPE" == "basic" ]; then
+    if [ "$SUPER_PARTITION" == "true" ]; then
+      if [ "$android_sdk" == "$supported_sdk_v29" ]; then
+        # Get the available space left on the device
+        size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+        CAPACITY="170000"
 
-      # Disk space in human readable format (k=1024)
-      ds_hr=`df -h /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+        # Disk space in human readable format (k=1024)
+        ds_hr=`df -h /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
 
-      # Print partition type
-      partition="Product"
+        # Print partition type
+        partition="Product"
+      fi
+    fi
+  fi
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ]; then
+    if [ "$SUPER_PARTITION" == "true" ]; then
+      if [ "$android_sdk" == "$supported_sdk_v29" ]; then
+        # Get the available space left on the device
+        size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+        CAPACITY="450000"
+
+        # Disk space in human readable format (k=1024)
+        ds_hr=`df -h /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+
+        # Print partition type
+        partition="Product"
+      fi
     fi
   fi
 }
 
 df_systemExt() {
-  if [ "$SUPER_PARTITION" == "true" ]; then
-    if [ "$android_sdk" == "$supported_sdk_v30" ]; then
-      # Get the available space left on the device
-      size=`df -k /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-      CAPACITY="170000"
+  if [ "$ZIPTYPE" == "basic" ]; then
+    if [ "$SUPER_PARTITION" == "true" ]; then
+      if [ "$android_sdk" == "$supported_sdk_v30" ]; then
+        # Get the available space left on the device
+        size=`df -k /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+        CAPACITY="170000"
 
-      # Disk space in human readable format (k=1024)
-      ds_hr=`df -h /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+        # Disk space in human readable format (k=1024)
+        ds_hr=`df -h /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
 
-      # Print partition type
-      partition="SystemExt"
+        # Print partition type
+        partition="SystemExt"
+      fi
+    fi
+  fi
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ]; then
+    if [ "$SUPER_PARTITION" == "true" ]; then
+      if [ "$android_sdk" == "$supported_sdk_v30" ]; then
+        # Get the available space left on the device
+        size=`df -k /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+        CAPACITY="450000"
+
+        # Disk space in human readable format (k=1024)
+        ds_hr=`df -h /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+
+        # Print partition type
+        partition="SystemExt"
+      fi
     fi
   fi
 }
@@ -8018,7 +8067,7 @@ diskfree() {
   df_system
   df_product
   df_systemExt
-  # Check if the available space is greater than 170MB (170000KB)
+  # Check if the available space is greater than 170MB (170000KB)/450MB (450000KB)
   if [[ "$size" -gt "$CAPACITY" ]]; then
     TARGET_ANDROID_PARTITION="true"
   fi
