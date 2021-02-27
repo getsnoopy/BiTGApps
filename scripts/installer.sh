@@ -8040,11 +8040,8 @@ chk_disk() {
 
 # check various partitions size before install
 disk_space_before() {
-  if [ -d "$ANDROID/system" ]; then
-    OLD_SIZE_SYSTEM=$(du -h -s $ANDROID_ROOT/system)
-    echo $OLD_SIZE_SYSTEM >> $TMP/bitgapps/old_system_size.log
-  else
-    OLD_SIZE_SYSTEM=$(du -h -s /system)
+  if [ -d "$SYSTEM" ]; then
+    OLD_SIZE_SYSTEM=$(du -h -s $SYSTEM)
     echo $OLD_SIZE_SYSTEM >> $TMP/bitgapps/old_system_size.log
   fi
   if [ -d "/product" ]; then
@@ -8063,11 +8060,8 @@ disk_space_before() {
 
 # check various partitions size after install
 disk_space_after() {
-  if [ -d "$ANDROID/system" ]; then
-    NEW_SIZE_SYSTEM=$(du -h -s $ANDROID_ROOT/system)
-    echo $NEW_SIZE_SYSTEM >> $TMP/bitgapps/new_system_size.log
-  else
-    NEW_SIZE_SYSTEM=$(du -h -s /system)
+  if [ -d "$SYSTEM" ]; then
+    NEW_SIZE_SYSTEM=$(du -h -s $SYSTEM)
     echo $NEW_SIZE_SYSTEM >> $TMP/bitgapps/new_system_size.log
   fi
   if [ -d "/product" ]; then
