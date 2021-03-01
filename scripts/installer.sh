@@ -6886,23 +6886,14 @@ purge_whitelist_permission() {
   else
     echo "ERROR: unable to find 'system_ext' build" >> $whitelist
   fi
-  if [ -f $SYSTEM/etc/prop.default ]; then
+  if [ -f "$SYSTEM/etc/prop.default" ] && [ -f "$ANDROID_ROOT/default.prop" ]; then
+    rm -rf $ANDROID_ROOT/default.prop
     if [ -n "$(cat $SYSTEM/etc/prop.default | grep control_privapp_permissions)" ]; then
-      if [ -f "$ANDROID_ROOT/default.prop" ]; then
-        SYMLINK="true"
-      else
-        SYMLINK="false"
-      fi
       grep -v "$PROPFLAG" $SYSTEM/etc/prop.default > $TMP/prop.default
       rm -rf $SYSTEM/etc/prop.default
-      if [ "$SYMLINK" == "true" ]; then
-        rm -rf $ANDROID_ROOT/default.prop
-      fi
       cp -f $TMP/prop.default $SYSTEM/etc/prop.default
       chmod 0644 $SYSTEM/etc/prop.default
-      if [ "$SYMLINK" == "true" ]; then
-        ln -sfnv $SYSTEM/etc/prop.default $ANDROID_ROOT/default.prop
-      fi
+      ln -sfnv $SYSTEM/etc/prop.default $ANDROID_ROOT/default.prop
       rm -rf $TMP/prop.default
     else
       echo "ERROR: Unable to find Whitelist property in 'system' default" >> $whitelist
