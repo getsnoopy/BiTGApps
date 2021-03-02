@@ -7923,11 +7923,12 @@ chk_product() {
     if [ "$android_sdk" == "$supported_sdk_v29" ]; then
       if [ ! -n "$(cat $fstab | grep /product)" ]; then
         ui_print "! Product partition not found. Aborting..."
-        ui_print " "
         restore_android_root
         # Wipe ZIP extracts
         cleanup
         unmount_all
+        ui_print "! Installation failed"
+        ui_print " "
         # Reset any error code
         true
         sync
@@ -7943,11 +7944,12 @@ chk_system_Ext() {
     if [ "$android_sdk" == "$supported_sdk_v30" ]; then
       if [ ! -n "$(cat $fstab | grep /system_ext)" ]; then
         ui_print "! SystemExt partition not found. Aborting..."
-        ui_print " "
         restore_android_root
         # Wipe ZIP extracts
         cleanup
         unmount_all
+        ui_print "! Installation failed"
+        ui_print " "
         # Reset any error code
         true
         sync
