@@ -10,3 +10,4 @@
 * [Device Partition](partitions.md)
 * [File Structure](structure.md)
 * [Environmental Variables](variables.md)
+* [Uninstall BiTGApps](uninstall.md)

@@ -4,6 +4,7 @@
 * boot-config.prop  (Help installing boot log patch)
 * cts-config.prop   (Help installing safetynet patch
 * setup-config.prop (Help installing google's SetupWizard)
+* wipe-config.prop  (Help Uninstall BiTGApps)
 
 Whatever config file you want to use, it should be placed in either of these storages
 **/sdcard**, **/sdcard1**, **/external_sd**, **/usb_otg**, **/usbstorage** before installing BiTGApps.

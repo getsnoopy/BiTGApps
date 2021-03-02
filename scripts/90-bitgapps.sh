@@ -22,20 +22,14 @@
 
 # ADDOND_VERSION=2
 
+# Set defaults
+BB="/data/aik/bin/busybox"
 TMP="/tmp"
+fstab="/etc/fstab"
 SQLITE_TOOL="$S/xbin/sqlite3"
 SQLITE3_OPT="false"
 
-# Check device architecture
-set_arch() {
-  arch=`uname -m`
-  if [ "$arch" == "armv7l" ]; then
-    ARMEABI="true"
-  fi
-  if [ "$arch" == "aarch64" ]; then
-    AARCH64="true"
-  fi
-}
+. $TMP/backuptool.functions
 
 # Output function
 trampoline() {
@@ -52,118 +46,27 @@ trampoline() {
   ui_print() { echo -e "ui_print $1\nui_print" >> /proc/self/fd/$OUTFD; }
 }
 
-# Set defaults
-. /tmp/backuptool.functions
-
-# Set CTS default properties
-cts_defaults() {
-  CTS_DEFAULT_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint="
-  CTS_DEFAULT_SYSTEM_EXT_BUILD_ID="ro.system.build.id="
-  CTS_DEFAULT_SYSTEM_EXT_BUILD_TAG="ro.system.build.tags="
-  CTS_DEFAULT_SYSTEM_EXT_BUILD_TYPE="ro.system.build.type="
-  CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=";
-  CTS_DEFAULT_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint="
-  CTS_DEFAULT_SYSTEM_BUILD_TYPE="ro.build.type="
-  CTS_DEFAULT_SYSTEM_BUILD_TAG="ro.build.tags="
-  CTS_DEFAULT_SYSTEM_BUILD_DESC="ro.build.description="
-  CTS_DEFAULT_PRODUCT_BUILD_FINGERPRINT="ro.product.build.fingerprint="
-  CTS_DEFAULT_PRODUCT_BUILD_ID="ro.product.build.id="
-  CTS_DEFAULT_PRODUCT_BUILD_TAG="ro.product.build.tags="
-  CTS_DEFAULT_PRODUCT_BUILD_TYPE="ro.product.build.type="
-  CTS_DEFAULT_EXT_BUILD_FINGERPRINT="ro.system_ext.build.fingerprint="
-  CTS_DEFAULT_EXT_BUILD_ID="ro.system_ext.build.id="
-  CTS_DEFAULT_EXT_BUILD_TAG="ro.system_ext.build.tags="
-  CTS_DEFAULT_EXT_BUILD_TYPE="ro.system_ext.build.type="
-  CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=";
-  CTS_DEFAULT_VENDOR_EXT_BUILD_FINGERPRINT="ro.vendor.build.fingerprint="
-  CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint="
-  CTS_DEFAULT_VENDOR_BUILD_ID="ro.vendor.build.id="
-  CTS_DEFAULT_VENDOR_BUILD_TAG="ro.vendor.build.tags="
-  CTS_DEFAULT_VENDOR_BUILD_TYPE="ro.vendor.build.type="
-  CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint="
-  CTS_DEFAULT_VENDOR_DLKM_BUILD_FINGERPRINT="ro.vendor_dlkm.build.fingerprint="
-  CTS_DEFAULT_VENDOR_DLKM_BUILD_ID="ro.vendor_dlkm.build.id="
-  CTS_DEFAULT_VENDOR_DLKM_BUILD_TAG="ro.vendor_dlkm.build.tags="
-  CTS_DEFAULT_VENDOR_DLKM_BUILD_TYPE="ro.vendor_dlkm.build.type="
-  CTS_DEFAULT_ODM_BUILD_FINGERPRINT="ro.odm.build.fingerprint="
-  CTS_DEFAULT_ODM_BUILD_ID="ro.odm.build.id="
-  CTS_DEFAULT_ODM_BUILD_TAG="ro.odm.build.tags="
-  CTS_DEFAULT_ODM_BUILD_TYPE="ro.odm.build.type="
-  CTS_DEFAULT_ODM_DLKM_BUILD_FINGERPRINT="ro.odm_dlkm.build.fingerprint="
-  CTS_DEFAULT_ODM_DLKM_BUILD_ID="ro.odm_dlkm.build.id="
-  CTS_DEFAULT_ODM_DLKM_BUILD_TAG="ro.odm_dlkm.build.tags="
-  CTS_DEFAULT_ODM_DLKM_BUILD_TYPE="ro.odm_dlkm.build.type="
+# Always use tools from AIK backup in /data
+check_aik_binaries() {
+  if [ "$1" == "backup" ] && [ ! -f "$BB" ]; then
+    ui_print "*************************"
+    ui_print " BiTGApps addon.d failed "
+    ui_print "*************************"
+    ui_print "! Cannot find AIK binaries - was data wiped or not decrypted?"
+    ui_print "! Reflash OTA from decrypted recovery or reflash BiTGApps"
+    exit 1
+  fi
+  if [ "$1" == "restore" ] && [ ! -f "$BB" ]; then
+    # Do not output anything on restore stage
+    exit 1
+  fi
 }
 
-# CTS patch
-patch_v31() {
-  CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
-  CTS_SYSTEM_EXT_BUILD_ID="ro.system.build.id=SPP1.210122.020.A3"
-  CTS_SYSTEM_EXT_BUILD_TAG="ro.system.build.tags=release-keys"
-  CTS_SYSTEM_EXT_BUILD_TYPE="ro.system.build.type=user"
-  CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-02-05";
-  CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
-  CTS_SYSTEM_BUILD_TYPE="ro.build.type=user"
-  CTS_SYSTEM_BUILD_TAG="ro.build.tags=release-keys"
-  CTS_SYSTEM_BUILD_DESC="ro.build.description=coral-user 11 RQ1A.210205.004 7038034 release-keys"
-  CTS_PRODUCT_BUILD_FINGERPRINT="ro.product.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
-  CTS_PRODUCT_BUILD_ID="ro.product.build.id=SPP1.210122.020.A3"
-  CTS_PRODUCT_BUILD_TAG="ro.product.build.tags=release-keys"
-  CTS_PRODUCT_BUILD_TYPE="ro.product.build.type=user"
-  CTS_EXT_BUILD_FINGERPRINT="ro.system_ext.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
-  CTS_EXT_BUILD_ID="ro.system_ext.build.id=SPP1.210122.020.A3"
-  CTS_EXT_BUILD_TAG="ro.system_ext.build.tags=release-keys"
-  CTS_EXT_BUILD_TYPE="ro.system_ext.build.type=user"
-  CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-02-05";
-  CTS_VENDOR_EXT_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
-  CTS_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
-  CTS_VENDOR_BUILD_ID="ro.vendor.build.id=SPP1.210122.020.A3"
-  CTS_VENDOR_BUILD_TAG="ro.vendor.build.tags=release-keys"
-  CTS_VENDOR_BUILD_TYPE="ro.vendor.build.type=user"
-  CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
-  CTS_VENDOR_DLKM_BUILD_FINGERPRINT="ro.vendor_dlkm.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
-  CTS_VENDOR_DLKM_BUILD_ID="ro.vendor_dlkm.build.id=SPP1.210122.020.A3"
-  CTS_VENDOR_DLKM_BUILD_TAG="ro.vendor_dlkm.build.tags=release-keys"
-  CTS_VENDOR_DLKM_BUILD_TYPE="ro.vendor_dlkm.build.type=user"
-  CTS_ODM_BUILD_FINGERPRINT="ro.odm.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
-  CTS_ODM_BUILD_ID="ro.odm.build.id=SPP1.210122.020.A3"
-  CTS_ODM_BUILD_TAG="ro.odm.build.tags=release-keys"
-  CTS_ODM_BUILD_TYPE="ro.odm.build.type=user"
-  CTS_ODM_DLKM_BUILD_FINGERPRINT="ro.odm_dlkm.build.fingerprint=google/coral/coral:S/SPP1.210122.020.A3/7145137:user/release-keys"
-  CTS_ODM_DLKM_BUILD_ID="ro.odm_dlkm.build.id=SPP1.210122.020.A3"
-  CTS_ODM_DLKM_BUILD_TAG="ro.odm_dlkm.build.tags=release-keys"
-  CTS_ODM_DLKM_BUILD_TYPE="ro.odm_dlkm.build.type=user"
-}
-
-patch_v30() {
-  CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
-  CTS_SYSTEM_EXT_BUILD_ID="ro.system.build.id=RQ1A.210205.004"
-  CTS_SYSTEM_EXT_BUILD_TAG="ro.system.build.tags=release-keys"
-  CTS_SYSTEM_EXT_BUILD_TYPE="ro.system.build.type=user"
-  CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-02-05";
-  CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
-  CTS_SYSTEM_BUILD_TYPE="ro.build.type=user"
-  CTS_SYSTEM_BUILD_TAG="ro.build.tags=release-keys"
-  CTS_SYSTEM_BUILD_DESC="ro.build.description=coral-user 11 RQ1A.210205.004 7038034 release-keys"
-  CTS_PRODUCT_BUILD_FINGERPRINT="ro.product.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
-  CTS_PRODUCT_BUILD_ID="ro.product.build.id=RQ1A.210205.004"
-  CTS_PRODUCT_BUILD_TAG="ro.product.build.tags=release-keys"
-  CTS_PRODUCT_BUILD_TYPE="ro.product.build.type=user"
-  CTS_EXT_BUILD_FINGERPRINT="ro.system_ext.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
-  CTS_EXT_BUILD_ID="ro.system_ext.build.id=RQ1A.210205.004"
-  CTS_EXT_BUILD_TAG="ro.system_ext.build.tags=release-keys"
-  CTS_EXT_BUILD_TYPE="ro.system_ext.build.type=user"
-  CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-02-05";
-  CTS_VENDOR_EXT_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
-  CTS_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
-  CTS_VENDOR_BUILD_ID="ro.vendor.build.id=RQ1A.210205.004"
-  CTS_VENDOR_BUILD_TAG="ro.vendor.build.tags=release-keys"
-  CTS_VENDOR_BUILD_TYPE="ro.vendor.build.type=user"
-  CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
-  CTS_ODM_BUILD_FINGERPRINT="ro.odm.build.fingerprint=google/coral/coral:11/RQ1A.210205.004/7038034:user/release-keys"
-  CTS_ODM_BUILD_ID="ro.odm.build.id=RQ1A.210205.004"
-  CTS_ODM_BUILD_TAG="ro.odm.build.tags=release-keys"
-  CTS_ODM_BUILD_TYPE="ro.odm.build.type=user"
+# Check device architecture
+set_arch() {
+  arch=`uname -m`
+  if [ "$arch" == "armv7l" ]; then ARMEABI="true"; fi
+  if [ "$arch" == "aarch64" ]; then AARCH64="true"; fi
 }
 
 # insert_line <file> <if search string> <before|after> <line match string> <inserted line>
@@ -185,32 +88,38 @@ insert_line() {
 
 # Database optimization using sqlite tool
 sqlite_opt() {
-  if [ "$SQLITE3_OPT" == "true" ]; then
-    for i in `find /d* -iname "*.db" 2>/dev/null`; do
-      # Running VACUUM
-      $SQLITE_TOOL $i 'VACUUM;'
-      resVac=$?
-      if [ $resVac == 0 ]; then
-        resVac="SUCCESS"
-      else
-        resVac="ERRCODE-$resVac"
-      fi
-      # Running INDEX
-      $SQLITE_TOOL $i 'REINDEX;'
-      resIndex=$?
-      if [ $resIndex == 0 ]; then
-        resIndex="SUCCESS"
-      else
-        resIndex="ERRCODE-$resIndex"
-      fi
-    done
-  fi
+  for i in $(find /d* -iname "*.db"); do
+    # Running VACUUM
+    $SQLITE_TOOL $i 'VACUUM;' > /dev/null 2>&1
+    resVac=$?
+    if [ $resVac == 0 ]; then
+      resVac="SUCCESS"
+    else
+      resVac="ERRCODE-$resVac"
+    fi
+    # Running INDEX
+    $SQLITE_TOOL $i 'REINDEX;' > /dev/null 2>&1
+    resIndex=$?
+    if [ $resIndex == 0 ]; then
+      resIndex="SUCCESS"
+    else
+      resIndex="ERRCODE-$resIndex"
+    fi
+    # Running ANALYZE
+    $SQLITE_TOOL $i 'ANALYZE;' > /dev/null 2>&1
+    resOpt=$?
+    if [ $resOpt == 0 ]; then
+      resOpt="SUCCESS"
+    else
+      resOpt="ERRCODE-$resOpt"
+    fi
+    echo "Database $i:  VACUUM=$resVac  REINDEX=$resIndex  ANALYZE=$resOpt" > /dev/null 2>&1
+  done
 }
 
 # Create temporary dir
 tmp_dir() {
   test -d $TMP/app || mkdir $TMP/app
-  test -d $TMP/bin || mkdir $TMP/bin
   test -d $TMP/priv-app || mkdir $TMP/priv-app
   test -d $TMP/etc || mkdir $TMP/etc
   test -d $TMP/default-permissions || mkdir $TMP/default-permissions
@@ -235,14 +144,12 @@ tmp_dir() {
   test -d $TMP/fboot/priv-app || mkdir $TMP/fboot/priv-app
   test -d $TMP/fboot/lib64 || mkdir $TMP/fboot/lib64
   test -d $TMP/overlay || mkdir $TMP/overlay
-  test -d $TMP/init || mkdir $TMP/init
   test -d $TMP/keystore || mkdir $TMP/keystore
 }
 
 # Wipe temporary dir
 del_tmp_dir() {
   rm -rf $TMP/app
-  rm -rf $TMP/bin
   rm -rf $TMP/priv-app
   rm -rf $TMP/framework
   rm -rf $TMP/lib
@@ -257,7 +164,6 @@ del_tmp_dir() {
   rm -rf $TMP/rwg
   rm -rf $TMP/fboot
   rm -rf $TMP/overlay
-  rm -rf $TMP/init
   rm -rf $TMP/keystore
   rm -rf $TMP/SYS_APP_CP
   rm -rf $TMP/SYS_PRIV_CP
@@ -290,19 +196,12 @@ on_partition_check() {
   active_slot=`getprop ro.boot.slot_suffix`
   AB_OTA_UPDATER=`getprop ro.build.ab_update`
   dynamic_partitions=`getprop ro.boot.dynamic_partitions`
-  dynamic_partitions_retrofit=`getprop ro.boot.dynamic_partitions_retrofit`
-}
-
-# Set fstab for getting mount point
-on_fstab() {
-  # No fstab check required for OTA survival script
-  fstab="/etc/fstab"
 }
 
 # Set vendor mount point
 vendor_mnt() {
   device_vendorpartition="false"
-  if [ -d /vendor ] && [ -n "$(cat $fstab | grep /vendor)" ]; then
+  if [ -n "$(cat $fstab | grep /vendor)" ]; then
     device_vendorpartition="true"
     VENDOR="/vendor"
   fi
@@ -338,116 +237,90 @@ super_partition() {
 # Mount partitions
 mount_all() {
   mount -o bind /dev/urandom /dev/random
-  mount -o ro -t auto /cache 2>/dev/null
-  mount -o rw,remount -t auto /cache
-  mount -o ro -t auto /persist 2>/dev/null
+  if [ -n "$(cat $fstab | grep /cache)" ]; then
+    mount -o ro -t auto /cache > /dev/null 2>&1
+    mount -o rw,remount -t auto /cache
+  fi
+  mount -o ro -t auto /persist > /dev/null 2>&1
+  # Set ANDROID_ROOT in the global environment
+  if [ "$($BB grep -w -o /system_root $fstab)" ]; then export ANDROID_ROOT="/system_root"; fi
+  if [ "$($BB grep -w -o /system $fstab)" ]; then export ANDROID_ROOT="/system"; fi
+  [ "$ANDROID_ROOT" == "/system_root" ]
+  [ "$ANDROID_ROOT" == "/system" ]
   if [ "$SUPER_PARTITION" == "true" ]; then
-    # Set ANDROID_ROOT in the global environment
-    test -d "/system_root" && export ANDROID_ROOT="/system_root" || export ANDROID_ROOT="/system"
     if [ "$device_abpartition" == "true" ]; then
       for block in system product vendor; do
         for slot in "" _a _b; do
-          blockdev --setrw /dev/block/mapper/$block$slot 2>/dev/null
+          blockdev --setrw /dev/block/mapper/$block$slot > /dev/null 2>&1
         done
       done
-      for block in system_ext; do
-        blockdev --setrw /dev/block/mapper/$block 2>/dev/null
-      done
       local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
-      mount -o ro -t auto /dev/block/mapper/system$slot $ANDROID_ROOT 2>/dev/null
+      mount -o ro -t auto /dev/block/mapper/system$slot $ANDROID_ROOT > /dev/null 2>&1
       mount -o rw,remount -t auto /dev/block/mapper/system$slot $ANDROID_ROOT
       if [ "$device_vendorpartition" == "true" ]; then
-        mount -o ro -t auto /dev/block/mapper/vendor$slot $VENDOR 2>/dev/null
+        mount -o ro -t auto /dev/block/mapper/vendor$slot $VENDOR > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/vendor$slot $VENDOR
       fi
       if [ -n "$(cat $fstab | grep /product)" ]; then
-        mount -o ro -t auto /dev/block/mapper/product$slot /product 2>/dev/null
+        mount -o ro -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/product$slot /product
       fi
       if [ -n "$(cat $fstab | grep /system_ext)" ]; then
-        mount -o ro -t auto /dev/block/mapper/system_ext /system_ext 2>/dev/null
+        blockdev --setrw /dev/block/mapper/system_ext
+        mount -o ro -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/system_ext /system_ext
       fi
     fi
     if [ "$device_abpartition" == "false" ]; then
       for block in system system_ext product vendor; do
-        blockdev --setrw /dev/block/mapper/$block 2>/dev/null
+        blockdev --setrw /dev/block/mapper/$block > /dev/null 2>&1
       done
-      mount -o ro -t auto /dev/block/mapper/system $ANDROID_ROOT 2>/dev/null
+      mount -o ro -t auto /dev/block/mapper/system $ANDROID_ROOT > /dev/null 2>&1
       mount -o rw,remount -t auto /dev/block/mapper/system $ANDROID_ROOT
       if [ "$device_vendorpartition" == "true" ]; then
-        mount -o ro -t auto /dev/block/mapper/vendor $VENDOR 2>/dev/null
+        mount -o ro -t auto /dev/block/mapper/vendor $VENDOR > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/vendor $VENDOR
       fi
       if [ -n "$(cat $fstab | grep /product)" ]; then
-        mount -o ro -t auto /dev/block/mapper/product /product 2>/dev/null
+        mount -o ro -t auto /dev/block/mapper/product /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/product /product
       fi
       if [ -n "$(cat $fstab | grep /system_ext)" ]; then
-        mount -o ro -t auto /dev/block/mapper/system_ext /system_ext 2>/dev/null
+        mount -o ro -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/system_ext /system_ext
       fi
     fi
   fi
   if [ "$SUPER_PARTITION" == "false" ]; then
     if [ "$device_abpartition" == "false" ]; then
-      # Set ANDROID_ROOT in the global environment
-      if [ -d /system_root ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
-        export ANDROID_ROOT="/system_root"
-      else
-        export ANDROID_ROOT="/system"
-      fi
-      mount -o ro -t auto $ANDROID_ROOT 2>/dev/null
+      mount -o ro -t auto $ANDROID_ROOT > /dev/null 2>&1
       mount -o rw,remount -t auto $ANDROID_ROOT
       if [ "$device_vendorpartition" == "true" ]; then
-        mount -o ro -t auto $VENDOR 2>/dev/null
+        mount -o ro -t auto $VENDOR > /dev/null 2>&1
         mount -o rw,remount -t auto $VENDOR
       fi
-      if [ -d /product ] && [ -n "$(cat $fstab | grep /product)" ]; then
-        mount -o ro -t auto /product 2>/dev/null
+      if [ -n "$(cat $fstab | grep /product)" ]; then
+        mount -o ro -t auto /product > /dev/null 2>&1
         mount -o rw,remount -t auto /product
       fi
     fi
     if [ "$device_abpartition" == "true" ]; then
-      # Set ANDROID_ROOT in the global environment
-      if [ -d /system_root ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
-        export ANDROID_ROOT="/system_root"
-      fi
-      if [ -d /system ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
-        export ANDROID_ROOT="/system_root"
-      fi
-      if [ -d /system ] && [ -n "$(cat $fstab | grep /system)" ]; then
-        export ANDROID_ROOT="/system"
-      fi
       if [ "$system_as_root" == "true" ]; then
         local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
-        if [ "$ANDROID_ROOT" == "/system_root" ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
-          mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot /system_root 2>/dev/null
-          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot /system_root
+        if [ "$ANDROID_ROOT" == "/system_root" ]; then
+          mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
+          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
         fi
-        if [ "$ANDROID_ROOT" == "/system" ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
-          mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot /system_root 2>/dev/null
-          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot /system_root
-        fi
-        if [ "$ANDROID_ROOT" == "/system" ] && [ -n "$(cat $fstab | grep /system)" ]; then
-          mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot /system 2>/dev/null
-          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot /system
-        fi
-        # Retry, if previous mounting failed
-        if [ "$ANDROID_ROOT" == "/system_root" ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
-          mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot /system 2>/dev/null
-          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot /system
-        fi
-        if [ "$ANDROID_ROOT" == "/system" ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
-          mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot /system 2>/dev/null
-          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot /system
+        if [ "$ANDROID_ROOT" == "/system" ]; then
+          mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
+          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
         fi
         if [ "$device_vendorpartition" == "true" ]; then
-          mount -o ro -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR 2>/dev/null
+          mount -o ro -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
           mount -o rw,remount -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR
         fi
-        if [ -d /product ] && [ -n "$(cat $fstab | grep /product)" ]; then
-          mount -o ro -t auto /dev/block/bootdevice/by-name/product$slot /product 2>/dev/null
+        if [ -n "$(cat $fstab | grep /product)" ]; then
+          mount -o ro -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
           mount -o rw,remount -t auto /dev/block/bootdevice/by-name/product$slot /product
         fi
       fi
@@ -457,27 +330,14 @@ mount_all() {
 
 # Export our own system layout
 system_layout() {
-  if [ "$SUPER_PARTITION" == "true" ]; then
-    S="$ANDROID_ROOT/system"
+  if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($BB grep -w -o /system_root $fstab)" ]; then
+    export SYSTEM="/system_root/system"
   fi
-  if [ "$SUPER_PARTITION" == "false" ]; then
-    if [ -f /system_root/system/build.prop ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
-      S="/system_root/system"
-    elif [ -f /system/system/build.prop ] && [ -n "$(cat $fstab | grep /system)" ]; then
-      S="/system/system"
-    elif [ "$device_abpartition" == "true" ]; then
-      S="/system_root/system"
-    elif [ "$device_abpartition" == "true" ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
-      S="/system_root/system"
-    elif [ "$device_abpartition" == "true" ] && [ -n "$(cat $fstab | grep /system)" ]; then
-      S="/system"
-    elif [ -f /system/build.prop ] && [ -n "$(cat $fstab | grep /system_root)" ]; then
-      S="/system"
-    elif [ -f /system/build.prop ] && [ -n "$(cat $fstab | grep /system)" ]; then
-      S="/system"
-    else
-      S="/system"
-    fi
+  if [ -f $ANDROID_ROOT/build.prop ] && [ "$($BB grep -w -o /system $fstab)" ]; then
+    export SYSTEM="/system"
+  fi
+  if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($BB grep -w -o /system $fstab)" ]; then
+    export SYSTEM="/system/system"
   fi
 }
 
@@ -508,9 +368,7 @@ on_version_check() {
 }
 
 api_dependent_overlay() {
-  if [ "$android_sdk" -ge "30" ]; then
-    API30="true"
-  fi
+  if [ "$android_sdk" -ge "30" ]; then OVERLAY="true"; fi
 }
 
 ensure_dir() {
@@ -525,7 +383,7 @@ ensure_dir() {
   SYSTEM_LIB="$SYSTEM/lib"
   $AARCH64 && SYSTEM_LIB64="$SYSTEM/lib64"
   SYSTEM_XBIN="$S/xbin"
-  $API30 && SYSTEM_OVERLAY="$SYSTEM/overlay"
+  $OVERLAY && SYSTEM_OVERLAY="$SYSTEM/overlay"
   test -d $SYSTEM_APP || mkdir $SYSTEM_APP
   test -d $SYSTEM_PRIV_APP || mkdir $SYSTEM_PRIV_APP
   test -d $SYSTEM_ETC_DIR || mkdir $SYSTEM_ETC_DIR
@@ -535,13 +393,11 @@ ensure_dir() {
   test -d $SYSTEM_ETC_PREF || mkdir $SYSTEM_ETC_PREF
   test -d $SYSTEM_FRAMEWORK || mkdir $SYSTEM_FRAMEWORK
   test -d $SYSTEM_LIB || mkdir $SYSTEM_LIB
-  if [ "$AARCH64" == "true" ]; then
-    test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
-  fi
+  test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
+  [ ! "$AARCH64" == "true" ] && rm -rf $SYSTEM_LIB64
   test -d $SYSTEM_XBIN || mkdir $SYSTEM_XBIN
-  if [ "$API30" == "true" ]; then
-    test -d $SYSTEM_OVERLAY || mkdir $SYSTEM_OVERLAY
-  fi
+  test -d $SYSTEM_OVERLAY || mkdir $SYSTEM_OVERLAY
+  [ ! "$OVERLAY" == "true" ] && rm -rf $SYSTEM_OVERLAY
   chmod 0755 $SYSTEM_APP
   chmod 0755 $SYSTEM_PRIV_APP
   chmod 0755 $SYSTEM_ETC_DIR
@@ -553,7 +409,7 @@ ensure_dir() {
   chmod 0755 $SYSTEM_LIB
   $AARCH64 && chmod 0755 $SYSTEM_LIB64
   chmod 0755 $SYSTEM_XBIN
-  $API30 && chmod 0755 $SYSTEM_OVERLAY
+  $OVERLAY && chmod 0755 $SYSTEM_OVERLAY
   chcon -h u:object_r:system_file:s0 "$SYSTEM_APP"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DIR"
@@ -565,7 +421,7 @@ ensure_dir() {
   chcon -h u:object_r:system_file:s0 "$SYSTEM_LIB"
   $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_LIB64"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_XBIN"
-  $API30 && chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
+  $OVERLAY && chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
 }
 
 # Set installation layout
@@ -583,8 +439,14 @@ set_pathmap() {
 }
 
 conf_addon_backup() {
-  if [ ! -f $S/config.prop ]; then
+  if [ ! -f $TMP/config.prop ]; then
     ui_print "BackupTools: Failed to create BiTGApps backup"
+  fi
+}
+
+conf_addon_restore() {
+  if [ ! -f $S/config.prop ]; then
+    ui_print "BackupTools: Failed to restore BiTGApps backup"
   fi
 }
 
@@ -632,24 +494,33 @@ purge_whitelist_permission() {
       rm -rf $TMP/system_ext/build.prop
     fi
   fi
-  if [ -f $S/etc/prop.default ]; then
+  if [ -f "$S/etc/prop.default" ] && [ -f "$ANDROID_ROOT/default.prop" ]; then
     if [ -n "$(cat $S/etc/prop.default | grep control_privapp_permissions)" ]; then
-      if [ -f "$ANDROID_ROOT/default.prop" ]; then
-        SYMLINK="true"
-      else
-        SYMLINK="false"
-      fi
+      rm -rf $ANDROID_ROOT/default.prop
       grep -v "$PROPFLAG" $S/etc/prop.default > $TMP/prop.default
       rm -rf $S/etc/prop.default
-      if [ "$SYMLINK" == "true" ]; then
-        rm -rf $ANDROID_ROOT/default.prop
-      fi
       cp -f $TMP/prop.default $S/etc/prop.default
       chmod 0644 $S/etc/prop.default
-      if [ "$SYMLINK" == "true" ]; then
-        ln -sfnv $S/etc/prop.default $ANDROID_ROOT/default.prop
-      fi
+      ln -sfnv $S/etc/prop.default $ANDROID_ROOT/default.prop
       rm -rf $TMP/prop.default
+    fi
+  fi
+  if [ "$device_vendorpartition" == "false" ]; then
+    if [ -n "$(cat $S/vendor/build.prop | grep control_privapp_permissions)" ]; then
+      grep -v "$PROPFLAG" $S/vendor/build.prop > $TMP/build.prop
+      rm -rf $S/vendor/build.prop
+      cp -f $TMP/build.prop $S/vendor/build.prop
+      chmod 0644 $S/vendor/build.prop
+      rm -rf $TMP/build.prop
+    fi
+    if [ -f "$S/vendor/default.prop" ]; then
+      if [ -n "$(cat $S/vendor/default.prop | grep control_privapp_permissions)" ]; then
+        grep -v "$PROPFLAG" $S/vendor/default.prop > $TMP/default.prop
+        rm -rf $S/vendor/default.prop
+        cp -f $TMP/default.prop $S/vendor/default.prop
+        chmod 0644 $S/vendor/default.prop
+        rm -rf $TMP/default.prop
+      fi
     fi
   fi
   if [ "$device_vendorpartition" == "true" ]; then
@@ -666,6 +537,66 @@ purge_whitelist_permission() {
       cp -f $TMP/default.prop $VENDOR/default.prop
       chmod 0644 $VENDOR/default.prop
       rm -rf $TMP/default.prop
+    fi
+    if [ -f "$VENDOR/odm/etc/build.prop" ]; then
+      if [ -n "$(cat $VENDOR/odm/etc/build.prop | grep control_privapp_permissions)" ]; then
+        grep -v "$PROPFLAG" $VENDOR/odm/etc/build.prop > $TMP/build.prop
+        rm -rf $VENDOR/odm/etc/build.prop
+        cp -f $TMP/build.prop $VENDOR/odm/etc/build.prop
+        chmod 0644 $VENDOR/odm/etc/build.prop
+        rm -rf $TMP/build.prop
+      fi
+    fi
+    if [ -f "$VENDOR/odm_dlkm/etc/build.prop" ]; then
+      if [ -n "$(cat $VENDOR/odm_dlkm/etc/build.prop | grep control_privapp_permissions)" ]; then
+        grep -v "$PROPFLAG" $VENDOR/odm_dlkm/etc/build.prop > $TMP/build.prop
+        rm -rf $VENDOR/odm_dlkm/etc/build.prop
+        cp -f $TMP/build.prop $VENDOR/odm_dlkm/etc/build.prop
+        chmod 0644 $VENDOR/odm_dlkm/etc/build.prop
+        rm -rf $TMP/build.prop
+      fi
+    fi
+    if [ -f "$VENDOR/vendor_dlkm/etc/build.prop" ]; then
+      if [ -n "$(cat $VENDOR/vendor_dlkm/etc/build.prop | grep control_privapp_permissions)" ]; then
+        grep -v "$PROPFLAG" $VENDOR/vendor_dlkm/etc/build.prop > $TMP/build.prop
+        rm -rf $VENDOR/vendor_dlkm/etc/build.prop
+        cp -f $TMP/build.prop $VENDOR/vendor_dlkm/etc/build.prop
+        chmod 0644 $VENDOR/vendor_dlkm/etc/build.prop
+        rm -rf $TMP/build.prop
+      fi
+    fi
+  fi
+}
+
+# Remove Privileged App Whitelist property from boot image
+purge_boot_whitelist_permission() {
+  # Non SAR specific; Apply, after all checks are false
+  if [ ! "$SYSTEM_ROOT" == "true" ] && [ ! "$device_abpartition" == "true" ] && [ ! "$SUPER_PARTITION" == "true" ]; then
+    cd /data/aik
+    # Lets see what fstab tells me
+    block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
+    # Copy boot image
+    dd if="$block" of="boot.img" > /dev/null 2>&1
+    ./unpackimg.sh boot.img > /dev/null 2>&1
+    if [ -f "ramdisk/default.prop" ]; then
+      if [ -n "$(cat ramdisk/default.prop | grep control_privapp_permissions)" ]; then
+        grep -v "$PROPFLAG" ramdisk/default.prop > ramdisk/prop.default
+        rm -rf ramdisk/default.prop
+        cp -f ramdisk/prop.default ramdisk/default.prop
+        chmod 0600 ramdisk/default.prop
+      fi
+      ./repackimg.sh > /dev/null 2>&1
+      dd if="image-new.img" of="$block" > /dev/null 2>&1
+      rm -rf boot.img
+      rm -rf image-new.img
+      ./cleanup.sh > /dev/null 2>&1
+      cd ../..
+    else
+      ./cleanup.sh > /dev/null 2>&1
+      # Wipe stock boot image
+      rm -rf boot.img
+      # Checkout path
+      cd ../..
     fi
   fi
 }
@@ -706,439 +637,151 @@ on_cts_status_check() {
   cts_install_status="$(get_prop "ro.cts.enabled")"
 }
 
-on_spl_status_check() {
-  spl_patch_status="$(get_prop "ro.spl.update")"
-}
-
-on_usf_status_check() {
-  usf_patch_status="$(get_prop "ro.usf.update")"
-}
-
-api_dependent_init() {
-  API30_SPL="false"
-  if [ "$spl_patch_status" == "true" ]; then
-    API30_SPL="true"
-  fi
-  API30_USF="false"
-  if [ "$usf_patch_status" == "true" ]; then
-    API30_USF="true"
-  fi
-}
-
 # Check RWG status
 on_rwg_status_check() {
   rwg_install_status="$(get_prop "ro.rwg.device")"
 }
 
-# Apply safetynet patch on system build
-cts_patch_system() {
+# Update boot image security patch level
+spl_update_boot() {
+  cd /data/aik
+  # Lets see what fstab tells me
+  block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
+  # Copy boot image
+  dd if="$block" of="boot.img" > /dev/null 2>&1
+  ./unpackimg.sh boot.img > /dev/null 2>&1
+  if [ -f "split_img/boot.img-os_patch_level" ]; then
+    rm -rf split_img/boot.img-os_patch_level
+    echo "2021-02" >> split_img/boot.img-os_patch_level
+    chmod 0644 split_img/boot.img-os_patch_level
+    ./repackimg.sh > /dev/null 2>&1
+    dd if="image-new.img" of="$block" > /dev/null 2>&1
+    rm -rf boot.img
+    rm -rf image-new.img
+    ./cleanup.sh > /dev/null 2>&1
+    cd ../..
+    # Set variable for installing build property patch
+    export TARGET_SPLIT_IMAGE="true"
+  else
+    ./cleanup.sh > /dev/null 2>&1
+    # Wipe stock boot image
+    rm -rf boot.img
+    # Checkout path
+    cd ../..
+    # Skip installing build property patch, if boot unpack failed
+    export TARGET_SPLIT_IMAGE="false"
+  fi
+}
+
+# Apply safetynet patch on system/vendor build
+set_cts_patch() {
   # Ext Build fingerprint
   if [ -n "$(cat $S/build.prop | grep ro.system.build.fingerprint)" ]; then
+    CTS_DEFAULT_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint="
     grep -v "$CTS_DEFAULT_SYSTEM_EXT_BUILD_FINGERPRINT" $S/build.prop > $TMP/system.prop
     rm -rf $S/build.prop
     cp -f $TMP/system.prop $S/build.prop
     chmod 0644 $S/build.prop
     rm -rf $TMP/system.prop
+    CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/coral/coral:11/RQ2A.210305.006/7119741:user/release-keys"
     insert_line $S/build.prop "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT" after 'ro.system.build.date.utc=' "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT"
-  fi
-  # Ext Build id
-  if [ -n "$(cat $S/build.prop | grep ro.system.build.id)" ]; then
-    grep -v "$CTS_DEFAULT_SYSTEM_EXT_BUILD_ID" $S/build.prop > $TMP/system.prop
-    rm -rf $S/build.prop
-    cp -f $TMP/system.prop $S/build.prop
-    chmod 0644 $S/build.prop
-    rm -rf $TMP/system.prop
-    insert_line $S/build.prop "$CTS_SYSTEM_EXT_BUILD_ID" after 'ro.system.build.fingerprint=' "$CTS_SYSTEM_EXT_BUILD_ID"
-  fi
-  # Ext Build tags
-  if [ -n "$(cat $S/build.prop | grep ro.system.build.tags)" ]; then
-    grep -v "$CTS_DEFAULT_SYSTEM_EXT_BUILD_TAG" $S/build.prop > $TMP/system.prop
-    rm -rf $S/build.prop
-    cp -f $TMP/system.prop $S/build.prop
-    chmod 0644 $S/build.prop
-    rm -rf $TMP/system.prop
-    insert_line $S/build.prop "$CTS_SYSTEM_EXT_BUILD_TAG" after 'ro.system.build.id=' "$CTS_SYSTEM_EXT_BUILD_TAG"
-  fi
-  # Ext Build type
-  if [ -n "$(cat $S/build.prop | grep ro.system.build.type)" ]; then
-    grep -v "$CTS_DEFAULT_SYSTEM_EXT_BUILD_TYPE" $S/build.prop > $TMP/system.prop
-    rm -rf $S/build.prop
-    cp -f $TMP/system.prop $S/build.prop
-    chmod 0644 $S/build.prop
-    rm -rf $TMP/system.prop
-    insert_line $S/build.prop "$CTS_SYSTEM_EXT_BUILD_TYPE" after 'ro.system.build.tags=' "$CTS_SYSTEM_EXT_BUILD_TYPE"
   fi
   # Build fingerprint
   if [ -n "$(cat $S/build.prop | grep ro.build.fingerprint)" ]; then
+    CTS_DEFAULT_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint="
     grep -v "$CTS_DEFAULT_SYSTEM_BUILD_FINGERPRINT" $S/build.prop > $TMP/system.prop
     rm -rf $S/build.prop
     cp -f $TMP/system.prop $S/build.prop
     chmod 0644 $S/build.prop
     rm -rf $TMP/system.prop
+    CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:11/RQ2A.210305.006/7119741:user/release-keys"
     insert_line $S/build.prop "$CTS_SYSTEM_BUILD_FINGERPRINT" after 'ro.build.description=' "$CTS_SYSTEM_BUILD_FINGERPRINT"
   fi
-  # Build type
-  if [ -n "$(cat $S/build.prop | grep ro.build.type=userdebug)" ]; then
-    grep -v "$CTS_DEFAULT_SYSTEM_BUILD_TYPE" $S/build.prop > $TMP/system.prop
+  # Build security patch
+  if [ -n "$(cat $S/build.prop | grep ro.build.version.security_patch)" ]; then
+    CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=";
+    grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $S/build.prop > $TMP/system.prop
     rm -rf $S/build.prop
     cp -f $TMP/system.prop $S/build.prop
     chmod 0644 $S/build.prop
     rm -rf $TMP/system.prop
-    insert_line $S/build.prop "$CTS_SYSTEM_BUILD_TYPE" after 'ro.build.date.utc=' "$CTS_SYSTEM_BUILD_TYPE"
+    CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-03-05";
+    insert_line $S/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
   fi
-  # Build tags
-  if [ -n "$(cat $S/build.prop | grep ro.build.tags)" ]; then
-    grep -v "$CTS_DEFAULT_SYSTEM_BUILD_TAG" $S/build.prop > $TMP/system.prop
-    rm -rf $S/build.prop
-    cp -f $TMP/system.prop $S/build.prop
-    chmod 0644 $S/build.prop
-    rm -rf $TMP/system.prop
-    insert_line $S/build.prop "$CTS_SYSTEM_BUILD_TAG" after 'ro.build.host=' "$CTS_SYSTEM_BUILD_TAG"
-  fi
-  # Build description
-  if [ -n "$(cat $S/build.prop | grep ro.build.description)" ]; then
-    grep -v "$CTS_DEFAULT_SYSTEM_BUILD_DESC" $S/build.prop > $TMP/system.prop
-    rm -rf $S/build.prop
-    cp -f $TMP/system.prop $S/build.prop
-    chmod 0644 $S/build.prop
-    rm -rf $TMP/system.prop
-    insert_line $S/build.prop "$CTS_SYSTEM_BUILD_DESC" after '# Do not try to parse description or thumbprint' "$CTS_SYSTEM_BUILD_DESC"
-  fi
-}
-
-# Apply safetynet patch on product build
-cts_patch_product() {
-  if [ -f "$S/product/build.prop" ]; then
+  if [ "$device_vendorpartition" == "false" ]; then
+    # Build security patch
+    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.vendor.build.security_patch)" ]; then
+      CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=";
+      grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
+      rm -rf $SYSTEM/vendor/build.prop
+      cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
+      chmod 0644 $SYSTEM/vendor/build.prop
+      rm -rf $TMP/vendor.prop
+      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-03-05";
+      insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
+    fi
     # Build fingerprint
-    if [ -n "$(cat $S/product/build.prop | grep ro.product.build.fingerprint)" ]; then
-      grep -v "$CTS_DEFAULT_PRODUCT_BUILD_FINGERPRINT" $S/product/build.prop > $TMP/product.prop
-      rm -rf $S/product/build.prop
-      cp -f $TMP/product.prop $S/product/build.prop
-      chmod 0644 $S/product/build.prop
-      rm -rf $TMP/product.prop
-      insert_line $S/product/build.prop "$CTS_PRODUCT_BUILD_FINGERPRINT" after 'ro.product.build.date.utc=' "$CTS_PRODUCT_BUILD_FINGERPRINT"
+    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.vendor.build.fingerprint)" ]; then
+      CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint="
+      grep -v "$CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
+      rm -rf $SYSTEM/vendor/build.prop
+      cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
+      chmod 0644 $SYSTEM/vendor/build.prop
+      rm -rf $TMP/vendor.prop
+      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:11/RQ2A.210305.006/7119741:user/release-keys"
+      insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
-    # Build id
-    if [ -n "$(cat $S/product/build.prop | grep ro.product.build.id)" ]; then
-      grep -v "$CTS_DEFAULT_PRODUCT_BUILD_ID" $S/product/build.prop > $TMP/product.prop
-      rm -rf $S/product/build.prop
-      cp -f $TMP/product.prop $S/product/build.prop
-      chmod 0644 $S/product/build.prop
-      rm -rf $TMP/product.prop
-      insert_line $S/product/build.prop "$CTS_PRODUCT_BUILD_ID" after 'ro.product.build.fingerprint=' "$CTS_PRODUCT_BUILD_ID"
-    fi
-    # Build tags
-    if [ -n "$(cat $S/product/build.prop | grep ro.product.build.tags)" ]; then
-      grep -v "$CTS_DEFAULT_PRODUCT_BUILD_TAG" $S/product/build.prop > $TMP/product.prop
-      rm -rf $S/product/build.prop
-      cp -f $TMP/product.prop $S/product/build.prop
-      chmod 0644 $S/product/build.prop
-      rm -rf $TMP/product.prop
-      insert_line $S/product/build.prop "$CTS_PRODUCT_BUILD_TAG" after 'ro.product.build.id=' "$CTS_PRODUCT_BUILD_TAG"
-    fi
-    # Build type
-    if [ -n "$(cat $S/product/build.prop | grep ro.product.build.type=userdebug)" ]; then
-      grep -v "$CTS_DEFAULT_PRODUCT_BUILD_TYPE" $S/product/build.prop > $TMP/product.prop
-      rm -rf $S/product/build.prop
-      cp -f $TMP/product.prop $S/product/build.prop
-      chmod 0644 $S/product/build.prop
-      rm -rf $TMP/product.prop
-      insert_line $S/product/build.prop "$CTS_PRODUCT_BUILD_TYPE" after 'ro.product.build.tags=' "$CTS_PRODUCT_BUILD_TYPE"
+    # Build bootimage
+    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.bootimage.build.fingerprint)" ]; then
+      CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint="
+      grep -v "$CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
+      rm -rf $SYSTEM/vendor/build.prop
+      cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
+      chmod 0644 $SYSTEM/vendor/build.prop
+      rm -rf $TMP/vendor.prop
+      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:11/RQ2A.210305.006/7119741:user/release-keys"
+      insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
     fi
   fi
-}
-
-# Apply safetynet patch on system_ext build
-cts_patch_ext() {
-  if [ -f "$S/system_ext/build.prop" ]; then
-    # Build fingerprint
-    if [ -n "$(cat $S/system_ext/build.prop | grep ro.system_ext.build.fingerprint)" ]; then
-      grep -v "$CTS_DEFAULT_EXT_BUILD_FINGERPRINT" $S/system_ext/build.prop > $TMP/ext.prop
-      rm -rf $S/system_ext/build.prop
-      cp -f $TMP/ext.prop $S/system_ext/build.prop
-      chmod 0644 $S/system_ext/build.prop
-      rm -rf $TMP/ext.prop
-      insert_line $S/system_ext/build.prop "$CTS_EXT_BUILD_FINGERPRINT" after 'ro.system_ext.build.date.utc=' "$CTS_EXT_BUILD_FINGERPRINT"
-    fi
-    # Build id
-    if [ -n "$(cat $S/system_ext/build.prop | grep ro.system_ext.build.id)" ]; then
-      grep -v "$CTS_DEFAULT_EXT_BUILD_ID" $S/system_ext/build.prop > $TMP/ext.prop
-      rm -rf $S/system_ext/build.prop
-      cp -f $TMP/ext.prop $S/system_ext/build.prop
-      chmod 0644 $S/system_ext/build.prop
-      rm -rf $TMP/ext.prop
-      insert_line $S/system_ext/build.prop "$CTS_EXT_BUILD_ID" after 'ro.system_ext.build.fingerprint=' "$CTS_EXT_BUILD_ID"
-    fi
-    # Build tags
-    if [ -n "$(cat $S/system_ext/build.prop | grep ro.system_ext.build.tags)" ]; then
-      grep -v "$CTS_DEFAULT_EXT_BUILD_TAG" $S/system_ext/build.prop > $TMP/ext.prop
-      rm -rf $S/system_ext/build.prop
-      cp -f $TMP/ext.prop $S/system_ext/build.prop
-      chmod 0644 $S/system_ext/build.prop
-      rm -rf $TMP/ext.prop
-      insert_line $S/system_ext/build.prop "$CTS_EXT_BUILD_TAG" after 'ro.system_ext.build.id=' "$CTS_EXT_BUILD_TAG"
-    fi
-    # Build type
-    if [ -n "$(cat $S/system_ext/build.prop | grep ro.system_ext.build.type=userdebug)" ]; then
-      grep -v "$CTS_DEFAULT_EXT_BUILD_TYPE" $S/system_ext/build.prop > $TMP/ext.prop
-      rm -rf $S/system_ext/build.prop
-      cp -f $TMP/ext.prop $S/system_ext/build.prop
-      chmod 0644 $S/system_ext/build.prop
-      rm -rf $TMP/ext.prop
-      insert_line $S/system_ext/build.prop "$CTS_EXT_BUILD_TYPE" after 'ro.system_ext.build.tags=' "$CTS_EXT_BUILD_TYPE"
-    fi
-  fi
-}
-
-# Apply safetynet patch on vendor build
-cts_patch_vendor() {
   if [ "$device_vendorpartition" == "true" ]; then
-    # Ext Build fingerprint
-    if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.fingerprint)" ]; then
-      grep -v "$CTS_DEFAULT_VENDOR_EXT_BUILD_FINGERPRINT" $VENDOR/build.prop > $TMP/vendor.prop
+    # Build security patch
+    if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.security_patch)" ]; then
+      CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=";
+      grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $VENDOR/build.prop > $TMP/vendor.prop
       rm -rf $VENDOR/build.prop
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
-      insert_line $VENDOR/build.prop "$CTS_VENDOR_EXT_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_EXT_BUILD_FINGERPRINT"
+      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-03-05";
+      insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
     fi
     # Build fingerprint
-    if [ -n "$(cat $VENDOR/build.prop | grep ro.build.fingerprint)" ]; then
+    if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.fingerprint)" ]; then
+      CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint="
       grep -v "$CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT" $VENDOR/build.prop > $TMP/vendor.prop
       rm -rf $VENDOR/build.prop
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
-      insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.fingerprint=' "$CTS_VENDOR_BUILD_FINGERPRINT"
-    fi
-    # Build id
-    if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.id)" ]; then
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_ID" $VENDOR/build.prop > $TMP/vendor.prop
-      rm -rf $VENDOR/build.prop
-      cp -f $TMP/vendor.prop $VENDOR/build.prop
-      chmod 0644 $VENDOR/build.prop
-      rm -rf $TMP/vendor.prop
-      insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_ID" after 'ro.vendor.build.fingerprint=' "$CTS_VENDOR_BUILD_ID"
-    fi
-    # Build tags
-    if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.tags)" ]; then
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_TAG" $VENDOR/build.prop > $TMP/vendor.prop
-      rm -rf $VENDOR/build.prop
-      cp -f $TMP/vendor.prop $VENDOR/build.prop
-      chmod 0644 $VENDOR/build.prop
-      rm -rf $TMP/vendor.prop
-      insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_TAG" after 'ro.vendor.build.id=' "$CTS_VENDOR_BUILD_TAG"
-    fi
-    # Build type
-    if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.type)" ]; then
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_TYPE" $VENDOR/build.prop > $TMP/vendor.prop
-      rm -rf $VENDOR/build.prop
-      cp -f $TMP/vendor.prop $VENDOR/build.prop
-      chmod 0644 $VENDOR/build.prop
-      rm -rf $TMP/vendor.prop
-      insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_TYPE" after 'ro.vendor.build.tags=' "$CTS_VENDOR_BUILD_TYPE"
+      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:11/RQ2A.210305.006/7119741:user/release-keys"
+      insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build bootimage
     if [ -n "$(cat $VENDOR/build.prop | grep ro.bootimage.build.fingerprint)" ]; then
+      CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint="
       grep -v "$CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE" $VENDOR/build.prop > $TMP/vendor.prop
       rm -rf $VENDOR/build.prop
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
+      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:11/RQ2A.210305.006/7119741:user/release-keys"
       insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
     fi
   fi
 }
 
-# Apply safetynet patch on vendor dlkm build
-cts_patch_vendor_dlkm() {
-  if [ "$device_vendorpartition" == "true" ]; then
-    if [ -f "$ANDROID_ROOT/vendor_dlkm/etc/build.prop" ]; then
-      # Build fingerprint
-      if [ -n "$(cat $ANDROID_ROOT/vendor_dlkm/etc/build.prop | grep ro.vendor_dlkm.build.fingerprint)" ]; then
-        grep -v "$CTS_DEFAULT_VENDOR_DLKM_BUILD_FINGERPRINT" $ANDROID_ROOT/vendor_dlkm/etc/build.prop > $TMP/vendor_dlkm.prop
-        rm -rf $ANDROID_ROOT/vendor_dlkm/etc/build.prop
-        cp -f $TMP/vendor_dlkm.prop $ANDROID_ROOT/vendor_dlkm/etc/build.prop
-        chmod 0644 $ANDROID_ROOT/vendor_dlkm/etc/build.prop
-        rm -rf $TMP/vendor_dlkm.prop
-        insert_line $ANDROID_ROOT/vendor_dlkm/etc/build.prop "$CTS_VENDOR_DLKM_BUILD_FINGERPRINT" after 'ro.vendor_dlkm.build.date.utc=' "$CTS_VENDOR_DLKM_BUILD_FINGERPRINT"
-      fi
-      # Build id
-      if [ -n "$(cat $ANDROID_ROOT/vendor_dlkm/etc/build.prop | grep ro.vendor_dlkm.build.id)" ]; then
-        grep -v "$CTS_DEFAULT_VENDOR_DLKM_BUILD_ID" $ANDROID_ROOT/vendor_dlkm/etc/build.prop > $TMP/vendor_dlkm.prop
-        rm -rf $ANDROID_ROOT/vendor_dlkm/etc/build.prop
-        cp -f $TMP/vendor_dlkm.prop $ANDROID_ROOT/vendor_dlkm/etc/build.prop
-        chmod 0644 $ANDROID_ROOT/vendor_dlkm/etc/build.prop
-        rm -rf $TMP/vendor_dlkm.prop
-        insert_line $ANDROID_ROOT/vendor_dlkm/etc/build.prop "$CTS_VENDOR_DLKM_BUILD_ID" after 'ro.vendor_dlkm.build.fingerprint=' "$CTS_VENDOR_DLKM_BUILD_ID"
-      fi
-      # Build tags
-      if [ -n "$(cat $ANDROID_ROOT/vendor_dlkm/etc/build.prop | grep ro.vendor_dlkm.build.tags)" ]; then
-        grep -v "$CTS_DEFAULT_VENDOR_DLKM_BUILD_TAG" $ANDROID_ROOT/vendor_dlkm/etc/build.prop > $TMP/vendor_dlkm.prop
-        rm -rf $ANDROID_ROOT/vendor_dlkm/etc/build.prop
-        cp -f $TMP/vendor_dlkm.prop $ANDROID_ROOT/vendor_dlkm/etc/build.prop
-        chmod 0644 $ANDROID_ROOT/vendor_dlkm/etc/build.prop
-        rm -rf $TMP/vendor_dlkm.prop
-        insert_line $ANDROID_ROOT/vendor_dlkm/etc/build.prop "$CTS_VENDOR_DLKM_BUILD_TAG" after 'ro.vendor_dlkm.build.id=' "$CTS_VENDOR_DLKM_BUILD_TAG"
-      fi
-      # Build type
-      if [ -n "$(cat $ANDROID_ROOT/vendor_dlkm/etc/build.prop | grep ro.vendor_dlkm.build.type=userdebug)" ]; then
-        grep -v "$CTS_DEFAULT_VENDOR_DLKM_BUILD_TYPE" $ANDROID_ROOT/vendor_dlkm/etc/build.prop > $TMP/vendor_dlkm.prop
-        rm -rf $ANDROID_ROOT/vendor_dlkm/etc/build.prop
-        cp -f $TMP/vendor_dlkm.prop $ANDROID_ROOT/vendor_dlkm/etc/build.prop
-        chmod 0644 $ANDROID_ROOT/vendor_dlkm/etc/build.prop
-        rm -rf $TMP/vendor_dlkm.prop
-        insert_line $ANDROID_ROOT/vendor_dlkm/etc/build.prop "$CTS_VENDOR_DLKM_BUILD_TYPE" after 'ro.vendor_dlkm.build.tags=' "$CTS_VENDOR_DLKM_BUILD_TYPE"
-      fi
-    fi
-  fi
-}
-
-# Apply safetynet patch on odm build
-cts_patch_odm() {
-  if [ "$device_vendorpartition" == "true" ]; then
-    if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
-      # Build fingerprint
-      if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.fingerprint)" ]; then
-        grep -v "$CTS_DEFAULT_ODM_BUILD_FINGERPRINT" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
-        rm -rf $ANDROID_ROOT/odm/etc/build.prop
-        cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
-        chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
-        rm -rf $TMP/odm.prop
-        insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_FINGERPRINT" after 'ro.odm.build.date.utc=' "$CTS_ODM_BUILD_FINGERPRINT"
-      fi
-      # Build id
-      if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.id)" ]; then
-        grep -v "$CTS_DEFAULT_ODM_BUILD_ID" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
-        rm -rf $ANDROID_ROOT/odm/etc/build.prop
-        cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
-        chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
-        rm -rf $TMP/odm.prop
-        insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_ID" after 'ro.odm.build.fingerprint=' "$CTS_ODM_BUILD_ID"
-      fi
-      # Build tags
-      if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.tags)" ]; then
-        grep -v "$CTS_DEFAULT_ODM_BUILD_TAG" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
-        rm -rf $ANDROID_ROOT/odm/etc/build.prop
-        cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
-        chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
-        rm -rf $TMP/odm.prop
-        insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_TAG" after 'ro.odm.build.id=' "$CTS_ODM_BUILD_TAG"
-      fi
-      # Build type
-      if [ -n "$(cat $ANDROID_ROOT/odm/etc/build.prop | grep ro.odm.build.type=userdebug)" ]; then
-        grep -v "$CTS_DEFAULT_ODM_BUILD_TYPE" $ANDROID_ROOT/odm/etc/build.prop > $TMP/odm.prop
-        rm -rf $ANDROID_ROOT/odm/etc/build.prop
-        cp -f $TMP/odm.prop $ANDROID_ROOT/odm/etc/build.prop
-        chmod 0644 $ANDROID_ROOT/odm/etc/build.prop
-        rm -rf $TMP/odm.prop
-        insert_line $ANDROID_ROOT/odm/etc/build.prop "$CTS_ODM_BUILD_TYPE" after 'ro.odm.build.tags=' "$CTS_ODM_BUILD_TYPE"
-      fi
-    fi
-  fi
-}
-
-# Apply safetynet patch on odm dlkm build
-cts_patch_odm_dlkm() {
-  if [ "$device_vendorpartition" == "true" ]; then
-    if [ -f "$ANDROID_ROOT/odm_dlkm/etc/build.prop" ]; then
-      # Build fingerprint
-      if [ -n "$(cat $ANDROID_ROOT/odm_dlkm/etc/build.prop | grep ro.odm_dlkm.build.fingerprint)" ]; then
-        grep -v "$CTS_DEFAULT_ODM_DLKM_BUILD_FINGERPRINT" $ANDROID_ROOT/odm_dlkm/etc/build.prop > $TMP/odm_dlkm.prop
-        rm -rf $ANDROID_ROOT/odm_dlkm/etc/build.prop
-        cp -f $TMP/odm_dlkm.prop $ANDROID_ROOT/odm_dlkm/etc/build.prop
-        chmod 0644 $ANDROID_ROOT/odm_dlkm/etc/build.prop
-        rm -rf $TMP/odm_dlkm.prop
-        insert_line $ANDROID_ROOT/odm_dlkm/etc/build.prop "$CTS_ODM_DLKM_BUILD_FINGERPRINT" after 'ro.odm_dlkm.build.date.utc=' "$CTS_ODM_DLKM_BUILD_FINGERPRINT"
-      fi
-      # Build id
-      if [ -n "$(cat $ANDROID_ROOT/odm_dlkm/etc/build.prop | grep ro.odm_dlkm.build.id)" ]; then
-        grep -v "$CTS_DEFAULT_ODM_DLKM_BUILD_ID" $ANDROID_ROOT/odm_dlkm/etc/build.prop > $TMP/odm_dlkm.prop
-        rm -rf $ANDROID_ROOT/odm_dlkm/etc/build.prop
-        cp -f $TMP/odm_dlkm.prop $ANDROID_ROOT/odm_dlkm/etc/build.prop
-        chmod 0644 $ANDROID_ROOT/odm_dlkm/etc/build.prop
-        rm -rf $TMP/odm_dlkm.prop
-        insert_line $ANDROID_ROOT/odm_dlkm/etc/build.prop "$CTS_ODM_DLKM_BUILD_ID" after 'ro.odm_dlkm.build.fingerprint=' "$CTS_ODM_DLKM_BUILD_ID"
-      fi
-      # Build tags
-      if [ -n "$(cat $ANDROID_ROOT/odm_dlkm/etc/build.prop | grep ro.odm_dlkm.build.tags)" ]; then
-        grep -v "$CTS_DEFAULT_ODM_DLKM_BUILD_TAG" $ANDROID_ROOT/odm_dlkm/etc/build.prop > $TMP/odm_dlkm.prop
-        rm -rf $ANDROID_ROOT/odm_dlkm/etc/build.prop
-        cp -f $TMP/odm_dlkm.prop $ANDROID_ROOT/odm_dlkm/etc/build.prop
-        chmod 0644 $ANDROID_ROOT/odm_dlkm/etc/build.prop
-        rm -rf $TMP/odm_dlkm.prop
-        insert_line $ANDROID_ROOT/odm_dlkm/etc/build.prop "$CTS_ODM_DLKM_BUILD_TAG" after 'ro.odm_dlkm.build.id=' "$CTS_ODM_DLKM_BUILD_TAG"
-      fi
-      # Build type
-      if [ -n "$(cat $ANDROID_ROOT/odm_dlkm/etc/build.prop | grep ro.odm_dlkm.build.type=userdebug)" ]; then
-        grep -v "$CTS_DEFAULT_ODM_DLKM_BUILD_TYPE" $ANDROID_ROOT/odm_dlkm/etc/build.prop > $TMP/odm_dlkm.prop
-        rm -rf $ANDROID_ROOT/odm_dlkm/etc/build.prop
-        cp -f $TMP/odm_dlkm.prop $ANDROID_ROOT/odm_dlkm/etc/build.prop
-        chmod 0644 $ANDROID_ROOT/odm_dlkm/etc/build.prop
-        rm -rf $TMP/odm_dlkm.prop
-        insert_line $ANDROID_ROOT/odm_dlkm/etc/build.prop "$CTS_ODM_DLKM_BUILD_TYPE" after 'ro.odm_dlkm.build.tags=' "$CTS_ODM_DLKM_BUILD_TYPE"
-      fi
-    fi
-  fi
-}
-
-# Update security patch level of system build
-spl_update_system() {
-  # Build security patch
-  if [ "$spl_patch_status" == "true" ]; then
-    if [ -n "$(cat $S/build.prop | grep ro.build.version.security_patch)" ]; then
-      grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $S/build.prop > $TMP/system.prop
-      rm -rf $S/build.prop
-      cp -f $TMP/system.prop $S/build.prop
-      chmod 0644 $S/build.prop
-      rm -rf $TMP/system.prop
-      insert_line $S/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
-    fi
-  fi
-}
-
-# Update security patch level of vendor build
-spl_update_vendor() {
-  if [ "$spl_patch_status" == "true" ]; then
-    if [ "$device_vendorpartition" == "true" ]; then
-      # Build security patch
-      if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.security_patch)" ]; then
-        grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $VENDOR/build.prop > $TMP/vendor.prop
-        rm -rf $VENDOR/build.prop
-        cp -f $TMP/vendor.prop $VENDOR/build.prop
-        chmod 0644 $VENDOR/build.prop
-        rm -rf $TMP/vendor.prop
-        insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
-      fi
-    fi
-  fi
-}
-
-cts_patch() {
-  if [ "$cts_install_status" == "true" ]; then
-    if [ "$android_sdk" == "$supported_sdk_v31" ]; then
-      patch_v31
-      cts_patch_system
-      cts_patch_product
-      cts_patch_ext
-      cts_patch_vendor
-      cts_patch_vendor_dlkm
-      cts_patch_odm
-      cts_patch_odm_dlkm
-      spl_update_system
-      spl_update_vendor
-    fi
-    if [ "$android_sdk" == "$supported_sdk_v30" ]; then
-      patch_v30
-      cts_patch_system
-      cts_patch_product
-      cts_patch_ext
-      cts_patch_vendor
-      cts_patch_odm
-      spl_update_system
-      spl_update_vendor
-    fi
-  fi
+on_cts_patch() {
+  if [ "$cts_install_status" == "true" ]; then spl_update_boot; $TARGET_SPLIT_IMAGE && set_cts_patch; fi
 }
 
 # API fixes
@@ -1157,17 +800,23 @@ sdk_fix() {
     if [ -f "$S/system_ext/build.prop" ]; then
       chmod 0600 $S/system_ext/build.prop
     fi
+    if [ -f "$S/vendor/build.prop" ]; then
+      chmod 0600 $S/vendor/build.prop
+    fi
+    if [ -f "$S/vendor/default.prop" ]; then
+      chmod 0600 $S/vendor/default.prop
+    fi
     if [ "$device_vendorpartition" = "true" ]; then
       chmod 0600 $VENDOR/build.prop
       chmod 0600 $VENDOR/default.prop
-      if [ -f "$ANDROID_ROOT/vendor_dlkm/etc/build.prop" ]; then
-        chmod 0600 $ANDROID_ROOT/vendor_dlkm/etc/build.prop
+      if [ -f "$VENDOR/odm/etc/build.prop" ]; then
+        chmod 0600 $VENDOR/odm/etc/build.prop
       fi
-      if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
-        chmod 0600 $ANDROID_ROOT/odm/etc/build.prop
+      if [ -f "$VENDOR/odm_dlkm/etc/build.prop" ]; then
+        chmod 0600 $VENDOR/odm_dlkm/etc/build.prop
       fi
-      if [ -f "$ANDROID_ROOT/odm_dlkm/etc/build.prop" ]; then
-        chmod 0600 $ANDROID_ROOT/odm_dlkm/etc/build.prop
+      if [ -f "$VENDOR/vendor_dlkm/etc/build.prop" ]; then
+        chmod 0600 $VENDOR/vendor_dlkm/etc/build.prop
       fi
     fi
   fi
@@ -1188,17 +837,23 @@ selinux_fix() {
   if [ -f "$S/system_ext/build.prop" ]; then
     chcon -h u:object_r:system_file:s0 "$S/system_ext/build.prop"
   fi
+  if [ -f "$S/vendor/build.prop" ]; then
+    chcon -h u:object_r:system_file:s0 "$S/vendor/build.prop"
+  fi
+  if [ -f "$S/vendor/default.prop" ]; then
+    chcon -h u:object_r:system_file:s0 "$S/vendor/default.prop"
+  fi
   if [ "$device_vendorpartition" == "true" ]; then
     chcon -h u:object_r:vendor_file:s0 "$VENDOR/build.prop"
     chcon -h u:object_r:vendor_file:s0 "$VENDOR/default.prop"
-    if [ -f "$ANDROID_ROOT/vendor_dlkm/etc/build.prop" ]; then
-      chcon -h u:object_r:vendor_configs_file:s0 "$ANDROID_ROOT/vendor_dlkm/etc/build.prop"
+    if [ -f "$VENDOR/odm/etc/build.prop" ]; then
+      chcon -h u:object_r:vendor_configs_file:s0 "$VENDOR/odm/etc/build.prop"
     fi
-    if [ -f "$ANDROID_ROOT/odm/etc/build.prop" ]; then
-      chcon -h u:object_r:vendor_configs_file:s0 "$ANDROID_ROOT/odm/etc/build.prop"
+    if [ -f "$VENDOR/odm_dlkm/etc/build.prop" ]; then
+      chcon -h u:object_r:vendor_configs_file:s0 "$VENDOR/odm_dlkm/etc/build.prop"
     fi
-    if [ -f "$ANDROID_ROOT/odm_dlkm/etc/build.prop" ]; then
-      chcon -h u:object_r:vendor_configs_file:s0 "$ANDROID_ROOT/odm_dlkm/etc/build.prop"
+    if [ -f "$VENDOR/vendor_dlkm/etc/build.prop" ]; then
+      chcon -h u:object_r:vendor_configs_file:s0 "$VENDOR/vendor_dlkm/etc/build.prop"
     fi
   fi
 }
@@ -1983,12 +1638,9 @@ backupdirSYS() {
     $SYSTEM/app/FaceLock
     $SYSTEM/app/GoogleCalendarSyncAdapter
     $SYSTEM/app/GoogleContactsSyncAdapter"
-    
+
   SYS_APP_JAR="
     $S/app/GoogleExtShared"
-
-  SYS_BIN="
-    $S/bin/pm.sh"
 
   SYS_PRIVAPP="
     $SYSTEM/priv-app/AndroidPlatformServices
@@ -2007,11 +1659,6 @@ backupdirSYS() {
   SYS_PRIVAPP_JAR="
     $S/priv-app/GoogleExtServices"
 
-  SYS_FRAMEWORK="
-    $SYSTEM/framework/com.google.android.dialer.support.jar
-    $SYSTEM/framework/com.google.android.maps.jar
-    $SYSTEM/framework/com.google.android.media.effects.jar"
-
   SYS_LIB="
     $SYSTEM/lib/libfacenet.so
     $SYSTEM/lib/libfilterpack_facedetect.so
@@ -2023,29 +1670,19 @@ backupdirSYS() {
     $SYSTEM/lib64/libfrsdk.so"
 
   SYS_SYSCONFIG="
-    $SYSTEM/etc/sysconfig/dialer_experience.xml
     $SYSTEM/etc/sysconfig/google.xml
     $SYSTEM/etc/sysconfig/google_build.xml
     $SYSTEM/etc/sysconfig/google_exclusives_enable.xml
     $SYSTEM/etc/sysconfig/google-hiddenapi-package-whitelist.xml
     $SYSTEM/etc/sysconfig/google-rollback-package-whitelist.xml
-    $SYSTEM/etc/sysconfig/google-staged-installer-whitelist.xml
-    $SYSTEM/etc/sysconfig/nexus.xml
-    $SYSTEM/etc/sysconfig/nga.xml
-    $SYSTEM/etc/sysconfig/pixel_2019_exclusive.xml
-    $SYSTEM/etc/sysconfig/pixel_experience_2017.xml
-    $SYSTEM/etc/sysconfig/pixel_experience_2018.xml
-    $SYSTEM/etc/sysconfig/pixel_experience_2019_midyear.xml
-    $SYSTEM/etc/sysconfig/pixel_experience_2019.xml
-    $SYSTEM/etc/sysconfig/preinstalled-packages-product-pixel-2017-and-newer.xml"
+    $SYSTEM/etc/sysconfig/google-staged-installer-whitelist.xml"
 
   SYS_DEFAULTPERMISSIONS="
     $SYSTEM/etc/default-permissions/default-permissions.xml"
 
   SYS_PERMISSIONS="
-    $SYSTEM/etc/permissions/com.google.android.dialer.support.xml
-    $SYSTEM/etc/permissions/com.google.android.maps.xml
-    $SYSTEM/etc/permissions/com.google.android.media.effects.xml
+    $SYSTEM/etc/permissions/privapp-permissions-atv.xml
+    $SYSTEM/etc/permissions/privapp-permissions-google.xml
     $SYSTEM/etc/permissions/split-permissions-google.xml"
 
   SYS_PREFERREDAPPS="
@@ -2123,13 +1760,6 @@ backupdirSYSOverlay() {
     $SYSTEM/overlay/PlayStoreOverlay"
 }
 
-backupdirSYSInit() {
-  SYS_INIT="
-    $S/etc/init/bootanim.rc
-    $S/etc/init/init.spl.rc
-    $S/etc/init/init.usf.rc"
-}
-
 backupdirSYSKeystore() {
   SYS_KEYSTORE="
     $S/bin/keystore
@@ -2145,9 +1775,6 @@ restoredirTMP() {
 
   TMP_APP_JAR="
     $TMP/app/GoogleExtShared"
-
-  TMP_BIN="
-    $TMP/bin/pm.sh"
 
   TMP_PRIVAPP="
     $TMP/priv-app/AndroidPlatformServices
@@ -2166,11 +1793,6 @@ restoredirTMP() {
   TMP_PRIVAPP_JAR="
     $TMP/priv-app/GoogleExtServices"
 
-  TMP_FRAMEWORK="
-    $TMP/framework/com.google.android.dialer.support.jar
-    $TMP/framework/com.google.android.maps.jar
-    $TMP/framework/com.google.android.media.effects.jar"
-
   TMP_LIB="
     $TMP/lib/libfacenet.so
     $TMP/lib/libfilterpack_facedetect.so
@@ -2182,29 +1804,19 @@ restoredirTMP() {
     $TMP/lib64/libfrsdk.so"
 
   TMP_SYSCONFIG="
-    $TMP/sysconfig/dialer_experience.xml
     $TMP/sysconfig/google.xml
     $TMP/sysconfig/google_build.xml
     $TMP/sysconfig/google_exclusives_enable.xml
     $TMP/sysconfig/google-hiddenapi-package-whitelist.xml
     $TMP/sysconfig/google-rollback-package-whitelist.xml
-    $TMP/sysconfig/google-staged-installer-whitelist.xml
-    $TMP/sysconfig/nexus.xml
-    $TMP/sysconfig/nga.xml
-    $TMP/sysconfig/pixel_2019_exclusive.xml
-    $TMP/sysconfig/pixel_experience_2017.xml
-    $TMP/sysconfig/pixel_experience_2018.xml
-    $TMP/sysconfig/pixel_experience_2019_midyear.xml
-    $TMP/sysconfig/pixel_experience_2019.xml
-    $TMP/sysconfig/preinstalled-packages-product-pixel-2017-and-newer.xml"
+    $TMP/sysconfig/google-staged-installer-whitelist.xml"
 
   TMP_DEFAULTPERMISSIONS="
     $TMP/default-permissions/default-permissions.xml"
 
   TMP_PERMISSIONS="
-    $TMP/permissions/com.google.android.dialer.support.xml
-    $TMP/permissions/com.google.android.maps.xml
-    $TMP/permissions/com.google.android.media.effects.xml
+    $TMP/permissions/privapp-permissions-atv.xml
+    $TMP/permissions/privapp-permissions-google.xml
     $TMP/permissions/split-permissions-google.xml"
 
   TMP_PREFERREDAPPS="
@@ -2280,13 +1892,6 @@ restoredirTMPAddon() {
 restoredirTMPOverlay() {
   TMP_OVERLAY="
     $TMP/overlay/PlayStoreOverlay"
-}
-
-restoredirTMPInit() {
-  TMP_INIT="
-    $TMP/init/bootanim.rc
-    $TMP/init/init.spl.rc
-    $TMP/init/init.usf.rc"
 }
 
 restoredirTMPKeystore() {
@@ -2745,37 +2350,33 @@ restore_conflicting_packages() {
   fi
 }
 
-# Call functions
-set_arch
+# Static functions
 trampoline
-tmp_dir
-on_sdk
-on_partition_check
-on_fstab
-ab_partition
-system_as_root
-super_partition
-vendor_mnt
-mount_all
-system_layout
-on_version_check
-api_dependent_overlay
-set_pathmap
+check_aik_binaries "$@"
 
 case "$1" in
-  pre-backup)
-    # Stub
-  ;;
   backup)
-    # Stub
     ui_print "BackupTools: Starting BiTGApps backup"
+    # Start runtime functions
+    set_arch
+    tmp_dir
+    on_sdk
+    on_partition_check
+    ab_partition
+    system_as_root
+    super_partition
+    vendor_mnt
+    mount_all
+    system_layout
+    on_version_check
+    api_dependent_overlay
+    set_pathmap
+    # End runtime functions
     backupdirSYS
     mv $SYS_APP $TMP/app 2>/dev/null
     mv $SYS_APP_JAR $TMP/app 2>/dev/null
-    mv $SYS_BIN $TMP/bin 2>/dev/null
     mv $SYS_PRIVAPP $TMP/priv-app 2>/dev/null
     mv $SYS_PRIVAPP_JAR $TMP/priv-app 2>/dev/null
-    mv $SYS_FRAMEWORK $TMP/framework 2>/dev/null
     mv $SYS_LIB $TMP/lib 2>/dev/null
     $AARCH64 && mv $SYS_LIB64 $TMP/lib64 2>/dev/null
     mv $SYS_SYSCONFIG $TMP/sysconfig 2>/dev/null
@@ -2795,31 +2396,37 @@ case "$1" in
     backupdirSYSRwg
     on_rwg_status_check
     trigger_rwg_backup
-    $API30 && backupdirSYSOverlay
-    $API30 && mv $SYS_OVERLAY $TMP/overlay 2>/dev/null
-    on_spl_status_check
-    on_usf_status_check
-    api_dependent_init
-    $API30_SPL && backupdirSYSInit
-    $API30_SPL && mv $SYS_INIT $TMP/init 2>/dev/null
-    $API30_USF && backupdirSYSKeystore
-    $API30_USF && mv $SYS_KEYSTORE $TMP/keystore 2>/dev/null
+    $OVERLAY && backupdirSYSOverlay
+    $OVERLAY && mv $SYS_OVERLAY $TMP/overlay 2>/dev/null
+    backupdirSYSKeystore
+    mv $SYS_KEYSTORE $TMP/keystore 2>/dev/null
+    # Confirm that backup is done
+    conf_addon_backup
   ;;
-  post-backup)
-    # Stub
-  ;;
-  pre-restore)
-    # Stub
+  restore)
     ui_print "BackupTools: Restoring BiTGApps backup"
+    # Start runtime functions
+    set_arch
+    tmp_dir
+    on_sdk
+    on_partition_check
+    ab_partition
+    system_as_root
+    super_partition
+    vendor_mnt
+    mount_all
+    system_layout
+    on_version_check
+    api_dependent_overlay
+    set_pathmap
+    # End runtime functions
     on_rwg_status_check
     lim_aosp_install
     restoredirTMP
     mv $TMP_APP $SYSTEM/app 2>/dev/null
     mv $TMP_APP_JAR $S/app 2>/dev/null
-    mv $TMP_BIN $S/bin 2>/dev/null
     mv $TMP_PRIVAPP $SYSTEM/priv-app 2>/dev/null
     mv $TMP_PRIVAPP_JAR $S/priv-app 2>/dev/null
-    mv $TMP_FRAMEWORK $SYSTEM/framework 2>/dev/null
     mv $TMP_LIB $SYSTEM/lib 2>/dev/null
     $AARCH64 && mv $TMP_LIB64 $SYSTEM/lib64 2>/dev/null
     mv $TMP_SYSCONFIG $SYSTEM/etc/sysconfig 2>/dev/null
@@ -2829,46 +2436,28 @@ case "$1" in
     mv $TMP_PROPFILE $S/etc 2>/dev/null
     mv $TMP_BUILDFILE $S 2>/dev/null
     mv $TMP_XBIN $S/xbin 2>/dev/null
-    $API30 && restoredirTMPOverlay
-    $API30 && mv $TMP_OVERLAY $SYSTEM/overlay 2>/dev/null
-    on_spl_status_check
-    on_usf_status_check
-    api_dependent_init
-    $API30_SPL && restoredirTMPInit
-    $API30_SPL && mv $TMP_INIT $S/etc/init 2>/dev/null
-    $API30_SPL && chmod 0644 $S/etc/init/bootanim.rc 2>/dev/null
-    $API30_SPL && chmod 0644 $S/etc/init/init.spl.rc 2>/dev/null
-    $API30_SPL && chmod 0644 $S/etc/init/init.usf.rc 2>/dev/null
-    $API30_SPL && chcon -h u:object_r:system_file:s0 "$S/etc/init/bootanim.rc"
-    $API30_SPL && chcon -h u:object_r:system_file:s0 "$S/etc/init/init.spl.rc"
-    $API30_SPL && chcon -h u:object_r:system_file:s0 "$S/etc/init/init.usf.rc"
-    $API30_USF && restoredirTMPKeystore
-    $API30_USF && mv $TMP_KEYSTORE_BIN $S/bin 2>/dev/null
-    $API30_USF && mv $TMP_KEYSTORE_LIB $S/lib64 2>/dev/null
-    $API30_USF && chmod 0755 $S/bin/keystore 2>/dev/null
-    $API30_USF && chmod 0644 $S/lib64/libkeystore-attestation-application-id.so 2>/dev/null
-    $API30_USF && chcon -h u:object_r:keystore_exec:s0 "$S/bin/keystore"
-    $API30_USF && chcon -h u:object_r:system_lib_file:s0 "$S/lib64/libkeystore-attestation-application-id.so"
-  ;;
-  restore)
-    # Stub
-    opt_v29
-    opt_v30
-    opt_v31
+    $OVERLAY && restoredirTMPOverlay
+    $OVERLAY && mv $TMP_OVERLAY $SYSTEM/overlay 2>/dev/null
+    restoredirTMPKeystore
+    mv $TMP_KEYSTORE_BIN $S/bin 2>/dev/null
+    mv $TMP_KEYSTORE_LIB $S/lib64 2>/dev/null
+    chmod 0755 $S/bin/keystore 2>/dev/null
+    chmod 0644 $S/lib64/libkeystore-attestation-application-id.so 2>/dev/null
+    chcon -h u:object_r:keystore_exec:s0 "$S/bin/keystore"
+    chcon -h u:object_r:system_lib_file:s0 "$S/lib64/libkeystore-attestation-application-id.so"
+    opt_v25
     on_whitelist_check
     purge_whitelist_permission
+    purge_boot_whitelist_permission
     set_whitelist_permission
     set_assistant
     set_release_tag
-    cts_defaults
     on_cts_status_check
-    on_spl_status_check
-    on_usf_status_check
-    cts_patch
+    on_cts_patch
     sdk_fix
     selinux_fix
     bind_facelock_lib
-    sqlite_opt
+    $SQLITE3_OPT && sqlite_opt
     restoredirTMPFboot
     on_setup_status_check
     trigger_fboot_restore
@@ -2879,9 +2468,6 @@ case "$1" in
     restoredirTMPRwg
     on_rwg_status_check
     trigger_rwg_restore
-  ;;
-  post-restore)
-    # Stub
     on_addon_status_check
     fix_addon_conflict
     restoredirTMPAddon
@@ -2894,7 +2480,7 @@ case "$1" in
     rm -rf $S/system_ext/app/ExtShared
     rm -rf $S/system_ext/priv-app/ExtServices
     del_tmp_dir
-    # Confirm that backup/restore is done
-    conf_addon_backup
+    # Confirm that restore is done
+    conf_addon_restore
   ;;
 esac
