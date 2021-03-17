@@ -62,12 +62,14 @@ Here are feature highlights:
 
 ## License
 
-The BiTGApps Project itself is licensed under the [GPLv3](https://github.com/BiTGApps/BiTGApps/blob/master/LICENSE).
+The BiTGApps Project itself is licensed under the [GPLv3](https://github.com/BiTGApps/BiTGApps/blob/master/LICENSE) and anyone wanting to use it has to adhere to this license.
 
-License terms and the terms used by the BiTGApps installer and pre-built packages
+License terms used by the BiTGApps installer and pre-built packages
 
-   * The BiTGApps Project does not allow creation of any BiTGApps builds apart from the original author of the project.
+   * The BiTGApps Project does not allow creation of any project based on BiTGApps source itself like using the whole same source but with different project name.
    * BiTGApps installer scripts are provided in such a way that it can be freely used to make personal build. But does not allow its public release.
+   * You are required to give us full credits for any work you may be using from us.
+   * We kindly ask you to use common sense and don't profit entirely off the work of others. Renaming pre-built packages, strip author from installer and upload it anywhere as your own, be this with or without monetization.
    * The pre-built packages of BiTGApps are made available under the terms that they can be freely used for personal use only, and are not allowed to be mirrored to the public other than BiTGApps.com
 
 ## Author
