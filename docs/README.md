@@ -10,6 +10,7 @@
 * [Pre-Installed Packages](installs.md)
 * [Known Issue](bug.md)
 * [Device Partition](partitions.md)
+* [Installation Logs](logs.md)
 * [File Structure](structure.md)
 * [Environmental Variables](variables.md)
 * [Uninstall BiTGApps](uninstall.md)
