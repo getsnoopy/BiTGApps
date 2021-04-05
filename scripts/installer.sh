@@ -7511,7 +7511,7 @@ df_system() {
     if [ "$SUPER_PARTITION" == "false" ]; then
       # Get the available space left on the device
       size=`df -k $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-      CAPACITY="450000"
+      CAPACITY="650000"
       # Disk space in human readable format (k=1024)
       ds_hr=`df -h $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
       # Print partition type
@@ -7526,7 +7526,7 @@ df_product() {
       if [ "$android_sdk" == "$supported_sdk_v29" ]; then
         # Get the available space left on the device
         size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-        CAPACITY="170000"
+        CAPACITY="650000"
         # Disk space in human readable format (k=1024)
         ds_hr=`df -h /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
         # Print partition type
@@ -7539,7 +7539,7 @@ df_product() {
       if [ "$android_sdk" == "$supported_sdk_v29" ]; then
         # Get the available space left on the device
         size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-        CAPACITY="450000"
+        CAPACITY="650000"
         # Disk space in human readable format (k=1024)
         ds_hr=`df -h /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
         # Print partition type
@@ -7568,7 +7568,7 @@ df_systemExt() {
       if [ "$android_sdk" == "$supported_sdk_v30" ]; then
         # Get the available space left on the device
         size=`df -k /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-        CAPACITY="450000"
+        CAPACITY="650000"
         # Disk space in human readable format (k=1024)
         ds_hr=`df -h /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
         # Print partition type
@@ -7578,7 +7578,7 @@ df_systemExt() {
   fi
 }
 
-# Check if the available space is greater than 170MB(170000KB) or 450MB(450000KB)
+# Check if the available space is greater than 170MB(170000KB) or 650MB(650000KB)
 diskfree() {
   # Do not execute this function, when $ADDON target is set to 'sep'
   if [ "$ZIPTYPE" == "basic" ] || [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ]; then
