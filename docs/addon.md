@@ -8,7 +8,7 @@ There are two type of Addons:
 
 * Non Config Based
 
-To installing **Config Based** Addon you need **addon-config.prop** file. While **Non Config Based** does not require config file.
+To install **Config Based** Addon you need **addon-config.prop** file. While **Non Config Based** does not require config file.
 When this config file not present in device, at the time of installation you will be notified with following texts.
 
 ```! Addon config not found```
@@ -24,3 +24,14 @@ By default everything inside config file is set to false. You need change `false
 **Example:**
 
 * `ro.config.assistant=false` to `ro.config.assistant=true`
+
+## Android Platform
+
+- ARM
+- ARM64
+
+## Platform Support
+
+* For Config Based Addon you need to select Addon ZIP as per your device architecture.
+
+* Non Config Based Addon can be installed in both platforms.
