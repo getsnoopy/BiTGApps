@@ -35,15 +35,15 @@ Here are feature highlights:
 
 ## Downloads
 
-[![](https://img.shields.io/badge/BiTGApps-%20ARM-green.svg?style=flat-square)](https://bitgapps.com/downloads/arm)
+[![](https://img.shields.io/badge/BiTGApps-%20ARM-green.svg?style=flat-square)](https://bitgapps.ga/arm)
 <br>
-[![](https://img.shields.io/badge/BiTGApps-%20ARM64-green.svg?style=flat-square)](https://bitgapps.com/downloads/arm64)
+[![](https://img.shields.io/badge/BiTGApps-%20ARM64-green.svg?style=flat-square)](https://bitgapps.ga/arm64)
 <br>
-[![](https://img.shields.io/badge/BiTGApps-%20Addon-green.svg?style=flat-square)](https://bitgapps.com/downloads/addon)
+[![](https://img.shields.io/badge/BiTGApps-%20Addon-green.svg?style=flat-square)](https://bitgapps.ga/addon)
 <br>
-[![](https://img.shields.io/badge/BiTGApps-%20Configs-red.svg?style=flat-square)](https://bitgapps.com/downloads/configs)
+[![](https://img.shields.io/badge/BiTGApps-%20Configs-red.svg?style=flat-square)](https://bitgapps.ga/configs)
 <br>
-[![](https://img.shields.io/badge/BiTGApps-%20APK-red.svg?style=flat-square)](https://bitgapps.com/downloads/APK)
+[![](https://img.shields.io/badge/BiTGApps-%20APK-red.svg?style=flat-square)](https://bitgapps.ga/APK)
 
 ## Useful Links
 
