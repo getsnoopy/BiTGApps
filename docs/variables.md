@@ -54,7 +54,7 @@ _Note: Usable only, if you are building BiTGApps package_
 
 * This is used by build script and works together with GAPPS_RELEASE_TAG
 
-* `Example: $S` or [commit](https://github.com/BiTGApps/BiTGApps-Build/commit/7e38891fe62b2bb02c0ec02a132d9995cbfc70fb)
+* `Example: $S` or [commit](https://github.com/BiTGApps/BiTGApps-Build/commit/2941376b9fd7246389255e8d40321338999c031f)
 
 ### BuildDate
 
@@ -115,5 +115,11 @@ _Note: Usable only, if you are building BiTGApps package_
 ### TARGET_CONFIG_SETUP
 
 * Set SetupWizard config for upload, by default _false_
+
+* `Example: true`
+
+### TARGET_CONFIG_WIPE
+
+* Set Uninstall config for upload, by default _false_
 
 * `Example: true`

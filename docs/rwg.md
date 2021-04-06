@@ -11,4 +11,7 @@ BiTGApps can be installed in ROMs shipped with GApps. No config is required for 
 ## Usage
 
 Installation of BiTGApps must be done after flashing any of these ROMs. Do not flash after first boot else it will break several stuffs.
+
+## OTA
+
 During OTA update, BiTGApps OTA survival script will remove all pre-install google apps and restore BiTGApps components back in system.
