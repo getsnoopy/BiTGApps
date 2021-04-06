@@ -20,8 +20,6 @@
 # GNU General Public License for more details.
 ##############################################################
 
-# ADDOND_VERSION=2
-
 # Set defaults
 BB="/data/aik/bin/busybox"
 TMP="/tmp"
@@ -29,7 +27,19 @@ fstab="/etc/fstab"
 SQLITE_TOOL="$S/xbin/sqlite3"
 SQLITE3_OPT="false"
 
+# Set addond version check property
+AB_OTA_UPDATER=$(getprop ro.build.ab_update)
+dynamic_partitions=$(getprop ro.boot.dynamic_partitions)
+
+# Export functions from backuptool
 . $TMP/backuptool.functions
+
+set_addond_ver() {
+  export ADDOND_VERSION=""
+  if [ "$AB_OTA_UPDATER" == "true" ] || [ "$dynamic_partitions" == "true" ]; then
+    export ADDOND_VERSION="3"
+  fi
+}
 
 # Output function
 trampoline() {
@@ -192,10 +202,10 @@ on_sdk() {
 
 # Set partition and boot slot property
 on_partition_check() {
-  system_as_root=`getprop ro.build.system_root_image`
-  active_slot=`getprop ro.boot.slot_suffix`
-  AB_OTA_UPDATER=`getprop ro.build.ab_update`
-  dynamic_partitions=`getprop ro.boot.dynamic_partitions`
+  system_as_root=$(getprop ro.build.system_root_image)
+  active_slot=$(getprop ro.boot.slot_suffix)
+  AB_OTA_UPDATER=$(getprop ro.build.ab_update)
+  dynamic_partitions=$(getprop ro.boot.dynamic_partitions)
 }
 
 # Set vendor mount point
@@ -232,6 +242,15 @@ super_partition() {
   if [ "$dynamic_partitions" == "true" ]; then
     SUPER_PARTITION="true"
   fi
+}
+
+# For addond version 3, unmount partitions mounted by backuptool
+unmount_all() {
+  (umount -l /system_root
+   umount -l /system
+   umount -l /product
+   umount -l /system_ext
+   umount -l /vendor) > /dev/null 2>&1
 }
 
 # Mount partitions
@@ -2351,6 +2370,7 @@ restore_conflicting_packages() {
 }
 
 # Static functions
+set_addond_ver
 trampoline
 check_aik_binaries "$@"
 
@@ -2358,6 +2378,7 @@ case "$1" in
   backup)
     ui_print "BackupTools: Starting BiTGApps backup"
     # Start runtime functions
+    unmount_all
     set_arch
     tmp_dir
     on_sdk
@@ -2406,6 +2427,7 @@ case "$1" in
   restore)
     ui_print "BackupTools: Restoring BiTGApps backup"
     # Start runtime functions
+    unmount_all
     set_arch
     tmp_dir
     on_sdk
