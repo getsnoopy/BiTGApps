@@ -7413,10 +7413,13 @@ pre_install() {
     system_layout
     mount_status
     get_addon_config_path
+    get_wipe_config_path
     profile
     on_version_check
     on_platform_check
     on_target_platform
+    on_wipe_check
+    get_wipe_config
   fi
   if [ "$ZIPTYPE" == "basic" ]; then
     on_sdk
