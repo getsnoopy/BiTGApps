@@ -1939,7 +1939,7 @@ set_aosp_default() {
       roles="/data/misc_de/0/apexdata/com.android.permission/roles.xml"
       if [ ! -f "$roles" ]; then
         install -d "/data/misc_de/0/apexdata/com.android.permission"
-        chown -R system:misc "/data/misc_de"
+        chown -R 1000:9998 "/data/misc_de"
         chmod -R 1771 "/data/misc_de/0"
         chmod 711 "/data/misc_de/0/apexdata"
         chmod 771 "/data/misc_de/0/apexdata/com.android.permission"
@@ -5468,7 +5468,7 @@ set_google_assistant_default() {
       else
         if [ ! -d "/data/misc_de/0/apexdata/com.android.permission" ]; then
           install -d "/data/misc_de/0/apexdata/com.android.permission"
-          chown -R system:misc "/data/misc_de"
+          chown -R 1000:9998 "/data/misc_de"
           chmod -R 1771 "/data/misc_de/0"
           chmod 711 "/data/misc_de/0/apexdata"
           chmod 771 "/data/misc_de/0/apexdata/com.android.permission"
@@ -5573,7 +5573,7 @@ set_google_dialer_default() {
       else
         if [ ! -d "/data/misc_de/0/apexdata/com.android.permission" ]; then
           install -d "/data/misc_de/0/apexdata/com.android.permission"
-          chown -R system:misc "/data/misc_de"
+          chown -R 1000:9998 "/data/misc_de"
           chmod -R 1771 "/data/misc_de/0"
           chmod 711 "/data/misc_de/0/apexdata"
           chmod 771 "/data/misc_de/0/apexdata/com.android.permission"
@@ -5678,7 +5678,7 @@ set_google_messages_default() {
       else
         if [ ! -d "/data/misc_de/0/apexdata/com.android.permission" ]; then
           install -d "/data/misc_de/0/apexdata/com.android.permission"
-          chown -R system:misc "/data/misc_de"
+          chown -R 1000:9998 "/data/misc_de"
           chmod -R 1771 "/data/misc_de/0"
           chmod 711 "/data/misc_de/0/apexdata"
           chmod 771 "/data/misc_de/0/apexdata/com.android.permission"
