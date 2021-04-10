@@ -74,20 +74,6 @@ _Note: Usable only, if you are building BiTGApps package_
 
 * `Example: sf for sourceforge`
 
-### TESTRELEASE
-
-* If set then test builds only uploaded to sourceforge and used by release script
-
-* `Example: 1 or leave empty`
-
-### TOKEN
-
-* Set ZIP token for test release and works together with TESTRELEASE
-
-* When building, specially test build, must set TOKEN else it will break ZIP
-
-* `Example: 1009`
-
 ### APKRELEASE
 
 * Set release tag in APK file and used by release script
