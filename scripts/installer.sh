@@ -7,7 +7,7 @@
 #
 # Copyright       : Copyright (C) 2018-2021 TheHitMan7
 #
-# License         : SPDX-License-Identifier: GPL-3.0-or-later
+# License         : GPL-3.0-or-later
 ##############################################################
 # The BiTGApps scripts are free software: you can redistribute it
 # and/or modify it under the terms of the GNU General Public License
