@@ -7375,15 +7375,19 @@ post_restore() {
 
 post_uninstall() {
   if [ "$wipe_config" == "true" ]; then
-    print_title_wipe
-    ext_pathmap
-    post_install_wipe
-    product_pathmap
-    post_install_wipe
-    system_pathmap
-    post_install_wipe
-    post_restore
-    on_uninstalled
+    if [ "$supported_wipe_config" == "true" ]; then
+      print_title_wipe
+      ext_pathmap
+      post_install_wipe
+      product_pathmap
+      post_install_wipe
+      system_pathmap
+      post_install_wipe
+      post_restore
+      on_uninstalled
+    else
+      on_abort "! Error uninstall BiTGApps components"
+    fi
   fi
 }
 
