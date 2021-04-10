@@ -31,7 +31,8 @@ Failure of patched keystore can cause bootloop.
 
 ## Installation Conflicts
 
-Installation of safetynet patch entirely depends on boot image editing. For any reason, BiTGApps installer failed to extract/unpack/edit boot image, safetynet patch will not be installed and you will be notified with following texts.
+Installation of safetynet patch entirely depends on boot image editing. For any reason, BiTGApps installer failed to extract/unpack/edit boot image, safetynet patch will not be installed and you will be notified with following texts and
+installation will exit. At this point all you have to do is, delete config file, reboot to recovery and install BiTGApps.
 
 ```! Error installing CTS patch```
 
