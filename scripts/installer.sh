@@ -6968,7 +6968,7 @@ usf_v26() {
   tar -xf $ZIP_FILE/Keystore.tar.xz -C $TMP_KEYSTORE
   # Do not install, if Android SDK 25 detected
   if [ ! "$android_sdk" == "$supported_sdk_v25" ]; then
-    # Up-to Android SDK 29 patched keystore executable required
+    # Up-to Android SDK 29, patched keystore executable required
     if [ "$android_sdk" -le "$supported_sdk_v29" ]; then
       # Install patched keystore
       rm -rf $SYSTEM/bin/keystore
@@ -6977,8 +6977,8 @@ usf_v26() {
       chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
     fi
   fi
-  # Android SDK 30+ patched keystore executable and library required
-  if [ "$android_sdk" -ge "$supported_sdk_v30" ]; then
+  # For Android SDK 30, patched keystore executable and library required
+  if [ "$android_sdk" == "$supported_sdk_v30" ]; then
     # Install patched keystore
     rm -rf $SYSTEM/bin/keystore
     cp -f $TMP_KEYSTORE/keystore $SYSTEM/bin/keystore

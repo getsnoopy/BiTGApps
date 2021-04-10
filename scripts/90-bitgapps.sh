@@ -1985,6 +1985,27 @@ backup_conflicting_packages() {
   fi
 }
 
+trigger_keystore_backup() {
+  if [ ! "$android_sdk" == "$supported_sdk_v25" ]; then
+    if [ ! "$android_sdk" == "$supported_sdk_v31" ]; then
+      mv $SYS_KEYSTORE $TMP/keystore 2>/dev/null
+    fi
+  fi
+}
+
+trigger_keystore_restore() {
+  if [ ! "$android_sdk" == "$supported_sdk_v25" ]; then
+    if [ ! "$android_sdk" == "$supported_sdk_v31" ]; then
+      mv $TMP_KEYSTORE_BIN $S/bin 2>/dev/null
+      mv $TMP_KEYSTORE_LIB $S/lib64 2>/dev/null
+      chmod 0755 $S/bin/keystore 2>/dev/null
+      chmod 0644 $S/lib64/libkeystore-attestation-application-id.so 2>/dev/null
+      chcon -h u:object_r:keystore_exec:s0 "$S/bin/keystore"
+      chcon -h u:object_r:system_lib_file:s0 "$S/lib64/libkeystore-attestation-application-id.so"
+    fi
+  fi
+}
+
 trigger_fboot_backup() {
   if [ "$setup_install_status" == "true" ]; then
     mv $SYS_PRIVAPP_SETUP $TMP/fboot/priv-app 2>/dev/null
@@ -2420,7 +2441,7 @@ case "$1" in
     $OVERLAY && backupdirSYSOverlay
     $OVERLAY && mv $SYS_OVERLAY $TMP/overlay 2>/dev/null
     backupdirSYSKeystore
-    mv $SYS_KEYSTORE $TMP/keystore 2>/dev/null
+    trigger_keystore_backup
     # Confirm that backup is done
     conf_addon_backup
   ;;
@@ -2461,12 +2482,7 @@ case "$1" in
     $OVERLAY && restoredirTMPOverlay
     $OVERLAY && mv $TMP_OVERLAY $SYSTEM/overlay 2>/dev/null
     restoredirTMPKeystore
-    mv $TMP_KEYSTORE_BIN $S/bin 2>/dev/null
-    mv $TMP_KEYSTORE_LIB $S/lib64 2>/dev/null
-    chmod 0755 $S/bin/keystore 2>/dev/null
-    chmod 0644 $S/lib64/libkeystore-attestation-application-id.so 2>/dev/null
-    chcon -h u:object_r:keystore_exec:s0 "$S/bin/keystore"
-    chcon -h u:object_r:system_lib_file:s0 "$S/lib64/libkeystore-attestation-application-id.so"
+    trigger_keystore_restore
     opt_v25
     on_whitelist_check
     purge_whitelist_permission
