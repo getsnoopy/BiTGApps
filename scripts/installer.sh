@@ -7028,7 +7028,7 @@ on_cts_patch() {
         insert_line $SYSTEM/config.prop "ro.cts.enabled=true" after '# Begin build properties' "ro.cts.enabled=true"
         ui_print "- CTS patch installed"
       else
-        ui_print "! Error installing CTS patch"
+        on_abort "! Error installing CTS patch"
       fi
     else
       echo "ERROR: Config property set to 'false'" >> $CTS_PATCH
