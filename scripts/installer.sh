@@ -6809,7 +6809,7 @@ spl_update_boot() {
   ./unpackimg.sh boot.img > /dev/null 2>&1
   if [ -f "split_img/boot.img-os_patch_level" ]; then
     rm -rf split_img/boot.img-os_patch_level
-    echo "2021-03" >> split_img/boot.img-os_patch_level
+    echo "2021-04" >> split_img/boot.img-os_patch_level
     chmod 0644 split_img/boot.img-os_patch_level
     # Keep patched split image file
     cp -f split_img/boot.img-os_patch_level $TMP/bitgapps/os_patch_level.log
