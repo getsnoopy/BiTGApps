@@ -29,8 +29,8 @@ Here are feature highlights:
 
 ## Release Tag
 
-![](https://img.shields.io/badge/BiTGApps-%20R20-blue.svg?style=flat-square)
-![](https://img.shields.io/badge/Addon-%20R8-blue.svg?style=flat-square)
+![](https://img.shields.io/badge/BiTGApps-%20R21-blue.svg?style=flat-square)
+![](https://img.shields.io/badge/Addon-%20R9-blue.svg?style=flat-square)
 ![](https://img.shields.io/badge/APK-%20v1.3-blue.svg?style=flat-square)
 
 ## Downloads
