@@ -5418,10 +5418,12 @@ set_google_assistant_default() {
       if [ -f "$roles" ]; then
         # No default role has set for Google Assistant
         if $l/grep -q 'android.app.role.ASSISTANT' "$roles"; then
-          remove_line $roles 'android.app.role.ASSISTANT'
-          insert_line $roles '<role name="android.app.role.ASSISTANT">' after 'roles version=' '  <role name="android.app.role.ASSISTANT">'
-          insert_line $roles '<holder name="com.google.android.googlequicksearchbox" />' after '<role name="android.app.role.ASSISTANT">' '    <holder name="com.google.android.googlequicksearchbox" />'
-          insert_line $roles '<role>' after '<holder name="com.google.android.googlequicksearchbox" />' '  </role>'
+          if ! $l/grep -q 'com.google.android.googlequicksearchbox' "$roles"; then
+            remove_line $roles 'android.app.role.ASSISTANT'
+            insert_line $roles '<role name="android.app.role.ASSISTANT">' after 'roles version=' '  <role name="android.app.role.ASSISTANT">'
+            insert_line $roles '<holder name="com.google.android.googlequicksearchbox" />' after '<role name="android.app.role.ASSISTANT">' '    <holder name="com.google.android.googlequicksearchbox" />'
+            insert_line $roles '<role>' after '<holder name="com.google.android.googlequicksearchbox" />' '  </role>'
+          fi
         else
           # Check roles version to determine whether roles created or not
           if [ "$($l/grep -w -o 'roles version="-1"' $roles)" ]; then
@@ -5453,10 +5455,12 @@ set_google_assistant_default() {
       if [ -f "$roles" ]; then
         # No default role has set for Google Assistant
         if $l/grep -q 'android.app.role.ASSISTANT' "$roles"; then
-          remove_line $roles 'android.app.role.ASSISTANT'
-          insert_line $roles '<role name="android.app.role.ASSISTANT">' after 'roles version=' '  <role name="android.app.role.ASSISTANT">'
-          insert_line $roles '<holder name="com.google.android.googlequicksearchbox" />' after '<role name="android.app.role.ASSISTANT">' '    <holder name="com.google.android.googlequicksearchbox" />'
-          insert_line $roles '<role>' after '<holder name="com.google.android.googlequicksearchbox" />' '  </role>'
+          if ! $l/grep -q 'com.google.android.googlequicksearchbox' "$roles"; then
+            remove_line $roles 'android.app.role.ASSISTANT'
+            insert_line $roles '<role name="android.app.role.ASSISTANT">' after 'roles version=' '  <role name="android.app.role.ASSISTANT">'
+            insert_line $roles '<holder name="com.google.android.googlequicksearchbox" />' after '<role name="android.app.role.ASSISTANT">' '    <holder name="com.google.android.googlequicksearchbox" />'
+            insert_line $roles '<role>' after '<holder name="com.google.android.googlequicksearchbox" />' '  </role>'
+          fi
         else
           # Check roles version to determine whether roles created or not
           if [ "$($l/grep -w -o 'roles version="-1"' $roles)" ]; then
