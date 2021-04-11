@@ -305,6 +305,7 @@ mount_apex() {
 }
 
 umount_apex() {
+  export ANDROID_ROOT=$OLD_ANDROID_ROOT
   test -d /apex || return 1
   local dest loop
   for dest in $(find /apex -type d -mindepth 1 -maxdepth 1); do
