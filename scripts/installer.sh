@@ -661,9 +661,17 @@ mount_all() {
   # Unset predefined environmental variable
   OLD_ANDROID_ROOT=$ANDROID_ROOT
   unset ANDROID_ROOT
-  # Set ANDROID_ROOT in the global environment
-  if [ "$($l/grep -w -o /system_root $fstab)" ]; then export ANDROID_ROOT="/system_root"; fi
-  if [ "$($l/grep -w -o /system $fstab)" ]; then export ANDROID_ROOT="/system"; fi
+  # Wipe conflicting layouts
+  (rm -rf /system_root
+   rm -rf /system
+   rm -rf /product
+   rm -rf /system_ext)
+  # Create initial path and set ANDROID_ROOT in the global environment
+  if [ "$($l/grep -w -o /system_root $fstab)" ]; then mkdir /system_root; export ANDROID_ROOT="/system_root"; fi
+  if [ "$($l/grep -w -o /system $fstab)" ]; then mkdir /system; export ANDROID_ROOT="/system"; fi
+  # System always set as ANDROID_ROOT
+  if [ "$($l/grep -w -o /product $fstab)" ]; then mkdir /product; fi
+  if [ "$($l/grep -w -o /system_ext $fstab)" ]; then mkdir /system_ext; fi
   [ "$ANDROID_ROOT" == "/system_root" ] && echo "$ANDROID_ROOT" >> $TMP/IS_MOUNTED_SAR
   [ "$ANDROID_ROOT" == "/system" ] && echo "$ANDROID_ROOT" >> $TMP/IS_MOUNTED_SAS
   if [ "$SUPER_PARTITION" == "true" ]; then
