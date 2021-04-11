@@ -264,8 +264,6 @@ mount_all() {
   # Set ANDROID_ROOT in the global environment
   if [ "$($BB grep -w -o /system_root $fstab)" ]; then export ANDROID_ROOT="/system_root"; fi
   if [ "$($BB grep -w -o /system $fstab)" ]; then export ANDROID_ROOT="/system"; fi
-  [ "$ANDROID_ROOT" == "/system_root" ]
-  [ "$ANDROID_ROOT" == "/system" ]
   if [ "$SUPER_PARTITION" == "true" ]; then
     if [ "$device_abpartition" == "true" ]; then
       for block in system product vendor; do
