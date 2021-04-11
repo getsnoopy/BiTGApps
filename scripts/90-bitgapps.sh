@@ -244,6 +244,84 @@ super_partition() {
   fi
 }
 
+setup_mountpoint() {
+  test -L $1 && mv -f $1 ${1}_link
+  if [ ! -d $1 ]; then
+    rm -f $1
+    mkdir $1
+  fi
+}
+
+mount_apex() {
+  if [ "$($BB grep -w -o /system_root $fstab)" ]; then SYSTEM="/system_root/system"; fi
+  if [ "$($BB grep -w -o /system $fstab)" ]; then SYSTEM="/system"; fi
+  if [ "$($BB grep -w -o /system $fstab)" ] && [ -d "/system/system" ]; then SYSTEM="/system/system"; fi
+  test -d "$SYSTEM/apex" || return 1
+  local apex dest loop minorx num
+  setup_mountpoint /apex
+  test -e /dev/block/loop1 && minorx=$(ls -l /dev/block/loop1 | awk '{ print $6 }') || minorx="1"
+  num="0"
+  for apex in $SYSTEM/apex/*; do
+    dest=/apex/$(basename $apex .apex)
+    test "$dest" == /apex/com.android.runtime.release && dest=/apex/com.android.runtime
+    mkdir -p $dest
+    case $apex in
+      *.apex)
+        unzip -qo $apex apex_payload.img -d /apex
+        mv -f /apex/apex_payload.img $dest.img
+        mount -t ext4 -o ro,noatime $dest.img $dest 2>/dev/null
+        if [ $? != 0 ]; then
+          while [ $num -lt 64 ]; do
+            loop=/dev/block/loop$num
+            (mknod $loop b 7 $((num * minorx))
+            losetup $loop $dest.img) 2>/dev/null
+            num=$((num + 1))
+            losetup $loop | grep -q $dest.img && break
+          done
+          mount -t ext4 -o ro,loop,noatime $loop $dest
+          if [ $? != 0 ]; then
+            losetup -d $loop 2>/dev/null
+          fi
+        fi
+      ;;
+      *) mount -o bind $apex $dest;;
+    esac
+  done
+  export ANDROID_RUNTIME_ROOT="/apex/com.android.runtime"
+  export ANDROID_TZDATA_ROOT="/apex/com.android.tzdata"
+  export ANDROID_ART_ROOT="/apex/com.android.art"
+  export ANDROID_I18N_ROOT="/apex/com.android.i18n"
+  local APEXJARS=$(find /apex -name '*.jar' | sort | tr '\n' ':')
+  local FWK=$SYSTEM/framework
+  export BOOTCLASSPATH="${APEXJARS}\
+  $FWK/framework.jar:\
+  $FWK/framework-graphics.jar:\
+  $FWK/ext.jar:\
+  $FWK/telephony-common.jar:\
+  $FWK/voip-common.jar:\
+  $FWK/ims-common.jar:\
+  $FWK/framework-atb-backward-compatibility.jar:\
+  $FWK/android.test.base.jar"
+}
+
+umount_apex() {
+  test -d /apex || return 1
+  local dest loop
+  for dest in $(find /apex -type d -mindepth 1 -maxdepth 1); do
+    if [ -f $dest.img ]; then
+      loop=$(mount | $BB grep $dest | cut -d" " -f1)
+    fi
+    (umount -l $dest
+    losetup -d $loop) 2>/dev/null
+  done
+  rm -rf /apex 2>/dev/null
+  unset ANDROID_RUNTIME_ROOT
+  unset ANDROID_TZDATA_ROOT
+  unset ANDROID_ART_ROOT
+  unset ANDROID_I18N_ROOT
+  unset BOOTCLASSPATH
+}
+
 # For addond version 3, unmount partitions mounted by backuptool
 unmount_all() {
   (umount -l /system_root
@@ -261,9 +339,20 @@ mount_all() {
     mount -o rw,remount -t auto /cache
   fi
   mount -o ro -t auto /persist > /dev/null 2>&1
-  # Set ANDROID_ROOT in the global environment
-  if [ "$($BB grep -w -o /system_root $fstab)" ]; then export ANDROID_ROOT="/system_root"; fi
-  if [ "$($BB grep -w -o /system $fstab)" ]; then export ANDROID_ROOT="/system"; fi
+  # Unset predefined environmental variable
+  OLD_ANDROID_ROOT=$ANDROID_ROOT
+  unset ANDROID_ROOT
+  # Wipe conflicting layouts
+  (rm -rf /system_root
+   rm -rf /system
+   rm -rf /product
+   rm -rf /system_ext)
+  # Create initial path and set ANDROID_ROOT in the global environment
+  if [ "$($BB grep -w -o /system_root $fstab)" ]; then mkdir /system_root; export ANDROID_ROOT="/system_root"; fi
+  if [ "$($BB grep -w -o /system $fstab)" ]; then mkdir /system; export ANDROID_ROOT="/system"; fi
+  # System always set as ANDROID_ROOT
+  if [ "$($BB grep -w -o /product $fstab)" ]; then mkdir /product; fi
+  if [ "$($BB grep -w -o /system_ext $fstab)" ]; then mkdir /system_ext; fi
   if [ "$SUPER_PARTITION" == "true" ]; then
     if [ "$device_abpartition" == "true" ]; then
       for block in system product vendor; do
@@ -343,6 +432,7 @@ mount_all() {
       fi
     fi
   fi
+  mount_apex
 }
 
 # Export our own system layout
@@ -2442,6 +2532,8 @@ case "$1" in
     trigger_keystore_backup
     # Confirm that backup is done
     conf_addon_backup
+    umount_apex
+    unmount_all
   ;;
   restore)
     ui_print "BackupTools: Restoring BiTGApps backup"
@@ -2518,5 +2610,7 @@ case "$1" in
     del_tmp_dir
     # Confirm that restore is done
     conf_addon_restore
+    umount_apex
+    unmount_all
   ;;
 esac
