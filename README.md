@@ -24,8 +24,8 @@ Here are feature highlights:
 
 ## Packages
 
-[![](https://img.shields.io/badge/List-%20GApps-teal.svg?style=flat-square)](https://github.com/BiTGApps/BiTGApps/blob/master/packages/gapps.md)
-[![](https://img.shields.io/badge/List-%20Addon-teal.svg?style=flat-square)](https://github.com/BiTGApps/BiTGApps/blob/master/packages/addon.md)
+[![](https://img.shields.io/badge/List-%20GApps-teal.svg?style=flat-square)](https://github.com/BiTGApps/BiTGApps/wiki/BiTGApps-Packages)
+[![](https://img.shields.io/badge/List-%20Addon-teal.svg?style=flat-square)](https://github.com/BiTGApps/BiTGApps/wiki/BiTGApps-Additional-Packages)
 
 ## Release Tag
 
