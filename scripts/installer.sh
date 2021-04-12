@@ -5258,21 +5258,6 @@ set_setup_install() {
       fi
     }
 
-    # Wipe conflicting packages
-    conf_package() {
-      if [ "$android_product" == "$supported_product" ]; then
-        rm -rf $SYSTEM/priv-app/GoogleRestore
-        rm -rf $SYSTEM/product/priv-app/GoogleRestore
-        rm -rf $SYSTEM/system_ext/priv-app/GoogleRestore
-      fi
-
-      if [ ! "$android_product" == "$supported_product" ]; then
-        rm -rf $SYSTEM/priv-app/AndroidMigratePrebuilt
-        rm -rf $SYSTEM/product/priv-app/AndroidMigratePrebuilt
-        rm -rf $SYSTEM/system_ext/priv-app/AndroidMigratePrebuilt
-      fi
-    }
-
     # Execute functions
     on_config_install() {
       pre_installed
@@ -5285,7 +5270,6 @@ set_setup_install() {
       add_opt
       perm_opt
       selinux_context_sp
-      conf_package
     }
     on_config_install
   else
