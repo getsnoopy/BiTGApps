@@ -4999,17 +4999,9 @@ print_title_setup() {
 set_setup_install() {
   if [ "$supported_setup_config" == "true" ]; then
     # Set default packages and unpack
-    if [ "$android_sdk" -ge "$supported_sdk_v29" ]; then
+    if [ "$android_sdk" -ge "$supported_sdk_v28" ]; then
       ZIP="
         zip/core/AndroidMigratePrebuilt.tar.xz
-        zip/core/GoogleBackupTransport.tar.xz
-        zip/core/GoogleOneTimeInitializer.tar.xz
-        zip/core/GoogleRestore.tar.xz
-        zip/core/SetupWizardPrebuilt.tar.xz" && unpack_zip
-    fi
-
-    if [ "$android_sdk" == "$supported_sdk_v28" ]; then
-      ZIP="
         zip/core/GoogleBackupTransport.tar.xz
         zip/core/GoogleOneTimeInitializer.tar.xz
         zip/core/GoogleRestore.tar.xz
@@ -5101,25 +5093,14 @@ set_setup_install() {
 
     # Unpack system files
     extract_app() {
-      if [ "$android_sdk" -ge "$supported_sdk_v29" ]; then
+      if [ "$android_sdk" -ge "$supported_sdk_v28" ]; then
         tar tvf $ZIP_FILE/core/AndroidMigratePrebuilt.tar.xz >> $config_log
         tar tvf $ZIP_FILE/core/GoogleBackupTransport.tar.xz >> $config_log
         tar tvf $ZIP_FILE/core/GoogleOneTimeInitializer.tar.xz >> $config_log
         tar tvf $ZIP_FILE/core/GoogleRestore.tar.xz >> $config_log
         tar tvf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz >> $config_log
-        tar -xf $ZIP_FILE/core/AndroidMigratePrebuilt.tar.xz -C $TMP_PRIV_SETUP
-        tar -xf $ZIP_FILE/core/GoogleBackupTransport.tar.xz -C $TMP_PRIV_SETUP
-        tar -xf $ZIP_FILE/core/GoogleOneTimeInitializer.tar.xz -C $TMP_PRIV_SETUP
-        tar -xf $ZIP_FILE/core/GoogleRestore.tar.xz -C $TMP_PRIV_SETUP
-        tar -xf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz -C $TMP_PRIV_SETUP
-        pkg_TMPSetup
-      fi
-      if [ "$android_sdk" == "$supported_sdk_v28" ]; then
-        tar tvf $ZIP_FILE/core/GoogleBackupTransport.tar.xz >> $config_log
-        tar tvf $ZIP_FILE/core/GoogleOneTimeInitializer.tar.xz >> $config_log
-        tar tvf $ZIP_FILE/core/GoogleRestore.tar.xz >> $config_log
-        tar tvf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz >> $config_log
         $AARCH64 && tar tvf $ZIP_FILE/core/setupwizardprebuilt_lib64.tar.xz >> $config_log
+        tar -xf $ZIP_FILE/core/AndroidMigratePrebuilt.tar.xz -C $TMP_PRIV_SETUP
         tar -xf $ZIP_FILE/core/GoogleBackupTransport.tar.xz -C $TMP_PRIV_SETUP
         tar -xf $ZIP_FILE/core/GoogleOneTimeInitializer.tar.xz -C $TMP_PRIV_SETUP
         tar -xf $ZIP_FILE/core/GoogleRestore.tar.xz -C $TMP_PRIV_SETUP
@@ -5141,14 +5122,8 @@ set_setup_install() {
 
     # Set selinux context
     selinux_context_sp() {
-      if [ "$android_sdk" -ge "$supported_sdk_v29" ]; then
+      if [ "$android_sdk" -ge "$supported_sdk_v28" ]; then
         chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/AndroidMigratePrebuilt"
-        chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleBackupTransport"
-        chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleOneTimeInitializer"
-        chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleRestore"
-        chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/SetupWizardPrebuilt"
-      fi
-      if [ "$android_sdk" == "$supported_sdk_v28" ]; then
         chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleBackupTransport"
         chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleOneTimeInitializer"
         chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/GoogleRestore"
@@ -5175,14 +5150,8 @@ set_setup_install() {
 
     # APK optimization using zipalign tool
     apk_opt() {
-      if [ "$android_sdk" -ge "$supported_sdk_v29" ]; then
+      if [ "$android_sdk" -ge "$supported_sdk_v28" ]; then
         $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/AndroidMigratePrebuilt/AndroidMigratePrebuilt.apk $ZIPALIGN_OUTFILE/AndroidMigratePrebuilt.apk >> $ZIPALIGN_LOG
-        $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/GoogleBackupTransport/GoogleBackupTransport.apk $ZIPALIGN_OUTFILE/GoogleBackupTransport.apk >> $ZIPALIGN_LOG
-        $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/GoogleOneTimeInitializer/GoogleOneTimeInitializer.apk $ZIPALIGN_OUTFILE/GoogleOneTimeInitializer.apk >> $ZIPALIGN_LOG
-        $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/GoogleRestore/GoogleRestore.apk $ZIPALIGN_OUTFILE/GoogleRestore.apk >> $ZIPALIGN_LOG
-        $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/SetupWizardPrebuilt/SetupWizardPrebuilt.apk $ZIPALIGN_OUTFILE/SetupWizardPrebuilt.apk >> $ZIPALIGN_LOG
-      fi
-      if [ "$android_sdk" == "$supported_sdk_v28" ]; then
         $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/GoogleBackupTransport/GoogleBackupTransport.apk $ZIPALIGN_OUTFILE/GoogleBackupTransport.apk >> $ZIPALIGN_LOG
         $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/GoogleOneTimeInitializer/GoogleOneTimeInitializer.apk $ZIPALIGN_OUTFILE/GoogleOneTimeInitializer.apk >> $ZIPALIGN_LOG
         $ZIPALIGN_TOOL -p -v 4 $SYSTEM_PRIV_APP/GoogleRestore/GoogleRestore.apk $ZIPALIGN_OUTFILE/GoogleRestore.apk >> $ZIPALIGN_LOG
@@ -5196,14 +5165,8 @@ set_setup_install() {
     }
 
     pre_opt() {
-      if [ "$android_sdk" -ge "$supported_sdk_v29" ]; then
+      if [ "$android_sdk" -ge "$supported_sdk_v28" ]; then
         rm -rf $SYSTEM_PRIV_APP/AndroidMigratePrebuilt/AndroidMigratePrebuilt.apk
-        rm -rf $SYSTEM_PRIV_APP/GoogleBackupTransport/GoogleBackupTransport.apk
-        rm -rf $SYSTEM_PRIV_APP/GoogleOneTimeInitializer/GoogleOneTimeInitializer.apk
-        rm -rf $SYSTEM_PRIV_APP/GoogleRestore/GoogleRestore.apk
-        rm -rf $SYSTEM_PRIV_APP/SetupWizardPrebuilt/SetupWizardPrebuilt.apk
-      fi
-      if [ "$android_sdk" == "$supported_sdk_v28" ]; then
         rm -rf $SYSTEM_PRIV_APP/GoogleBackupTransport/GoogleBackupTransport.apk
         rm -rf $SYSTEM_PRIV_APP/GoogleOneTimeInitializer/GoogleOneTimeInitializer.apk
         rm -rf $SYSTEM_PRIV_APP/GoogleRestore/GoogleRestore.apk
@@ -5217,14 +5180,8 @@ set_setup_install() {
     }
 
     add_opt() {
-      if [ "$android_sdk" -ge "$supported_sdk_v29" ]; then
+      if [ "$android_sdk" -ge "$supported_sdk_v28" ]; then
         cp -f $ZIPALIGN_OUTFILE/AndroidMigratePrebuilt.apk $SYSTEM_PRIV_APP/AndroidMigratePrebuilt/AndroidMigratePrebuilt.apk
-        cp -f $ZIPALIGN_OUTFILE/GoogleBackupTransport.apk $SYSTEM_PRIV_APP/GoogleBackupTransport/GoogleBackupTransport.apk
-        cp -f $ZIPALIGN_OUTFILE/GoogleOneTimeInitializer.apk $SYSTEM_PRIV_APP/GoogleOneTimeInitializer/GoogleOneTimeInitializer.apk
-        cp -f $ZIPALIGN_OUTFILE/GoogleRestore.apk $SYSTEM_PRIV_APP/GoogleRestore/GoogleRestore.apk
-        cp -f $ZIPALIGN_OUTFILE/SetupWizardPrebuilt.apk $SYSTEM_PRIV_APP/SetupWizardPrebuilt/SetupWizardPrebuilt.apk
-      fi
-      if [ "$android_sdk" == "$supported_sdk_v28" ]; then
         cp -f $ZIPALIGN_OUTFILE/GoogleBackupTransport.apk $SYSTEM_PRIV_APP/GoogleBackupTransport/GoogleBackupTransport.apk
         cp -f $ZIPALIGN_OUTFILE/GoogleOneTimeInitializer.apk $SYSTEM_PRIV_APP/GoogleOneTimeInitializer/GoogleOneTimeInitializer.apk
         cp -f $ZIPALIGN_OUTFILE/GoogleRestore.apk $SYSTEM_PRIV_APP/GoogleRestore/GoogleRestore.apk
@@ -5238,14 +5195,8 @@ set_setup_install() {
     }
 
     perm_opt() {
-      if [ "$android_sdk" -ge "$supported_sdk_v29" ]; then
+      if [ "$android_sdk" -ge "$supported_sdk_v28" ]; then
         chmod 0644 $SYSTEM_PRIV_APP/AndroidMigratePrebuilt/AndroidMigratePrebuilt.apk
-        chmod 0644 $SYSTEM_PRIV_APP/GoogleBackupTransport/GoogleBackupTransport.apk
-        chmod 0644 $SYSTEM_PRIV_APP/GoogleOneTimeInitializer/GoogleOneTimeInitializer.apk
-        chmod 0644 $SYSTEM_PRIV_APP/GoogleRestore/GoogleRestore.apk
-        chmod 0644 $SYSTEM_PRIV_APP/SetupWizardPrebuilt/SetupWizardPrebuilt.apk
-      fi
-      if [ "$android_sdk" == "$supported_sdk_v28" ]; then
         chmod 0644 $SYSTEM_PRIV_APP/GoogleBackupTransport/GoogleBackupTransport.apk
         chmod 0644 $SYSTEM_PRIV_APP/GoogleOneTimeInitializer/GoogleOneTimeInitializer.apk
         chmod 0644 $SYSTEM_PRIV_APP/GoogleRestore/GoogleRestore.apk
