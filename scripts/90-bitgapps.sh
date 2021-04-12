@@ -724,12 +724,6 @@ set_release_tag() {
   insert_line $S/build.prop "ro.gapps.release_tag=" after 'net.bt.name=Android' 'ro.gapps.release_tag='
 }
 
-# Set product check property
-on_pixel_check() {
-  android_product="$(get_prop "ro.product.system.brand")"
-  supported_product="google"
-}
-
 # Check SetupWizard install status
 on_setup_status_check() {
   setup_install_status="$(get_prop "ro.setup.enabled")"
@@ -2193,19 +2187,6 @@ fix_setup_conflict() {
   fi
 }
 
-conf_package() {
-  if [ "$android_product" == "$supported_product" ]; then
-    rm -rf $SYSTEM/priv-app/GoogleRestore
-    rm -rf $SYSTEM/product/priv-app/GoogleRestore
-    rm -rf $SYSTEM/system_ext/priv-app/GoogleRestore
-  fi
-  if [ ! "$android_product" == "$supported_product" ]; then
-    rm -rf $SYSTEM/priv-app/AndroidMigratePrebuilt
-    rm -rf $SYSTEM/product/priv-app/AndroidMigratePrebuilt
-    rm -rf $SYSTEM/system_ext/priv-app/AndroidMigratePrebuilt
-  fi
-}
-
 # Wipe conflicting packages
 fix_addon_conflict() {
   if [ "$addon_install_status" == "true" ]; then
@@ -2591,8 +2572,6 @@ case "$1" in
     on_setup_status_check
     trigger_fboot_restore
     fix_setup_conflict
-    on_pixel_check
-    conf_package
     bind_setupwizard_lib
     restoredirTMPRwg
     on_rwg_status_check
