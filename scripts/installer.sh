@@ -1715,12 +1715,6 @@ on_version_check() {
   fi
 }
 
-# Set product check property
-on_pixel_check() {
-  android_product="$(get_prop "ro.product.system.brand")"
-  supported_product="google"
-}
-
 # Set platform check property
 on_platform_check() {
   # Obsolete build property in use
@@ -7651,7 +7645,6 @@ post_install() {
     aosp_pkg_install
     build_prop_file
     on_setup_check
-    on_pixel_check
     get_setup_config
     print_title_setup
     on_setup_install
