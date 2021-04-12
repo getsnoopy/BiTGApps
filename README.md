@@ -49,6 +49,7 @@ Here are feature highlights:
 
 * [Development Forum](https://forum.xda-developers.com/t/custom-gapps-bitgapps-for-android.4012165)
 * [Frequently Asked Questions](https://github.com/BiTGApps/BiTGApps/wiki/Frequently-Asked-Questions-(FAQ))
+* [Common Installation Issues](https://github.com/BiTGApps/BiTGApps/wiki/Common-Installation-Issues)
 * [BiTGApps Documentation](docs/README.md)
 
 ## Discussion Group
