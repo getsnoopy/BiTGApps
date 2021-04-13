@@ -6688,13 +6688,11 @@ purge_boot_whitelist_permission() {
     # Copy boot image
     dd if="$block" of="boot.img" > /dev/null 2>&1
     ./unpackimg.sh boot.img > /dev/null 2>&1
-    if [ -f "ramdisk/default.prop" ]; then
-      if [ -n "$(cat ramdisk/default.prop | grep control_privapp_permissions)" ]; then
-        grep -v "$PROPFLAG" ramdisk/default.prop > ramdisk/prop.default
-        rm -rf ramdisk/default.prop
-        cp -f ramdisk/prop.default ramdisk/default.prop
-        chmod 0600 ramdisk/default.prop
-      fi
+    if [ -f "ramdisk/default.prop" ] && [ -n "$(cat ramdisk/default.prop | grep control_privapp_permissions)" ]; then
+      grep -v "$PROPFLAG" ramdisk/default.prop > ramdisk/prop.default
+      rm -rf ramdisk/default.prop
+      mv ramdisk/prop.default ramdisk/default.prop
+      chmod 0600 ramdisk/default.prop
       # Keep patched default property file
       cp -f ramdisk/default.prop $TMP/bitgapps/boot.prop
       ./repackimg.sh > /dev/null 2>&1
