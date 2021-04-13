@@ -672,8 +672,6 @@ mount_all() {
   # System always set as ANDROID_ROOT
   if [ "$($l/grep -w -o /product $fstab)" ]; then mkdir /product; fi
   if [ "$($l/grep -w -o /system_ext $fstab)" ]; then mkdir /system_ext; fi
-  [ "$ANDROID_ROOT" == "/system_root" ] && echo "$ANDROID_ROOT" >> $TMP/IS_MOUNTED_SAR
-  [ "$ANDROID_ROOT" == "/system" ] && echo "$ANDROID_ROOT" >> $TMP/IS_MOUNTED_SAS
   if [ "$SUPER_PARTITION" == "true" ]; then
     if [ "$device_abpartition" == "true" ]; then
       for block in system system_ext product vendor; do
@@ -822,7 +820,6 @@ system_layout() {
   if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($l/grep -w -o /system $fstab)" ]; then
     export SYSTEM="/system/system"
   fi
-  echo "$SYSTEM" >> $TMP/IS_LAYOUT_SYSTEM
 }
 
 # Check pre-installed GApps package
@@ -903,7 +900,7 @@ print_title_boot() {
   fi
 }
 
-# Boot log function, trigger at 'on fs' stage
+# Bootlog function, trigger at 'on fs' stage
 patch_bootimg() {
   if [ "$supported_boot_config" == "true" ]; then
     # Non SAR specific; Apply, after all checks are false
@@ -931,7 +928,7 @@ patch_bootimg() {
         fi
         # Keep patched kernel init
         cp -f ramdisk/init.rc $TMP/bitgapps/init.rc
-        # Change selinux state to permissive, without this boot log script failed to execute
+        # Change selinux state to permissive, without this bootlog script failed to execute
         [ -n "$(cat split_img/boot.img-cmdline | grep 'androidboot.selinux=permissive')" ] || patch_cmdline androidboot.selinux 'androidboot.selinux=permissive'
         # Keep patched kernel cmdline
         cp -f split_img/boot.img-cmdline $TMP/bitgapps/cmdline.log
@@ -969,7 +966,7 @@ patch_bootimg() {
       # Check kernel init before patching boot image
       if [ -f "$TMP_AIK/split_img/boot.img-cmdline" ] && [ -f "/system_root/init.rc" ]; then
         cd $TMP_AIK
-        # Change selinux state to permissive, without this boot log script failed to execute
+        # Change selinux state to permissive, without this bootlog script failed to execute
         [ -n "$(cat split_img/boot.img-cmdline | grep 'androidboot.selinux=permissive')" ] || patch_cmdline androidboot.selinux 'androidboot.selinux=permissive'
         # Keep patched kernel cmdline
         cp -f split_img/boot.img-cmdline $TMP/bitgapps/cmdline.log
@@ -1027,7 +1024,7 @@ patch_bootimg() {
       # Check kernel init before patching boot image
       if [ -f "$TMP_AIK/split_img/boot.img-cmdline" ] && [ -f "/system_root/system/etc/init/hw/init.rc" ]; then
         cd $TMP_AIK
-        # Change selinux state to permissive, without this boot log script failed to execute
+        # Change selinux state to permissive, without this bootlog script failed to execute
         [ -n "$(cat split_img/boot.img-cmdline | grep 'androidboot.selinux=permissive')" ] || patch_cmdline androidboot.selinux 'androidboot.selinux=permissive'
         # Keep patched kernel cmdline
         cp -f split_img/boot.img-cmdline $TMP/bitgapps/cmdline.log
@@ -1479,17 +1476,6 @@ on_installed() {
   sync
 }
 
-on_uninstalled() {
-  unmount_all
-  cleanup
-  recovery_cleanup
-  ui_print "- Installation complete"
-  ui_print " "
-  # Reset any error code
-  true
-  sync
-}
-
 # Database optimization using sqlite tool
 sqlite_opt() {
   for i in $(find /d* -iname "*.db"); do
@@ -1609,33 +1595,33 @@ get_prop() {
   fi
 }
 
-# Set release tag check property
+# Check Deprecated Release Tag
 on_release_tag() {
   android_release="$(get_prop "ro.gapps.release_tag")"
   unsupported_release="$TARGET_GAPPS_RELEASE"
 }
 
-# Set boot check property
+# Bootlog Config Property
 on_boot_check() {
   supported_boot_config="$(get_prop "ro.config.boot")"
 }
 
-# Set setupwizard check property
+# SetupWizard Config Property
 on_setup_check() {
   supported_setup_config="$(get_prop "ro.config.setupwizard")"
 }
 
-# Set cts check property
+# CTS Config Property
 on_cts_check() {
   supported_cts_config="$(get_prop "ro.config.cts")"
 }
 
-# Set wipe check property
+# Wipe Config Property
 on_wipe_check() {
   supported_wipe_config="$(get_prop "ro.config.wipe")"
 }
 
-# Set addon check property
+# Addon Config Properties
 on_addon_check() {
   supported_assistant_config="$(get_prop "ro.config.assistant")"
   supported_calculator_config="$(get_prop "ro.config.calculator")"
@@ -1659,7 +1645,7 @@ on_whitelist_check() {
   PROPFLAG="ro.control_privapp_permissions"
 }
 
-# Set version check property
+# Set SDK and Version check property
 on_version_check() {
   if [ "$ZIPTYPE" == "addon" ]; then
     android_sdk="$(get_prop "ro.build.version.sdk")"
@@ -7075,7 +7061,7 @@ print_title_wipe() {
 }
 
 # Set pathmap
-ext_pathmap() {
+ext_uninstall() {
   SYSTEM_ADDOND="$SYSTEM/addon.d"
   SYSTEM_APP="$SYSTEM/system_ext/app"
   SYSTEM_PRIV_APP="$SYSTEM/system_ext/priv-app"
@@ -7091,7 +7077,7 @@ ext_pathmap() {
   SYSTEM_OVERLAY="$SYSTEM/system_ext/overlay"
 }
 
-product_pathmap() {
+product_uninstall() {
   SYSTEM_ADDOND="$SYSTEM/addon.d"
   SYSTEM_APP="$SYSTEM/product/app"
   SYSTEM_PRIV_APP="$SYSTEM/product/priv-app"
@@ -7106,7 +7092,7 @@ product_pathmap() {
   SYSTEM_XBIN="$SYSTEM/xbin"
 }
 
-system_pathmap() {
+system_uninstall() {
   SYSTEM_ADDOND="$SYSTEM/addon.d"
   SYSTEM_APP="$SYSTEM/app"
   SYSTEM_PRIV_APP="$SYSTEM/priv-app"
@@ -7318,14 +7304,14 @@ post_uninstall() {
   if [ "$wipe_config" == "true" ]; then
     if [ "$supported_wipe_config" == "true" ]; then
       print_title_wipe
-      ext_pathmap
+      ext_uninstall
       post_install_wipe
-      product_pathmap
+      product_uninstall
       post_install_wipe
-      system_pathmap
+      system_uninstall
       post_install_wipe
       post_restore
-      on_uninstalled
+      on_installed
     else
       on_abort "! Error uninstall BiTGApps components"
     fi

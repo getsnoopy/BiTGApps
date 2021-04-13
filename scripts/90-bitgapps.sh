@@ -27,7 +27,9 @@ fstab="/etc/fstab"
 SQLITE_TOOL="$S/xbin/sqlite3"
 SQLITE3_OPT="false"
 
-# Set addond version check property
+# Set partition and boot slot property
+system_as_root=$(getprop ro.build.system_root_image)
+active_slot=$(getprop ro.boot.slot_suffix)
 AB_OTA_UPDATER=$(getprop ro.build.ab_update)
 dynamic_partitions=$(getprop ro.boot.dynamic_partitions)
 
@@ -198,14 +200,6 @@ on_sdk() {
   supported_sdk_v27="27"
   supported_sdk_v26="26"
   supported_sdk_v25="25"
-}
-
-# Set partition and boot slot property
-on_partition_check() {
-  system_as_root=$(getprop ro.build.system_root_image)
-  active_slot=$(getprop ro.boot.slot_suffix)
-  AB_OTA_UPDATER=$(getprop ro.build.ab_update)
-  dynamic_partitions=$(getprop ro.boot.dynamic_partitions)
 }
 
 # Set vendor mount point
@@ -2473,7 +2467,6 @@ case "$1" in
     set_arch
     tmp_dir
     on_sdk
-    on_partition_check
     ab_partition
     system_as_root
     super_partition
@@ -2524,7 +2517,6 @@ case "$1" in
     set_arch
     tmp_dir
     on_sdk
-    on_partition_check
     ab_partition
     system_as_root
     super_partition

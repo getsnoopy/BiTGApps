@@ -1,6 +1,6 @@
 # Generating Boot Logs
 
-You can generate logcat and dmesg log using BiTGApps itself. Boot log functionality is not enabled by default. For that you need **boot-config.prop** file.
+You can generate logcat and dmesg log using BiTGApps itself. Bootlog functionality is not enabled by default. For that you need **boot-config.prop** file.
 When this config file not present in device, at the time of installation you will be notified with following texts.
 
 ```! Boot config not found```
@@ -28,8 +28,8 @@ after few seconds device will reboot back to recovery itself. You can grab log f
 
 ## Installation Conflicts
 
-Installation of boot log patch entirely depends on boot image editing. For any reason, BiTGApps installer failed to extract/unpack/edit boot image, boot log patch will not be installed.
-No changes will made in **system** regarding boot log patch.
+Installation of bootlog patch entirely depends on boot image editing. For any reason, BiTGApps installer failed to extract/unpack/edit boot image, bootlog patch will not be installed.
+No changes will made in **system** regarding bootlog patch.
 
 ## SELinux Conflicts
 
@@ -39,5 +39,5 @@ To fix this issue, BiTGApps will patch kernel commandline and make it permissive
 
 ## Launch Bootanim Early
 If your ROM built with this [commit](https://github.com/sm6150-dev/android_device_xiaomi_sm6150-common/commit/d64878a85353175b3fe9a14effded9408abeb5a1), then it is more likely that
-boot animation will trigger even if your device is completely broken, not in a state of generating boot logs. The boot log functionality will not work in this case.
+boot animation will trigger even if your device is completely broken, not in a state of generating bootlogs. The bootlog functionality will not work in this case.
 It maybe caused by a broken ROM or kernel itself.
