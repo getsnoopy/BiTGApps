@@ -496,6 +496,14 @@ setup_mountpoint() {
   fi
 }
 
+umount_all() {
+  (umount -l /system_root
+   umount -l /system
+   umount -l /product
+   umount -l /system_ext
+   umount -l /vendor) > /dev/null 2>&1
+}
+
 mount_apex() {
   if [ "$($l/grep -w -o /system_root $fstab)" ]; then SYSTEM="/system_root/system"; fi
   if [ "$($l/grep -w -o /system $fstab)" ]; then SYSTEM="/system"; fi
@@ -7325,6 +7333,7 @@ helper() {
   print_title
   set_bb
   chk_pre_inst
+  umount_all
 }
 
 # These set of functions should be executed after 'helper' function
