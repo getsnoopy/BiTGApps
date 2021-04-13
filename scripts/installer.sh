@@ -1334,15 +1334,6 @@ set_comp_log_zip() {
 
 set_install_logs() {
   cp -f $TMP/recovery.log $TMP/bitgapps/recovery.log > /dev/null 2>&1
-  cp -f $TMP/fstab.log $TMP/bitgapps/fstab.log > /dev/null 2>&1
-  cp -f $TMP/SAR.log $TMP/bitgapps/SAR.log > /dev/null 2>&1
-  cp -f $TMP/AB.log $TMP/bitgapps/AB.log > /dev/null 2>&1
-  cp -f $TMP/A-only.log $TMP/bitgapps/A-only.log > /dev/null 2>&1
-  cp -f $TMP/SARHW.log $TMP/bitgapps/SARHW.log > /dev/null 2>&1
-  cp -f $TMP/SYSHW.log $TMP/bitgapps/SYSHW.log > /dev/null 2>&1
-  cp -f $TMP/IS_MOUNTED_SAR $TMP/bitgapps/IS_MOUNTED_SAR > /dev/null 2>&1
-  cp -f $TMP/IS_MOUNTED_SAS $TMP/bitgapps/IS_MOUNTED_SAS > /dev/null 2>&1
-  cp -f $TMP/IS_LAYOUT_SYSTEM $TMP/bitgapps/IS_LAYOUT_SYSTEM > /dev/null 2>&1
   cp -f /etc/fstab $TMP/bitgapps/fstab > /dev/null 2>&1
   cp -f /etc/recovery.fstab $TMP/bitgapps/recovery.fstab > /dev/null 2>&1
   cp -f /etc/twrp.fstab $TMP/bitgapps/twrp.fstab > /dev/null 2>&1
@@ -1368,7 +1359,7 @@ set_install_logs() {
   cp -f $BOOT_CONFIG_DEST $TMP/bitgapps/boot-config.prop > /dev/null 2>&1
   cp -f $CTS_CONFIG_DEST $TMP/bitgapps/cts-config.prop > /dev/null 2>&1
   cp -f $SETUP_CONFIG_DEST $TMP/bitgapps/setup-config.prop > /dev/null 2>&1
-  echo "$ANDROID_ROOT" >> $TMP/bitgapps/mount.log
+  cp -f $WIPE_CONFIG_DEST $TMP/bitgapps/wipe-config.prop > /dev/null 2>&1
 }
 
 # Generate log file on failed installation
