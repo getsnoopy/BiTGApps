@@ -21,11 +21,10 @@
 ##############################################################
 
 # Set defaults
-BB="/data/aik/bin/busybox"
+BB="/data/busybox/busybox"
 TMP="/tmp"
 fstab="/etc/fstab"
-SQLITE_TOOL="$S/xbin/sqlite3"
-SQLITE3_OPT="false"
+SQLITE_TOOL="$TMP/xbin/sqlite3"
 
 # Set partition and boot slot property
 system_as_root=$(getprop ro.build.system_root_image)
@@ -36,7 +35,8 @@ dynamic_partitions=$(getprop ro.boot.dynamic_partitions)
 # Export functions from backuptool
 . $TMP/backuptool.functions
 
-set_addond_ver() {
+# Export ADDOND_VERSION
+set_version() {
   export ADDOND_VERSION=""
   if [ "$AB_OTA_UPDATER" == "true" ] || [ "$dynamic_partitions" == "true" ]; then
     export ADDOND_VERSION="3"
@@ -58,13 +58,13 @@ trampoline() {
   ui_print() { echo -e "ui_print $1\nui_print" >> /proc/self/fd/$OUTFD; }
 }
 
-# Always use tools from AIK backup in /data
-check_aik_binaries() {
+# Always use busybox backup from /data
+check_busybox() {
   if [ "$1" == "backup" ] && [ ! -f "$BB" ]; then
     ui_print "*************************"
     ui_print " BiTGApps addon.d failed "
     ui_print "*************************"
-    ui_print "! Cannot find AIK binaries - was data wiped or not decrypted?"
+    ui_print "! Cannot find Busybox - was data wiped or not decrypted?"
     ui_print "! Reflash OTA from decrypted recovery or reflash BiTGApps"
     exit 1
   fi
@@ -72,6 +72,23 @@ check_aik_binaries() {
     # Do not output anything on restore stage
     exit 1
   fi
+}
+
+# Set pre-bundled busybox
+set_bb() {
+  l="$TMP/bin"
+  install -d "$l"
+  chmod 0755 $BB
+  for i in $($BB --list); do
+    if ! ln -sf "$BB" "$l/$i" && ! $BB ln -sf "$BB" "$l/$i" && ! $BB ln -f "$BB" "$l/$i" ; then
+      # Create script wrapper if symlinking and hardlinking failed because of restrictive selinux policy
+      if ! echo "#!$BB" > "$l/$i" || ! chmod 0755 "$l/$i" ; then
+        ui_print "! Failed to set-up pre-bundled busybox"
+      fi
+    fi
+  done
+  # Set busybox components in environment
+  export PATH="$l:$PATH"
 }
 
 # Check device architecture
@@ -100,7 +117,7 @@ insert_line() {
 
 # Database optimization using sqlite tool
 sqlite_opt() {
-  for i in $(find /d* -iname "*.db"); do
+  for i in $($l/find /d* -iname "*.db"); do
     # Running VACUUM
     $SQLITE_TOOL $i 'VACUUM;' > /dev/null 2>&1
     resVac=$?
@@ -125,7 +142,6 @@ sqlite_opt() {
     else
       resOpt="ERRCODE-$resOpt"
     fi
-    echo "Database $i:  VACUUM=$resVac  REINDEX=$resIndex  ANALYZE=$resOpt" > /dev/null 2>&1
   done
 }
 
@@ -156,21 +172,20 @@ tmp_dir() {
   test -d $TMP/fboot/priv-app || mkdir $TMP/fboot/priv-app
   test -d $TMP/fboot/lib64 || mkdir $TMP/fboot/lib64
   test -d $TMP/overlay || mkdir $TMP/overlay
-  test -d $TMP/keystore || mkdir $TMP/keystore
 }
 
 # Wipe temporary dir
 del_tmp_dir() {
   rm -rf $TMP/app
   rm -rf $TMP/priv-app
-  rm -rf $TMP/framework
-  rm -rf $TMP/lib
-  rm -rf $TMP/lib64
-  rm -rf $TMP/sysconfig
+  rm -rf $TMP/etc
   rm -rf $TMP/default-permissions
   rm -rf $TMP/permissions
   rm -rf $TMP/preferred-apps
-  rm -rf $TMP/etc
+  rm -rf $TMP/sysconfig
+  rm -rf $TMP/framework
+  rm -rf $TMP/lib
+  rm -rf $TMP/lib64
   rm -rf $TMP/xbin
   rm -rf $TMP/addon
   rm -rf $TMP/rwg
@@ -189,6 +204,15 @@ del_tmp_dir() {
   rm -rf $TMP/PRO_PRIV_CTT
   rm -rf $TMP/SYS_APP_EXT_CTT
   rm -rf $TMP/SYS_PRIV_EXT_CTT
+}
+
+shared_library() {
+  rm -rf $S/app/ExtShared
+  rm -rf $S/priv-app/ExtServices
+  rm -rf $S/product/app/ExtShared
+  rm -rf $S/product/priv-app/ExtServices
+  rm -rf $S/system_ext/app/ExtShared
+  rm -rf $S/system_ext/priv-app/ExtServices
 }
 
 # Set supported Android SDK Version
@@ -317,7 +341,6 @@ umount_apex() {
   unset BOOTCLASSPATH
 }
 
-# For addond version 3, unmount partitions mounted by backuptool
 unmount_all() {
   (umount -l /system_root
    umount -l /system
@@ -443,9 +466,7 @@ system_layout() {
   fi
 }
 
-get_file_prop() {
-  grep -m1 "^$2=" "$1" | cut -d= -f2
-}
+get_file_prop() { grep -m1 "^$2=" "$1" | cut -d= -f2; }
 
 get_prop() {
   # Check known .prop files using get_file_prop
@@ -465,13 +486,9 @@ get_prop() {
   fi
 }
 
-on_version_check() {
-  android_sdk="$(get_prop "ro.build.version.sdk")"
-}
+on_version_check() { android_sdk="$(get_prop "ro.build.version.sdk")"; }
 
-api_dependent_overlay() {
-  if [ "$android_sdk" -ge "30" ]; then OVERLAY="true"; fi
-}
+api_dependent_overlay() { if [ "$android_sdk" -ge "30" ]; then OVERLAY="true"; fi; }
 
 ensure_dir() {
   SYSTEM_APP="$SYSTEM/app"
@@ -540,12 +557,14 @@ set_pathmap() {
   fi
 }
 
+# Confirm that backup is done
 conf_addon_backup() {
   if [ ! -f $TMP/config.prop ]; then
     ui_print "BackupTools: Failed to create BiTGApps backup"
   fi
 }
 
+# Confirm that restore is done
 conf_addon_restore() {
   if [ ! -f $S/config.prop ]; then
     ui_print "BackupTools: Failed to restore BiTGApps backup"
@@ -670,215 +689,23 @@ purge_whitelist_permission() {
   fi
 }
 
-# Remove Privileged App Whitelist property from boot image
-purge_boot_whitelist_permission() {
-  # Non SAR specific; Apply, after all checks are false
-  if [ ! "$SYSTEM_ROOT" == "true" ] && [ ! "$device_abpartition" == "true" ] && [ ! "$SUPER_PARTITION" == "true" ]; then
-    cd /data/aik
-    # Lets see what fstab tells me
-    block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
-    # Copy boot image
-    dd if="$block" of="boot.img" > /dev/null 2>&1
-    ./unpackimg.sh boot.img > /dev/null 2>&1
-    if [ -f "ramdisk/default.prop" ]; then
-      if [ -n "$(cat ramdisk/default.prop | grep control_privapp_permissions)" ]; then
-        grep -v "$PROPFLAG" ramdisk/default.prop > ramdisk/prop.default
-        rm -rf ramdisk/default.prop
-        cp -f ramdisk/prop.default ramdisk/default.prop
-        chmod 0600 ramdisk/default.prop
-      fi
-      ./repackimg.sh > /dev/null 2>&1
-      dd if="image-new.img" of="$block" > /dev/null 2>&1
-      rm -rf boot.img
-      rm -rf image-new.img
-      ./cleanup.sh > /dev/null 2>&1
-      cd ../..
-    else
-      ./cleanup.sh > /dev/null 2>&1
-      # Wipe stock boot image
-      rm -rf boot.img
-      # Checkout path
-      cd ../..
-    fi
-  fi
-}
-
-# Add Whitelist property with flag disable in system
-set_whitelist_permission() {
-  insert_line $S/build.prop "ro.control_privapp_permissions=disable" after 'net.bt.name=Android' 'ro.control_privapp_permissions=disable'
-}
+# Add Whitelist property with flag disable
+set_whitelist_permission() { insert_line $S/build.prop "ro.control_privapp_permissions=disable" after 'net.bt.name=Android' 'ro.control_privapp_permissions=disable'; }
 
 # Enable Google Assistant
-set_assistant() {
-  insert_line $S/build.prop "ro.opa.eligible_device=true" after 'net.bt.name=Android' 'ro.opa.eligible_device=true'
-}
+set_assistant() { insert_line $S/build.prop "ro.opa.eligible_device=true" after 'net.bt.name=Android' 'ro.opa.eligible_device=true'; }
 
-# Set release tag in system build
-set_release_tag() {
-  insert_line $S/build.prop "ro.gapps.release_tag=" after 'net.bt.name=Android' 'ro.gapps.release_tag='
-}
+# Set Deprecated Release Tag
+set_release_tag() { insert_line $S/build.prop "ro.gapps.release_tag=" after 'net.bt.name=Android' 'ro.gapps.release_tag='; }
 
-# Check SetupWizard install status
-on_setup_status_check() {
-  setup_install_status="$(get_prop "ro.setup.enabled")"
-}
+# Check SetupWizard Status
+on_setup_status_check() { setup_install_status="$(get_prop "ro.setup.enabled")"; }
 
-# Check Addon install status
-on_addon_status_check() {
-  addon_install_status="$(get_prop "ro.addon.enabled")"
-}
+# Check Addon Status
+on_addon_status_check() { addon_install_status="$(get_prop "ro.addon.enabled")"; }
 
-# Check CTS install status
-on_cts_status_check() {
-  cts_install_status="$(get_prop "ro.cts.enabled")"
-}
-
-# Check RWG status
-on_rwg_status_check() {
-  rwg_install_status="$(get_prop "ro.rwg.device")"
-}
-
-# Update boot image security patch level
-spl_update_boot() {
-  cd /data/aik
-  # Lets see what fstab tells me
-  block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
-  # Copy boot image
-  dd if="$block" of="boot.img" > /dev/null 2>&1
-  ./unpackimg.sh boot.img > /dev/null 2>&1
-  if [ -f "split_img/boot.img-os_patch_level" ]; then
-    rm -rf split_img/boot.img-os_patch_level
-    echo "2021-04" >> split_img/boot.img-os_patch_level
-    chmod 0644 split_img/boot.img-os_patch_level
-    ./repackimg.sh > /dev/null 2>&1
-    dd if="image-new.img" of="$block" > /dev/null 2>&1
-    rm -rf boot.img
-    rm -rf image-new.img
-    ./cleanup.sh > /dev/null 2>&1
-    cd ../..
-    # Set variable for installing build property patch
-    export TARGET_SPLIT_IMAGE="true"
-  else
-    ./cleanup.sh > /dev/null 2>&1
-    # Wipe stock boot image
-    rm -rf boot.img
-    # Checkout path
-    cd ../..
-    # Skip installing build property patch, if boot unpack failed
-    export TARGET_SPLIT_IMAGE="false"
-  fi
-}
-
-# Apply safetynet patch on system/vendor build
-set_cts_patch() {
-  # Ext Build fingerprint
-  if [ -n "$(cat $S/build.prop | grep ro.system.build.fingerprint)" ]; then
-    CTS_DEFAULT_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint="
-    grep -v "$CTS_DEFAULT_SYSTEM_EXT_BUILD_FINGERPRINT" $S/build.prop > $TMP/system.prop
-    rm -rf $S/build.prop
-    cp -f $TMP/system.prop $S/build.prop
-    chmod 0644 $S/build.prop
-    rm -rf $TMP/system.prop
-    CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
-    insert_line $S/build.prop "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT" after 'ro.system.build.date.utc=' "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT"
-  fi
-  # Build fingerprint
-  if [ -n "$(cat $S/build.prop | grep ro.build.fingerprint)" ]; then
-    CTS_DEFAULT_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint="
-    grep -v "$CTS_DEFAULT_SYSTEM_BUILD_FINGERPRINT" $S/build.prop > $TMP/system.prop
-    rm -rf $S/build.prop
-    cp -f $TMP/system.prop $S/build.prop
-    chmod 0644 $S/build.prop
-    rm -rf $TMP/system.prop
-    CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
-    insert_line $S/build.prop "$CTS_SYSTEM_BUILD_FINGERPRINT" after 'ro.build.description=' "$CTS_SYSTEM_BUILD_FINGERPRINT"
-  fi
-  # Build security patch
-  if [ -n "$(cat $S/build.prop | grep ro.build.version.security_patch)" ]; then
-    CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=";
-    grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $S/build.prop > $TMP/system.prop
-    rm -rf $S/build.prop
-    cp -f $TMP/system.prop $S/build.prop
-    chmod 0644 $S/build.prop
-    rm -rf $TMP/system.prop
-    CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-04-05";
-    insert_line $S/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
-  fi
-  if [ "$device_vendorpartition" == "false" ]; then
-    # Build security patch
-    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.vendor.build.security_patch)" ]; then
-      CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=";
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
-      rm -rf $SYSTEM/vendor/build.prop
-      cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
-      chmod 0644 $SYSTEM/vendor/build.prop
-      rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-04-05";
-      insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
-    fi
-    # Build fingerprint
-    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.vendor.build.fingerprint)" ]; then
-      CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint="
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
-      rm -rf $SYSTEM/vendor/build.prop
-      cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
-      chmod 0644 $SYSTEM/vendor/build.prop
-      rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
-      insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
-    fi
-    # Build bootimage
-    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.bootimage.build.fingerprint)" ]; then
-      CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint="
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
-      rm -rf $SYSTEM/vendor/build.prop
-      cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
-      chmod 0644 $SYSTEM/vendor/build.prop
-      rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
-      insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
-    fi
-  fi
-  if [ "$device_vendorpartition" == "true" ]; then
-    # Build security patch
-    if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.security_patch)" ]; then
-      CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=";
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $VENDOR/build.prop > $TMP/vendor.prop
-      rm -rf $VENDOR/build.prop
-      cp -f $TMP/vendor.prop $VENDOR/build.prop
-      chmod 0644 $VENDOR/build.prop
-      rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-04-05";
-      insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
-    fi
-    # Build fingerprint
-    if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.fingerprint)" ]; then
-      CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint="
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT" $VENDOR/build.prop > $TMP/vendor.prop
-      rm -rf $VENDOR/build.prop
-      cp -f $TMP/vendor.prop $VENDOR/build.prop
-      chmod 0644 $VENDOR/build.prop
-      rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
-      insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
-    fi
-    # Build bootimage
-    if [ -n "$(cat $VENDOR/build.prop | grep ro.bootimage.build.fingerprint)" ]; then
-      CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint="
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE" $VENDOR/build.prop > $TMP/vendor.prop
-      rm -rf $VENDOR/build.prop
-      cp -f $TMP/vendor.prop $VENDOR/build.prop
-      chmod 0644 $VENDOR/build.prop
-      rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
-      insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
-    fi
-  fi
-}
-
-on_cts_patch() {
-  if [ "$cts_install_status" == "true" ]; then spl_update_boot; $TARGET_SPLIT_IMAGE && set_cts_patch; fi
-}
+# Check RWG Status
+on_rwg_status_check() { rwg_install_status="$(get_prop "ro.rwg.device")"; }
 
 # API fixes
 sdk_fix() {
@@ -1856,12 +1683,6 @@ backupdirSYSOverlay() {
     $SYSTEM/overlay/PlayStoreOverlay"
 }
 
-backupdirSYSKeystore() {
-  SYS_KEYSTORE="
-    $S/bin/keystore
-    $S/lib64/libkeystore-attestation-application-id.so"
-}
-
 # Set restore function
 restoredirTMP() {
   TMP_APP="
@@ -1990,11 +1811,6 @@ restoredirTMPOverlay() {
     $TMP/overlay/PlayStoreOverlay"
 }
 
-restoredirTMPKeystore() {
-  TMP_KEYSTORE_BIN="$TMP/keystore/keystore"
-  TMP_KEYSTORE_LIB="$TMP/keystore/libkeystore-attestation-application-id.so"
-}
-
 backup_conflicting_packages() {
   if [ "$addon_install_status" == "true" ]; then
     # Backup CalendarProvider
@@ -2058,27 +1874,6 @@ backup_conflicting_packages() {
     if [ "$SYS_PRIV_EXT_CTT" == "true" ]; then
       mv $S/system_ext/priv-app/ContactsProvider $TMP/addon/core/ContactsProvider
       echo >> $TMP/SYS_PRIV_EXT_CTT
-    fi
-  fi
-}
-
-trigger_keystore_backup() {
-  if [ ! "$android_sdk" == "$supported_sdk_v25" ]; then
-    if [ ! "$android_sdk" == "$supported_sdk_v31" ]; then
-      mv $SYS_KEYSTORE $TMP/keystore 2>/dev/null
-    fi
-  fi
-}
-
-trigger_keystore_restore() {
-  if [ ! "$android_sdk" == "$supported_sdk_v25" ]; then
-    if [ ! "$android_sdk" == "$supported_sdk_v31" ]; then
-      mv $TMP_KEYSTORE_BIN $S/bin 2>/dev/null
-      mv $TMP_KEYSTORE_LIB $S/lib64 2>/dev/null
-      chmod 0755 $S/bin/keystore 2>/dev/null
-      chmod 0644 $S/lib64/libkeystore-attestation-application-id.so 2>/dev/null
-      chcon -h u:object_r:keystore_exec:s0 "$S/bin/keystore"
-      chcon -h u:object_r:system_lib_file:s0 "$S/lib64/libkeystore-attestation-application-id.so"
     fi
   fi
 }
@@ -2454,15 +2249,17 @@ restore_conflicting_packages() {
   fi
 }
 
+copy_ota_script() { cp -f $TMP/addon.d/90-bitgapps.sh $S/addon.d/90-bitgapps.sh; }
+
 # Static functions
-set_addond_ver
+set_version
 trampoline
-check_aik_binaries "$@"
+check_busybox "$@"
 
 case "$1" in
   backup)
     ui_print "BackupTools: Starting BiTGApps backup"
-    # Start runtime functions
+    set_bb
     unmount_all
     set_arch
     tmp_dir
@@ -2476,7 +2273,6 @@ case "$1" in
     on_version_check
     api_dependent_overlay
     set_pathmap
-    # End runtime functions
     backupdirSYS
     mv $SYS_APP $TMP/app 2>/dev/null
     mv $SYS_APP_JAR $TMP/app 2>/dev/null
@@ -2503,16 +2299,14 @@ case "$1" in
     trigger_rwg_backup
     $OVERLAY && backupdirSYSOverlay
     $OVERLAY && mv $SYS_OVERLAY $TMP/overlay 2>/dev/null
-    backupdirSYSKeystore
-    trigger_keystore_backup
-    # Confirm that backup is done
+    copy_ota_script
     conf_addon_backup
     umount_apex
     unmount_all
   ;;
   restore)
     ui_print "BackupTools: Restoring BiTGApps backup"
-    # Start runtime functions
+    set_bb
     unmount_all
     set_arch
     tmp_dir
@@ -2526,7 +2320,6 @@ case "$1" in
     on_version_check
     api_dependent_overlay
     set_pathmap
-    # End runtime functions
     on_rwg_status_check
     lim_aosp_install
     restoredirTMP
@@ -2545,21 +2338,16 @@ case "$1" in
     mv $TMP_XBIN $S/xbin 2>/dev/null
     $OVERLAY && restoredirTMPOverlay
     $OVERLAY && mv $TMP_OVERLAY $SYSTEM/overlay 2>/dev/null
-    restoredirTMPKeystore
-    trigger_keystore_restore
     opt_v25
     on_whitelist_check
     purge_whitelist_permission
-    purge_boot_whitelist_permission
     set_whitelist_permission
     set_assistant
     set_release_tag
-    on_cts_status_check
-    on_cts_patch
     sdk_fix
     selinux_fix
     bind_facelock_lib
-    $SQLITE3_OPT && sqlite_opt
+    sqlite_opt
     restoredirTMPFboot
     on_setup_status_check
     trigger_fboot_restore
@@ -2573,14 +2361,9 @@ case "$1" in
     restoredirTMPAddon
     trigger_addon_restore
     restore_conflicting_packages
-    rm -rf $S/app/ExtShared
-    rm -rf $S/priv-app/ExtServices
-    rm -rf $S/product/app/ExtShared
-    rm -rf $S/product/priv-app/ExtServices
-    rm -rf $S/system_ext/app/ExtShared
-    rm -rf $S/system_ext/priv-app/ExtServices
+    copy_ota_script
+    shared_library
     del_tmp_dir
-    # Confirm that restore is done
     conf_addon_restore
     umount_apex
     unmount_all

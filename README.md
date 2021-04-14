@@ -14,7 +14,8 @@ Here are feature highlights:
 * Optimize APK files with Zipalign tool
 * Optimize application database with Sqlite tool
 * Safetynet Patch for passing CTS profile
-* Disable Privileged App permission
+* Bootlog Patch for generating bootloop logs
+* Disable Privileged Permissions Allowlisting functionality
 * Enable Battery Optimization for all GApps
 * It can be installed in Custom OS shipped with GApps
 * Addon packages for supporting additional GApps packages
@@ -31,6 +32,7 @@ Here are feature highlights:
 
 ![](https://img.shields.io/badge/BiTGApps-%20R21-blue.svg?style=flat-square)
 ![](https://img.shields.io/badge/Addon-%20R9-blue.svg?style=flat-square)
+![](https://img.shields.io/badge/Patch-%20R1-blue.svg?style=flat-square)
 ![](https://img.shields.io/badge/APK-%20v1.3-blue.svg?style=flat-square)
 
 ## Downloads
@@ -40,6 +42,8 @@ Here are feature highlights:
 [![](https://img.shields.io/badge/BiTGApps-%20ARM64-green.svg?style=flat-square)](https://bitgapps.ga/arm64)
 <br>
 [![](https://img.shields.io/badge/BiTGApps-%20Addon-green.svg?style=flat-square)](https://bitgapps.ga/addon)
+<br>
+[![](https://img.shields.io/badge/BiTGApps-%20Patch-green.svg?style=flat-square)](https://bitgapps.ga/patch)
 <br>
 [![](https://img.shields.io/badge/BiTGApps-%20Configs-red.svg?style=flat-square)](https://bitgapps.ga/configs)
 <br>

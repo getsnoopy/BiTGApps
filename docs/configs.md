@@ -3,8 +3,6 @@
 Configs           | Usage
 ----------------- | -----------------
 addon-config.prop | Help installing additional packages
-boot-config.prop  | Help installing boot log patch
-cts-config.prop   | Help installing safetynet patch
 setup-config.prop | Help installing google's SetupWizard
 wipe-config.prop  | Help Uninstall BiTGApps
 

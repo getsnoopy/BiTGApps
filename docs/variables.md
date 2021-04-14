@@ -14,6 +14,12 @@ _Note: Usable only, if you are building BiTGApps package_
 
 * `Example: R9`
 
+### COMMONPATCHRELEASE
+
+* This variable set release tag in Patch build file
+
+* `Example: R1`
+
 ### GAPPS_RELEASE
 
 * This sets release tag in utility script
@@ -83,18 +89,6 @@ _Note: Usable only, if you are building BiTGApps package_
 ### TARGET_CONFIG_ADDON
 
 * Set addon config for upload, by default _false_
-
-* `Example: true`
-
-### TARGET_CONFIG_BOOT
-
-* Set boot log config for upload, by default _false_
-
-* `Example: true`
-
-### TARGET_CONFIG_CTS
-
-* Set CTS config for upload, by default _false_
 
 * `Example: true`
 

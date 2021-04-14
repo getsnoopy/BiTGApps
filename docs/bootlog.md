@@ -1,11 +1,6 @@
 # Generating Boot Logs
 
-You can generate logcat and dmesg log using BiTGApps itself. Bootlog functionality is not enabled by default. For that you need **boot-config.prop** file.
-When this config file not present in device, at the time of installation you will be notified with following texts.
-
-```! Boot config not found```
-
-```! Skip installing bootlog patch```
+You can generate logcat and dmesg log using BiTGApps Bootlog Package.
 
 This can be used, when you ended up in bootloop after installing BiTGApps for whatever reasons. Logcat and dmesg log can be found in cache partition.
 
@@ -14,8 +9,7 @@ This can be used, when you ended up in bootloop after installing BiTGApps for wh
 
 ## System-As-Root
 
-The root file system is no longer included in ramdisk image and is instead merged into system image.
-Kernel init.rc that resides in either **system root** or **system/etc/init/hw** will be patched.
+The root file system is no longer included in ramdisk image and is instead merged into system image. Kernel init.rc that resides in either **system root** or **system/etc/init/hw** will be patched.
 
 ## A-only
 
@@ -23,13 +17,15 @@ Non-A/B devices that does not follow system-as-root scheme, boot image will be p
 
 ## Usage
 
-When device bootlooping, reboot to recovery, place config file and re-install BiTGApps. After installing, reboot to system and let it bootlooping,
-after few seconds device will reboot back to recovery itself. You can grab log files from cache partition.
+When device in bootloop state, reboot to recovery and install bootlog package. After installing, reboot to system and let it bootloop, in few seconds device will reboot back to recovery itself. You can grab log files from cache partition.
 
 ## Installation Conflicts
 
-Installation of bootlog patch entirely depends on boot image editing. For any reason, BiTGApps installer failed to extract/unpack/edit boot image, bootlog patch will not be installed.
-No changes will made in **system** regarding bootlog patch.
+Installation of bootlog patch entirely depends on boot image editing. For any reason, BiTGApps installer failed to extract/unpack/edit boot image, bootlog patch will not be installed. No changes will made in **system** regarding bootlog patch.
+
+You will be notified with following texts, if bootlog patch installed:
+
+`- Apply bootlog patch`
 
 ## SELinux Conflicts
 

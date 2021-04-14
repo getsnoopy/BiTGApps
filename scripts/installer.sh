@@ -88,11 +88,7 @@ zip_extract() {
   unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
   chmod 0755 "$TMP/busybox-arm"
   if [ "$ZIPTYPE" == "basic" ]; then
-    for f in config.prop \
-             g.prop \
-             init.logcat.rc \
-             sqlite3 \
-             zipalign; do
+    for f in config.prop g.prop sqlite3 zipalign; do
       unzip -o "$ZIPFILE" "$f" -d "$TMP"
     done
     for f in sqlite3 zipalign; do
@@ -124,22 +120,16 @@ set_bb() {
       fi
     done
     # Set busybox components in environment
-    PATH="$l:$PATH"
+    export PATH="$l:$PATH"
   else
     rm -rf $TMP/busybox-arm
+    rm -rf $TMP/config.prop
+    rm -rf $TMP/g.prop
     rm -rf $TMP/installer.sh
     rm -rf $TMP/updater
     rm -rf $TMP/util_functions.sh
-    if [ "$ZIPTYPE" == "basic" ]; then
-      for f in $TMP/config.prop \
-               $TMP/g.prop \
-               $TMP/init.logcat.rc \
-               $TMP/sqlite3 \
-               $TMP/zipalign
-      do
-        rm -rf "$f"
-      done
-    fi
+    rm -rf $TMP/sqlite3
+    rm -rf $TMP/zipalign
     ui_print "! Wrong architecture detected. Aborting..."
     ui_print "! Installation failed"
     ui_print " "
@@ -147,138 +137,8 @@ set_bb() {
   fi
 }
 
-# Check previous installations
-chk_pre_inst() {
-  if [ -n "$(cat $TMP/recovery.log | grep 'writing 1024 blocks of new data' )" ]; then
-    rm -rf $TMP/bin
-    rm -rf $TMP/busybox-arm
-    rm -rf $TMP/installer.sh
-    rm -rf $TMP/updater
-    rm -rf $TMP/util_functions.sh
-    if [ "$ZIPTYPE" == "basic" ]; then
-      for f in $TMP/config.prop \
-               $TMP/g.prop \
-               $TMP/init.logcat.rc \
-               $TMP/sqlite3 \
-               $TMP/zipalign
-      do
-        rm -rf "$f"
-      done
-    fi
-    ui_print "! Detected OS Installs. Aborting..."
-    ui_print "! Installation failed"
-    ui_print " "
-    exit 1
-  fi
-  if [ -n "$(cat $TMP/recovery.log | grep 'AnyKernel3' )" ]; then
-    rm -rf $TMP/bin
-    rm -rf $TMP/busybox-arm
-    rm -rf $TMP/installer.sh
-    rm -rf $TMP/updater
-    rm -rf $TMP/util_functions.sh
-    if [ "$ZIPTYPE" == "basic" ]; then
-      for f in $TMP/config.prop \
-               $TMP/g.prop \
-               $TMP/init.logcat.rc \
-               $TMP/sqlite3 \
-               $TMP/zipalign
-      do
-        rm -rf "$f"
-      done
-    fi
-    ui_print "! Detected AnyKernel Installs. Aborting..."
-    ui_print "! Installation failed"
-    ui_print " "
-    exit 1
-  fi
-  if [ "$($l/grep -i -w -o 'BACKUP STARTED' $TMP/recovery.log)" ]; then
-    rm -rf $TMP/bin
-    rm -rf $TMP/busybox-arm
-    rm -rf $TMP/installer.sh
-    rm -rf $TMP/updater
-    rm -rf $TMP/util_functions.sh
-    if [ "$ZIPTYPE" == "basic" ]; then
-      for f in $TMP/config.prop \
-               $TMP/g.prop \
-               $TMP/init.logcat.rc \
-               $TMP/sqlite3 \
-               $TMP/zipalign
-      do
-        rm -rf "$f"
-      done
-    fi
-    ui_print "! Detected Recovery Backup. Aborting..."
-    ui_print "! Installation failed"
-    ui_print " "
-    exit 1
-  fi
-  if [ -n "$(cat $TMP/recovery.log | grep 'package_extract_file' )" ]; then
-    rm -rf $TMP/bin
-    rm -rf $TMP/busybox-arm
-    rm -rf $TMP/installer.sh
-    rm -rf $TMP/updater
-    rm -rf $TMP/util_functions.sh
-    if [ "$ZIPTYPE" == "basic" ]; then
-      for f in $TMP/config.prop \
-               $TMP/g.prop \
-               $TMP/init.logcat.rc \
-               $TMP/sqlite3 \
-               $TMP/zipalign
-      do
-        rm -rf "$f"
-      done
-    fi
-    ui_print "! Detected Firmware Installs. Aborting..."
-    ui_print "! Installation failed"
-    ui_print " "
-    exit 1
-  fi
-  if [ "$($l/grep -w -o 'Magisk 2[0-9.]* Installer' $TMP/recovery.log)" ]; then
-    rm -rf $TMP/bin
-    rm -rf $TMP/busybox-arm
-    rm -rf $TMP/installer.sh
-    rm -rf $TMP/updater
-    rm -rf $TMP/util_functions.sh
-    if [ "$ZIPTYPE" == "basic" ]; then
-      for f in $TMP/config.prop \
-               $TMP/g.prop \
-               $TMP/init.logcat.rc \
-               $TMP/sqlite3 \
-               $TMP/zipalign
-      do
-        rm -rf "$f"
-      done
-    fi
-    ui_print "! Detected Magisk Installs. Aborting..."
-    ui_print "! Installation failed"
-    ui_print " "
-    exit 1
-  fi
-  if [ "$($l/grep -w -o 'BITGAPPS STARTED' $TMP/recovery.log)" ]; then
-    rm -rf $TMP/bin
-    rm -rf $TMP/busybox-arm
-    rm -rf $TMP/installer.sh
-    rm -rf $TMP/updater
-    rm -rf $TMP/util_functions.sh
-    if [ "$ZIPTYPE" == "basic" ]; then
-      for f in $TMP/config.prop \
-               $TMP/g.prop \
-               $TMP/init.logcat.rc \
-               $TMP/sqlite3 \
-               $TMP/zipalign
-      do
-        rm -rf "$f"
-      done
-    fi
-    ui_print "! Detected BiTGApps Installs. Aborting..."
-    ui_print "! Installation failed"
-    ui_print " "
-    exit 1
-  else
-    # Add filter in recovery log
-    echo "[BITGAPPS STARTED]" >> $TMP/recovery.log
-  fi
-}
+# Backup busybox in data partition for OTA script
+copy_busybox_binary() { mkdir $ANDROID_DATA/busybox; cp -f $TMP/busybox-arm $ANDROID_DATA/busybox/busybox; }
 
 # Unset predefined environmental variable
 recovery_actions() {
@@ -336,15 +196,6 @@ remove_line() {
   fi
 }
 
-# patch_cmdline <cmdline entry name> <replacement string>
-patch_cmdline() {
-  local cmdfile cmdtmp
-  cmdfile="split_img/boot.img-cmdline"
-  cmdtmp=$(cat $cmdfile)
-  echo "$cmdtmp $2" > $cmdfile
-  sed -i -e 's;  *; ;g' -e 's;[ \t]*$;;' $cmdfile
-}
-
 # Set package defaults
 build_defaults() {
   # Set temporary zip directory
@@ -377,8 +228,6 @@ build_defaults() {
   TMP_G_PREF="$UNZIP_DIR/tmp_pref"
   TMP_PERM_ROOT="$UNZIP_DIR/tmp_perm_root"
   TMP_OVERLAY="$UNZIP_DIR/tmp_overlay"
-  TMP_KEYSTORE="$UNZIP_DIR/tmp_keystore"
-  TMP_AIK="$UNZIP_DIR/tmp_aik"
   # Set logging
   LOG="$TMP/bitgapps/installation.log"
   AOSP="$TMP/bitgapps/aosp.log"
@@ -398,30 +247,8 @@ build_defaults() {
   sdk_v26="$TMP/bitgapps/sdk_v26.log"
   sdk_v25="$TMP/bitgapps/sdk_v25.log"
   LINKER="$TMP/bitgapps/lib-symlink.log"
-  PARTITION="$TMP/bitgapps/vendor.log"
-  CTS_PATCH="$TMP/bitgapps/config-cts.log"
   SETUP_CONFIG="$TMP/bitgapps/config-setupwizard.log"
   ADDON_CONFIG="$TMP/bitgapps/config-addon.log"
-  TARGET_SYSTEM="$TMP/bitgapps/cts-system.log"
-  TARGET_VENDOR="$TMP/bitgapps/cts-vendor.log"
-  bootA="$TMP/bitgapps/Non-AB.log"
-  bootSAR="$TMP/bitgapps/SAR.log"
-  bootSARHW="$TMP/bitgapps/SARHW.log"
-  KEYSTORE="$TMP/bitgapps/keystore.log"
-  AIK="$TMP/bitgapps/aik.log"
-}
-
-boot_image_editor() {
-  # Set defaults and unpack
-  ZIP="zip/AIK.tar.xz"
-  unpack_zip
-  tar tvf $ZIP_FILE/AIK.tar.xz >> $AIK
-  tar -xf $ZIP_FILE/AIK.tar.xz -C $TMP_AIK
-  chmod -R 0755 $TMP_AIK
-  # Keep Boot Image Editor in data partition for OTA script
-  mkdir -p $ANDROID_DATA/aik
-  tar -xf $ZIP_FILE/AIK.tar.xz -C $ANDROID_DATA/aik
-  chmod -R 0755 $ANDROID_DATA/aik
 }
 
 # Set partition and boot slot property
@@ -494,14 +321,6 @@ setup_mountpoint() {
     rm -f $1
     mkdir $1
   fi
-}
-
-umount_all() {
-  (umount -l /system_root
-   umount -l /system
-   umount -l /product
-   umount -l /system_ext
-   umount -l /vendor) > /dev/null 2>&1
 }
 
 mount_apex() {
@@ -587,73 +406,12 @@ ab_slot() {
   [ -z $SLOT ] || ui_print "- Current boot slot: $SLOT"
 }
 
-# Abort installation, if any of below partitions are pre-mounted
-chk_mnt_part() {
-  if [ "$($l/grep -w -o /system_root $fstab)" ]; then
-    if is_mounted /system_root; then
-      ui_print "! Cannot mount /system_root. Aborting..."
-      ui_print "! Installation failed"
-      ui_print " "
-      # Wipe ZIP extracts
-      cleanup
-      # Reset any error code
-      true
-      sync
-      exit 1
-    fi
-  fi
-  if [ "$($l/grep -w -o /system $fstab)" ]; then
-    if is_mounted /system; then
-      ui_print "! Cannot mount /system. Aborting..."
-      ui_print "! Installation failed"
-      ui_print " "
-      # Wipe ZIP extracts
-      cleanup
-      # Reset any error code
-      true
-      sync
-      exit 1
-    fi
-  fi
-  if [ "$device_vendorpartition" == "true" ]; then
-    if is_mounted $VENDOR; then
-      ui_print "! Cannot mount $VENDOR. Aborting..."
-      ui_print "! Installation failed"
-      ui_print " "
-      # Wipe ZIP extracts
-      cleanup
-      # Reset any error code
-      true
-      sync
-      exit 1
-    fi
-  fi
-  if [ -n "$(cat $fstab | grep /product)" ]; then
-    if is_mounted /product; then
-      ui_print "! Cannot mount /product. Aborting..."
-      ui_print "! Installation failed"
-      ui_print " "
-      # Wipe ZIP extracts
-      cleanup
-      # Reset any error code
-      true
-      sync
-      exit 1
-    fi
-  fi
-  if [ -n "$(cat $fstab | grep /system_ext)" ]; then
-    if is_mounted /system_ext; then
-      ui_print "! Cannot mount /system_ext. Aborting..."
-      ui_print "! Installation failed"
-      ui_print " "
-      # Wipe ZIP extracts
-      cleanup
-      # Reset any error code
-      true
-      sync
-      exit 1
-    fi
-  fi
+umount_all() {
+  (umount -l /system_root
+   umount -l /system
+   umount -l /product
+   umount -l /system_ext
+   umount -l /vendor) > /dev/null 2>&1
 }
 
 # Mount partitions
@@ -880,204 +638,6 @@ on_inst_abort() {
     true
     sync
     exit 1
-  fi
-}
-
-# Check whether boot config file present in device or not
-get_boot_config() {
-  for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage; do
-    for b in $(find $f -iname "boot-config.prop" 2>/dev/null); do
-      if [ -f "$b" ]; then
-        boot_config="true"
-      fi
-    done
-  done
-  if [ ! "$boot_config" == "true" ]; then
-    boot_config="false"
-  fi
-}
-
-print_title_boot() {
-  if [ "$boot_config" == "true" ]; then
-    ui_print "- Boot config detected"
-    ui_print "- Installing bootlog patch"
-  fi
-  if [ "$boot_config" == "false" ]; then
-    ui_print "! Boot config not found"
-    ui_print "! Skip installing bootlog patch"
-  fi
-}
-
-# Bootlog function, trigger at 'on fs' stage
-patch_bootimg() {
-  if [ "$supported_boot_config" == "true" ]; then
-    # Non SAR specific; Apply, after all checks are false
-    if [ ! "$SYSTEM_ROOT" == "true" ] && [ ! "$device_abpartition" == "true" ] && [ ! "$SUPER_PARTITION" == "true" ]; then
-      cd $TMP_AIK
-      # Lets see what fstab tells me
-      block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
-      # Copy boot image
-      dd if="$block" of="boot.img" > /dev/null 2>&1
-      ./unpackimg.sh boot.img > /dev/null 2>&1
-      if [ -f "split_img/boot.img-cmdline" ] && [ -f "ramdisk/init.rc" ]; then
-        if [ ! -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
-          echo "Kernel init patched" >> $bootA
-          sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' ramdisk/init.rc
-          cp -f $TMP/init.logcat.rc ramdisk/init.logcat.rc
-          chmod 0750 ramdisk/init.logcat.rc
-          chcon -h u:object_r:rootfs:s0 "ramdisk/init.logcat.rc"
-        fi
-        if [ -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
-          echo "ERROR: Kernel init patched already" >> $bootA
-          rm -rf ramdisk/init.logcat.rc
-          cp -f $TMP/init.logcat.rc ramdisk/init.logcat.rc
-          chmod 0750 ramdisk/init.logcat.rc
-          chcon -h u:object_r:rootfs:s0 "ramdisk/init.logcat.rc"
-        fi
-        # Keep patched kernel init
-        cp -f ramdisk/init.rc $TMP/bitgapps/init.rc
-        # Change selinux state to permissive, without this bootlog script failed to execute
-        [ -n "$(cat split_img/boot.img-cmdline | grep 'androidboot.selinux=permissive')" ] || patch_cmdline androidboot.selinux 'androidboot.selinux=permissive'
-        # Keep patched kernel cmdline
-        cp -f split_img/boot.img-cmdline $TMP/bitgapps/cmdline.log
-        ./repackimg.sh > /dev/null 2>&1
-        dd if="image-new.img" of="$block" > /dev/null 2>&1
-        rm -rf boot.img
-        rm -rf image-new.img
-        ./cleanup.sh > /dev/null 2>&1
-        cd ../../..
-      else
-        if [ ! -f "split_img/boot.img-cmdline" ]; then
-          echo "ERROR: Failed to unpack kernel" >> $bootA
-        fi
-        if [ ! -f "ramdisk/init.rc" ]; then
-          echo "ERROR: Failed to unpack ramdisk" >> $bootA
-        fi
-        # Wipe stock boot image
-        rm -rf boot.img
-        # Checkout path
-        cd ../../..
-        # Print error warning
-        ui_print "! Error unpacking boot image"
-      fi
-    fi
-    # system-as-root specific; root file system merged into system image
-    if [ "$SYSTEM_ROOT" == "true" ] || [ "$device_abpartition" == "true" ] || [ "$SUPER_PARTITION" == "true" ]; then
-      cd $TMP_AIK
-      # Lets see what fstab tells me
-      block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
-      # Copy boot image
-      dd if="$block" of="boot.img" > /dev/null 2>&1
-      ./unpackimg.sh boot.img > /dev/null 2>&1
-      # Checkout path
-      cd ../../..
-      # Check kernel init before patching boot image
-      if [ -f "$TMP_AIK/split_img/boot.img-cmdline" ] && [ -f "/system_root/init.rc" ]; then
-        cd $TMP_AIK
-        # Change selinux state to permissive, without this bootlog script failed to execute
-        [ -n "$(cat split_img/boot.img-cmdline | grep 'androidboot.selinux=permissive')" ] || patch_cmdline androidboot.selinux 'androidboot.selinux=permissive'
-        # Keep patched kernel cmdline
-        cp -f split_img/boot.img-cmdline $TMP/bitgapps/cmdline.log
-        ./repackimg.sh > /dev/null 2>&1
-        dd if="image-new.img" of="$block" > /dev/null 2>&1
-        rm -rf boot.img
-        rm -rf image-new.img
-        ./cleanup.sh > /dev/null 2>&1
-        cd ../../..
-        if [ -n "$(cat /system_root/init.rc | grep ro.zygote)" ]; then
-          if [ ! -n "$(cat /system_root/init.rc | grep init.logcat.rc)" ]; then
-            echo "Kernel init patched" >> $bootSAR
-            sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' /system_root/init.rc
-            cp -f $TMP/init.logcat.rc /system_root/init.logcat.rc
-            chmod 0750 /system_root/init.logcat.rc
-            chcon -h u:object_r:rootfs:s0 "/system_root/init.logcat.rc"
-          fi
-          if [ -n "$(cat /system_root/init.rc | grep init.logcat.rc)" ]; then
-            echo "ERROR: Kernel init patched already" >> $bootSAR
-            rm -rf /system_root/init.logcat.rc
-            cp -f $TMP/init.logcat.rc /system_root/init.logcat.rc
-            chmod 0750 /system_root/init.logcat.rc
-            chcon -h u:object_r:rootfs:s0 "/system_root/init.logcat.rc"
-          fi
-        fi
-        # Keep patched kernel init
-        cp -f /system_root/init.rc $TMP/bitgapps/init.rc
-      else
-        if [ ! -f "$TMP_AIK/split_img/boot.img-cmdline" ]; then
-          echo "ERROR: Failed to unpack kernel" >> $bootSAR
-        fi
-        if [ ! -f "/system_root/init.rc" ]; then
-          echo "ERROR: Unable to find kernel init" >> $bootSAR
-        fi
-        cd $TMP_AIK
-        ./cleanup.sh > /dev/null 2>&1
-        # Wipe stock boot image
-        rm -rf boot.img
-        # Checkout path
-        cd ../../..
-        # Print error warning
-        ui_print "! Error unpacking boot image"
-      fi
-    fi
-    # system-as-root specific; root file system merged into system image; kernel init not available in system image root
-    if [ "$SYSTEM_ROOT" == "true" ] || [ "$device_abpartition" == "true" ] || [ "$SUPER_PARTITION" == "true" ]; then
-      cd $TMP_AIK
-      # Lets see what fstab tells me
-      block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
-      # Copy boot image
-      dd if="$block" of="boot.img" > /dev/null 2>&1
-      ./unpackimg.sh boot.img > /dev/null 2>&1
-      # Checkout path
-      cd ../../..
-      # Check kernel init before patching boot image
-      if [ -f "$TMP_AIK/split_img/boot.img-cmdline" ] && [ -f "/system_root/system/etc/init/hw/init.rc" ]; then
-        cd $TMP_AIK
-        # Change selinux state to permissive, without this bootlog script failed to execute
-        [ -n "$(cat split_img/boot.img-cmdline | grep 'androidboot.selinux=permissive')" ] || patch_cmdline androidboot.selinux 'androidboot.selinux=permissive'
-        # Keep patched kernel cmdline
-        cp -f split_img/boot.img-cmdline $TMP/bitgapps/cmdline.log
-        ./repackimg.sh > /dev/null 2>&1
-        dd if="image-new.img" of="$block" > /dev/null 2>&1
-        rm -rf boot.img
-        rm -rf image-new.img
-        ./cleanup.sh > /dev/null 2>&1
-        cd ../../..
-        INIT="/system_root/system/etc/init/hw/init.rc"
-        if [ -n "$(cat $INIT | grep ro.zygote)" ]; then
-          if [ ! -n "$(cat $INIT | grep init.logcat.rc)" ]; then
-            echo "Kernel init patched" >> $bootSARHW
-            sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' $INIT
-            cp -f $TMP/init.logcat.rc /system_root/system/etc/init/hw/init.logcat.rc
-            chmod 0644 /system_root/system/etc/init/hw/init.logcat.rc
-            chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.logcat.rc"
-          fi
-          if [ -n "$(cat $INIT | grep init.logcat.rc)" ]; then
-            echo "ERROR: Kernel init patched already" >> $bootSARHW
-            rm -rf /system_root/system/etc/init/hw/init.logcat.rc
-            cp -f $TMP/init.logcat.rc /system_root/system/etc/init/hw/init.logcat.rc
-            chmod 0644 /system_root/system/etc/init/hw/init.logcat.rc
-            chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.logcat.rc"
-          fi
-        fi
-        # Keep patched kernel init
-        cp -f $INIT $TMP/bitgapps/init.rc
-      else
-        if [ ! -f "$TMP_AIK/split_img/boot.img-cmdline" ]; then
-          echo "ERROR: Failed to unpack kernel" >> $bootSARHW
-        fi
-        if [ ! -f "/system_root/init.rc" ]; then
-          echo "ERROR: Unable to find kernel init" >> $bootSARHW
-        fi
-        cd $TMP_AIK
-        ./cleanup.sh > /dev/null 2>&1
-        # Wipe stock boot image
-        rm -rf boot.img
-        # Checkout path
-        cd ../../..
-        # Print error warning
-        ui_print "! Error unpacking boot image"
-      fi
-    fi
   fi
 }
 
@@ -1356,8 +916,6 @@ set_install_logs() {
     cp -f $SYSTEM/etc/prop.default $TMP/bitgapps/system.default > /dev/null 2>&1
   fi
   cp -f $ADDON_CONFIG_DEST $TMP/bitgapps/addon-config.prop > /dev/null 2>&1
-  cp -f $BOOT_CONFIG_DEST $TMP/bitgapps/boot-config.prop > /dev/null 2>&1
-  cp -f $CTS_CONFIG_DEST $TMP/bitgapps/cts-config.prop > /dev/null 2>&1
   cp -f $SETUP_CONFIG_DEST $TMP/bitgapps/setup-config.prop > /dev/null 2>&1
   cp -f $WIPE_CONFIG_DEST $TMP/bitgapps/wipe-config.prop > /dev/null 2>&1
 }
@@ -1425,21 +983,10 @@ cleanup() {
   rm -rf $TMP/bitgapps*
   rm -rf $TMP/busybox-arm
   rm -rf $TMP/config.prop
-  rm -rf $TMP/fstab.log
   rm -rf $TMP/g.prop
-  rm -rf $TMP/init.logcat.rc
-  rm -rf $TMP/SAR.log
-  rm -rf $TMP/AB.log
-  rm -rf $TMP/A-only.log
-  rm -rf $TMP/SARHW.log
-  rm -rf $TMP/SYSHW.log
   rm -rf $TMP/installer.sh
-  rm -rf $TMP/IS_MOUNTED_SAR
-  rm -rf $TMP/IS_MOUNTED_SAS
-  rm -rf $TMP/IS_LAYOUT_SYSTEM
   rm -rf $TMP/mounted
   rm -rf $TMP/out
-  rm -rf $TMP/pm.sh
   rm -rf $TMP/restore
   rm -rf $TMP/sqlite3
   rm -rf $TMP/unzip
@@ -1506,31 +1053,11 @@ sqlite_opt() {
   done
 }
 
-get_boot_config_path() {
-  for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage; do
-    for b in $(find $f -iname "boot-config.prop" 2>/dev/null); do
-      if [ -f "$b" ]; then
-        BOOT_CONFIG_DEST="$b"
-      fi
-    done
-  done
-}
-
 get_setup_config_path() {
   for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage; do
     for s in $(find $f -iname "setup-config.prop" 2>/dev/null); do
       if [ -f "$s" ]; then
         SETUP_CONFIG_DEST="$s"
-      fi
-    done
-  done
-}
-
-get_cts_config_path() {
-  for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage; do
-    for c in $(find $f -iname "cts-config.prop" 2>/dev/null); do
-      if [ -f "$c" ]; then
-        CTS_CONFIG_DEST="$c"
       fi
     done
   done
@@ -1559,24 +1086,18 @@ get_wipe_config_path() {
 profile() {
   SYSTEM_PROPFILE="$SYSTEM/build.prop"
   VENDOR_PROPFILE="$VENDOR/build.prop"
-  BOOT_PROPFILE="$BOOT_CONFIG_DEST"
   SETUP_PROPFILE="$SETUP_CONFIG_DEST"
-  CTS_PROPFILE="$CTS_CONFIG_DEST"
   ADDON_PROPFILE="$ADDON_CONFIG_DEST"
   WIPE_PROPFILE="$WIPE_CONFIG_DEST"
 }
 
-get_file_prop() {
-  grep -m1 "^$2=" "$1" | cut -d= -f2
-}
+get_file_prop() { grep -m1 "^$2=" "$1" | cut -d= -f2; }
 
 get_prop() {
   # Check known .prop files using get_file_prop
   for f in $SYSTEM_PROPFILE \
            $VENDOR_PROPFILE \
-           $BOOT_PROPFILE \
            $SETUP_PROPFILE \
-           $CTS_PROPFILE \
            $ADDON_PROPFILE \
            $WIPE_PROPFILE; do
     if [ -e "$f" ]; then
@@ -1600,25 +1121,11 @@ on_release_tag() {
   unsupported_release="$TARGET_GAPPS_RELEASE"
 }
 
-# Bootlog Config Property
-on_boot_check() {
-  supported_boot_config="$(get_prop "ro.config.boot")"
-}
-
 # SetupWizard Config Property
-on_setup_check() {
-  supported_setup_config="$(get_prop "ro.config.setupwizard")"
-}
-
-# CTS Config Property
-on_cts_check() {
-  supported_cts_config="$(get_prop "ro.config.cts")"
-}
+on_setup_check() { supported_setup_config="$(get_prop "ro.config.setupwizard")"; }
 
 # Wipe Config Property
-on_wipe_check() {
-  supported_wipe_config="$(get_prop "ro.config.wipe")"
-}
+on_wipe_check() { supported_wipe_config="$(get_prop "ro.config.wipe")"; }
 
 # Addon Config Properties
 on_addon_check() {
@@ -1846,9 +1353,7 @@ mk_component() {
            $UNZIP_DIR/tmp_perm_aosp \
            $UNZIP_DIR/tmp_pref \
            $UNZIP_DIR/tmp_perm_root \
-           $UNZIP_DIR/tmp_overlay \
-           $UNZIP_DIR/tmp_keystore \
-           $UNZIP_DIR/tmp_aik
+           $UNZIP_DIR/tmp_overlay
   do
     mkdir $d
     # Recursively change folder permission
@@ -4939,7 +4444,7 @@ backup_script() {
   fi
 }
 
-# Keep sqlite executable for backuptool
+# Backup sqlite in system partition for OTA script
 sqlite_backup() {
   test -d $SYSTEM/xbin || mkdir $SYSTEM/xbin
   rm -rf $SYSTEM/xbin/sqlite3
@@ -4949,7 +4454,6 @@ sqlite_backup() {
   chcon -h u:object_r:system_file:s0 "$SYSTEM/xbin/sqlite3"
 }
 
-# Check whether SetupWizard config file present in device or not
 get_setup_config() {
   for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage; do
     for s in $(find $f -iname "setup-config.prop" 2>/dev/null); do
@@ -6678,40 +6182,7 @@ purge_whitelist_permission() {
   fi
 }
 
-# Remove Privileged App Whitelist property from boot image
-purge_boot_whitelist_permission() {
-  # Non SAR specific; Apply, after all checks are false
-  if [ ! "$SYSTEM_ROOT" == "true" ] && [ ! "$device_abpartition" == "true" ] && [ ! "$SUPER_PARTITION" == "true" ]; then
-    cd $TMP_AIK
-    # Lets see what fstab tells me
-    block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
-    # Copy boot image
-    dd if="$block" of="boot.img" > /dev/null 2>&1
-    ./unpackimg.sh boot.img > /dev/null 2>&1
-    if [ -f "ramdisk/default.prop" ] && [ -n "$(cat ramdisk/default.prop | grep control_privapp_permissions)" ]; then
-      grep -v "$PROPFLAG" ramdisk/default.prop > ramdisk/prop.default
-      rm -rf ramdisk/default.prop
-      mv ramdisk/prop.default ramdisk/default.prop
-      chmod 0600 ramdisk/default.prop
-      # Keep patched default property file
-      cp -f ramdisk/default.prop $TMP/bitgapps/boot.prop
-      ./repackimg.sh > /dev/null 2>&1
-      dd if="image-new.img" of="$block" > /dev/null 2>&1
-      rm -rf boot.img
-      rm -rf image-new.img
-      ./cleanup.sh > /dev/null 2>&1
-      cd ../../..
-    else
-      ./cleanup.sh > /dev/null 2>&1
-      # Wipe stock boot image
-      rm -rf boot.img
-      # Checkout path
-      cd ../../..
-    fi
-  fi
-}
-
-# Add Whitelist property with flag disable in system
+# Add Whitelist property with flag disable
 set_whitelist_permission() {
   insert_line $SYSTEM/build.prop "ro.control_privapp_permissions=disable" after 'net.bt.name=Android' 'ro.control_privapp_permissions=disable'
 }
@@ -6719,247 +6190,7 @@ set_whitelist_permission() {
 # Apply Privileged permission patch
 whitelist_patch() {
   purge_whitelist_permission
-  purge_boot_whitelist_permission
   set_whitelist_permission
-}
-
-# Update boot image security patch level
-spl_update_boot() {
-  cd $TMP_AIK
-  # Lets see what fstab tells me
-  block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
-  # Copy boot image
-  dd if="$block" of="boot.img" > /dev/null 2>&1
-  ./unpackimg.sh boot.img > /dev/null 2>&1
-  if [ -f "split_img/boot.img-os_patch_level" ]; then
-    rm -rf split_img/boot.img-os_patch_level
-    echo "2021-04" >> split_img/boot.img-os_patch_level
-    chmod 0644 split_img/boot.img-os_patch_level
-    # Keep patched split image file
-    cp -f split_img/boot.img-os_patch_level $TMP/bitgapps/os_patch_level.log
-    ./repackimg.sh > /dev/null 2>&1
-    dd if="image-new.img" of="$block" > /dev/null 2>&1
-    rm -rf boot.img
-    rm -rf image-new.img
-    ./cleanup.sh > /dev/null 2>&1
-    cd ../../..
-    # Set variable for installing build property patch
-    export TARGET_SPLIT_IMAGE="true"
-  else
-    ./cleanup.sh > /dev/null 2>&1
-    # Wipe stock boot image
-    rm -rf boot.img
-    # Checkout path
-    cd ../../..
-    # Skip installing build property patch, if boot unpack failed
-    export TARGET_SPLIT_IMAGE="false"
-  fi
-}
-
-# Apply safetynet patch on system/vendor build
-set_cts_patch() {
-  # Ext Build fingerprint
-  if [ -n "$(cat $SYSTEM/build.prop | grep ro.system.build.fingerprint)" ]; then
-    CTS_DEFAULT_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint="
-    grep -v "$CTS_DEFAULT_SYSTEM_EXT_BUILD_FINGERPRINT" $SYSTEM/build.prop > $TMP/system.prop
-    rm -rf $SYSTEM/build.prop
-    cp -f $TMP/system.prop $SYSTEM/build.prop
-    chmod 0644 $SYSTEM/build.prop
-    rm -rf $TMP/system.prop
-    CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
-    insert_line $SYSTEM/build.prop "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT" after 'ro.system.build.date.utc=' "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT"
-  else
-    echo "ERROR: Unable to find target property 'ro.system.build.fingerprint'" >> $TARGET_SYSTEM
-  fi
-  # Build fingerprint
-  if [ -n "$(cat $SYSTEM/build.prop | grep ro.build.fingerprint)" ]; then
-    CTS_DEFAULT_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint="
-    grep -v "$CTS_DEFAULT_SYSTEM_BUILD_FINGERPRINT" $SYSTEM/build.prop > $TMP/system.prop
-    rm -rf $SYSTEM/build.prop
-    cp -f $TMP/system.prop $SYSTEM/build.prop
-    chmod 0644 $SYSTEM/build.prop
-    rm -rf $TMP/system.prop
-    CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
-    insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_FINGERPRINT" after 'ro.build.description=' "$CTS_SYSTEM_BUILD_FINGERPRINT"
-  else
-    echo "ERROR: Unable to find target property 'ro.build.fingerprint'" >> $TARGET_SYSTEM
-  fi
-  # Build security patch
-  if [ -n "$(cat $SYSTEM/build.prop | grep ro.build.version.security_patch)" ]; then
-    CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=";
-    grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $SYSTEM/build.prop > $TMP/system.prop
-    rm -rf $SYSTEM/build.prop
-    cp -f $TMP/system.prop $SYSTEM/build.prop
-    chmod 0644 $SYSTEM/build.prop
-    rm -rf $TMP/system.prop
-    CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-04-05";
-    insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
-  else
-    echo "ERROR: Unable to find target property 'ro.build.version.security_patch'" >> $TARGET_SYSTEM
-  fi
-  if [ "$device_vendorpartition" == "false" ]; then
-    # Build security patch
-    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.vendor.build.security_patch)" ]; then
-      CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=";
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
-      rm -rf $SYSTEM/vendor/build.prop
-      cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
-      chmod 0644 $SYSTEM/vendor/build.prop
-      rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-04-05";
-      insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
-    else
-      echo "ERROR: Unable to find target property 'ro.vendor.build.security_patch'" >> $TARGET_VENDOR
-    fi
-    # Build fingerprint
-    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.vendor.build.fingerprint)" ]; then
-      CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint="
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
-      rm -rf $SYSTEM/vendor/build.prop
-      cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
-      chmod 0644 $SYSTEM/vendor/build.prop
-      rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
-      insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
-    else
-      echo "ERROR: Unable to find target property 'ro.vendor.build.fingerprint'" >> $TARGET_VENDOR
-    fi
-    # Build bootimage
-    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.bootimage.build.fingerprint)" ]; then
-      CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint="
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
-      rm -rf $SYSTEM/vendor/build.prop
-      cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
-      chmod 0644 $SYSTEM/vendor/build.prop
-      rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
-      insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
-    else
-      echo "ERROR: Unable to find target property 'ro.bootimage.build.fingerprint'" >> $TARGET_VENDOR
-    fi
-  fi
-  if [ "$device_vendorpartition" == "true" ]; then
-    # Build security patch
-    if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.security_patch)" ]; then
-      CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=";
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $VENDOR/build.prop > $TMP/vendor.prop
-      rm -rf $VENDOR/build.prop
-      cp -f $TMP/vendor.prop $VENDOR/build.prop
-      chmod 0644 $VENDOR/build.prop
-      rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-04-05";
-      insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
-    else
-      echo "ERROR: Unable to find target property 'ro.vendor.build.security_patch'" >> $TARGET_VENDOR
-    fi
-    # Build fingerprint
-    if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.fingerprint)" ]; then
-      CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint="
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT" $VENDOR/build.prop > $TMP/vendor.prop
-      rm -rf $VENDOR/build.prop
-      cp -f $TMP/vendor.prop $VENDOR/build.prop
-      chmod 0644 $VENDOR/build.prop
-      rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
-      insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
-    else
-      echo "ERROR: Unable to find target property 'ro.vendor.build.fingerprint'" >> $TARGET_VENDOR
-    fi
-    # Build bootimage
-    if [ -n "$(cat $VENDOR/build.prop | grep ro.bootimage.build.fingerprint)" ]; then
-      CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint="
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE" $VENDOR/build.prop > $TMP/vendor.prop
-      rm -rf $VENDOR/build.prop
-      cp -f $TMP/vendor.prop $VENDOR/build.prop
-      chmod 0644 $VENDOR/build.prop
-      rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
-      insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
-    else
-      echo "ERROR: Unable to find target property 'ro.bootimage.build.fingerprint'" >> $TARGET_VENDOR
-    fi
-  else
-    echo "ERROR: No vendor partition present" >> $PARTITION
-  fi
-}
-
-# Universal SafetyNet Fix; Works together with CTS patch
-usf_v26() {
-  # Set defaults and unpack
-  ZIP="zip/Keystore.tar.xz"
-  unpack_zip
-  tar tvf $ZIP_FILE/Keystore.tar.xz >> $KEYSTORE
-  tar -xf $ZIP_FILE/Keystore.tar.xz -C $TMP_KEYSTORE
-  # Do not install, if Android SDK 25 detected
-  if [ ! "$android_sdk" == "$supported_sdk_v25" ]; then
-    # Up-to Android SDK 29, patched keystore executable required
-    if [ "$android_sdk" -le "$supported_sdk_v29" ]; then
-      # Install patched keystore
-      rm -rf $SYSTEM/bin/keystore
-      cp -f $TMP_KEYSTORE/keystore $SYSTEM/bin/keystore
-      chmod 0755 $SYSTEM/bin/keystore
-      chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
-    fi
-  fi
-  # For Android SDK 30, patched keystore executable and library required
-  if [ "$android_sdk" == "$supported_sdk_v30" ]; then
-    # Install patched keystore
-    rm -rf $SYSTEM/bin/keystore
-    cp -f $TMP_KEYSTORE/keystore $SYSTEM/bin/keystore
-    chmod 0755 $SYSTEM/bin/keystore
-    chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
-    # Install patched libkeystore
-    rm -rf $SYSTEM/lib64/libkeystore-attestation-application-id.so
-    cp -f $TMP_KEYSTORE/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
-    chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so
-    chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
-  fi
-}
-
-# Check whether CTS config file present in device or not
-get_cts_config() {
-  for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage; do
-    for c in $(find $f -iname "cts-config.prop" 2>/dev/null); do
-      if [ -f "$c" ]; then
-        cts_config="true"
-      fi
-    done
-  done
-  if [ ! "$cts_config" == "true" ]; then
-    cts_config="false"
-  fi
-}
-
-print_title_cts() {
-  if [ "$cts_config" == "true" ]; then
-    ui_print "- CTS config detected"
-    ui_print "- Installing CTS patch"
-  fi
-  if [ "$cts_config" == "false" ]; then
-    ui_print "! CTS config not found"
-    ui_print "! Skip installing CTS patch"
-  fi
-}
-
-# Apply CTS patch
-on_cts_patch() {
-  if [ "$cts_config" == "true" ]; then
-    if [ "$supported_cts_config" == "true" ]; then
-      spl_update_boot
-      if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
-        set_cts_patch
-        usf_v26
-        insert_line $SYSTEM/config.prop "ro.cts.enabled=true" after '# Begin build properties' "ro.cts.enabled=true"
-        ui_print "- CTS patch installed"
-      else
-        ui_print "! Error installing CTS patch"
-      fi
-    else
-      echo "ERROR: Config property set to 'false'" >> $CTS_PATCH
-    fi
-  else
-    echo "ERROR: Config file not found" >> $CTS_PATCH
-  fi
 }
 
 # API fixes
@@ -7036,7 +6267,6 @@ selinux_fix() {
   fi
 }
 
-# Check whether wipe config file present in device or not
 get_wipe_config() {
   for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage; do
     for w in $(find $f -iname "wipe-config.prop" 2>/dev/null); do
@@ -7321,7 +6551,7 @@ helper() {
   zip_extract
   print_title
   set_bb
-  chk_pre_inst
+  copy_busybox_binary
   umount_all
 }
 
@@ -7336,7 +6566,6 @@ pre_install() {
     system_as_root
     super_partition
     ab_slot
-    chk_mnt_part
     mount_all
     check_rw_status
     system_layout
@@ -7359,16 +6588,13 @@ pre_install() {
     system_as_root
     super_partition
     ab_slot
-    chk_mnt_part
     mount_all
     check_rw_status
     system_layout
     mount_status
     chk_inst_pkg
     on_inst_abort
-    get_boot_config_path
     get_setup_config_path
-    get_cts_config_path
     get_wipe_config_path
     profile
     on_release_tag
@@ -7388,40 +6614,36 @@ pre_install() {
 
 # Check availability of Product partition
 chk_product() {
-  if [ "$SUPER_PARTITION" == "true" ]; then
-    if [ "$android_sdk" == "$supported_sdk_v29" ]; then
-      if [ ! -n "$(cat $fstab | grep /product)" ]; then
-        ui_print "! Product partition not found. Aborting..."
-        # Wipe ZIP extracts
-        cleanup
-        unmount_all
-        ui_print "! Installation failed"
-        ui_print " "
-        # Reset any error code
-        true
-        sync
-        exit 1
-      fi
+  if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "$supported_sdk_v29" ]; then
+    if [ ! -n "$(cat $fstab | grep /product)" ]; then
+      ui_print "! Product partition not found. Aborting..."
+      # Wipe ZIP extracts
+      cleanup
+      unmount_all
+      ui_print "! Installation failed"
+      ui_print " "
+      # Reset any error code
+      true
+      sync
+      exit 1
     fi
   fi
 }
 
 # Check availability of SystemExt partition
 chk_system_Ext() {
-  if [ "$SUPER_PARTITION" == "true" ]; then
-    if [ "$android_sdk" == "$supported_sdk_v30" ]; then
-      if [ ! -n "$(cat $fstab | grep /system_ext)" ]; then
-        ui_print "! SystemExt partition not found. Aborting..."
-        # Wipe ZIP extracts
-        cleanup
-        unmount_all
-        ui_print "! Installation failed"
-        ui_print " "
-        # Reset any error code
-        true
-        sync
-        exit 1
-      fi
+  if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "$supported_sdk_v30" ]; then
+    if [ ! -n "$(cat $fstab | grep /system_ext)" ]; then
+      ui_print "! SystemExt partition not found. Aborting..."
+      # Wipe ZIP extracts
+      cleanup
+      unmount_all
+      ui_print "! Installation failed"
+      ui_print " "
+      # Reset any error code
+      true
+      sync
+      exit 1
     fi
   fi
 }
@@ -7597,12 +6819,7 @@ post_install() {
     post_backup
     build_defaults
     mk_component
-    boot_image_editor
     disk_space_before
-    on_boot_check
-    get_boot_config
-    print_title_boot
-    patch_bootimg
     ext_pathmap
     product_pathmap
     system_pathmap
@@ -7636,10 +6853,6 @@ post_install() {
     opt_v25
     on_whitelist_check
     whitelist_patch
-    on_cts_check
-    get_cts_config
-    print_title_cts
-    on_cts_patch
     sdk_fix
     selinux_fix
     sqlite_opt
