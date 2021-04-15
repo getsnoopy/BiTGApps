@@ -8,6 +8,7 @@
 * [ROM With GApps](rwg.md)
 * [Additional Packages](addon.md)
 * [Additional Patches](patches.md)
+* [OTA Config](ota.md)
 * [Installation](installs.md)
 * [Known Issue](bug.md)
 * [Device Partition](partitions.md)
