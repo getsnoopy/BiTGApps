@@ -4803,10 +4803,10 @@ target_lib64() {
 
 dialer_config() {
   # Set default packages and unpack
-  ZIP="zip/Permissions.tar.xz" && unpack_zip
+  ZIP="zip/DialerPermissions.tar.xz" && unpack_zip
   # Unpack system files
-  tar tvf $ZIP_FILE/Permissions.tar.xz >> $LOG
-  tar -xf $ZIP_FILE/Permissions.tar.xz -C $TMP_G_PERM
+  tar tvf $ZIP_FILE/DialerPermissions.tar.xz >> $LOG
+  tar -xf $ZIP_FILE/DialerPermissions.tar.xz -C $TMP_G_PERM
   # Install package
   pkg_TMPPerm
   # Keep API based config
