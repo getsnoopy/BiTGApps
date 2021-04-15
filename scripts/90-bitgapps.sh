@@ -162,6 +162,8 @@ tmp_dir() {
   test -d $TMP/addon/app || mkdir $TMP/addon/app
   test -d $TMP/addon/priv-app || mkdir $TMP/addon/priv-app
   test -d $TMP/addon/core || mkdir $TMP/addon/core
+  test -d $TMP/addon/permissions || mkdir $TMP/addon/permissions
+  test -d $TMP/addon/framework || mkdir $TMP/addon/framework
   test -d $TMP/addon/lib || mkdir $TMP/addon/lib
   test -d $TMP/addon/lib64 || mkdir $TMP/addon/lib64
   test -d $TMP/rwg || mkdir $TMP/rwg
@@ -1671,6 +1673,13 @@ backupdirSYSAddon() {
     $SYSTEM/priv-app/Velvet
     $SYSTEM/priv-app/WellbeingPrebuilt"
 
+  SYS_PERMISSIONS_ADDON="
+    $SYSTEM/etc/permissions/com.google.android.dialer.framework.xml
+    $SYSTEM/etc/permissions/com.google.android.dialer.support.xml"
+
+  SYS_FRAMEWORK_ADDON="
+    $SYSTEM/framework/com.google.android.dialer.support.jar"
+
   SYS_LIB_ADDON="
     $SYSTEM/lib/libsketchology_native.so"
 
@@ -1799,6 +1808,13 @@ restoredirTMPAddon() {
     $TMP/addon/priv-app/Velvet
     $TMP/addon/priv-app/WellbeingPrebuilt"
 
+  TMP_PERMISSIONS_ADDON="
+    $TMP/addon/permissions/com.google.android.dialer.framework.xml
+    $TMP/addon/permissions/com.google.android.dialer.support.xml"
+
+  TMP_FRAMEWORK_ADDON="
+    $TMP/addon/framework/com.google.android.dialer.support.jar"
+
   TMP_LIB_ADDON="
     $TMP/addon/lib/libsketchology_native.so"
 
@@ -1912,6 +1928,8 @@ trigger_addon_backup() {
   if [ "$addon_install_status" == "true" ]; then
     mv $SYS_APP_ADDON $TMP/addon/app 2>/dev/null
     mv $SYS_PRIVAPP_ADDON $TMP/addon/priv-app 2>/dev/null
+    mv $SYS_PERMISSIONS_ADDON $TMP/addon/permissions 2>/dev/null
+    mv $SYS_FRAMEWORK_ADDON $TMP/addon/framework 2>/dev/null
     mv $SYS_LIB_ADDON $TMP/addon/lib 2>/dev/null
     mv $SYS_LIB64_ADDON $TMP/addon/lib64 2>/dev/null
   fi
@@ -1921,6 +1939,8 @@ trigger_addon_restore() {
   if [ "$addon_install_status" == "true" ]; then
     mv $TMP_APP_ADDON $SYSTEM/app 2>/dev/null
     mv $TMP_PRIVAPP_ADDON $SYSTEM/priv-app 2>/dev/null
+    mv $TMP_PERMISSIONS_ADDON $SYSTEM/etc/permissions 2>/dev/null
+    mv $TMP_FRAMEWORK_ADDON $SYSTEM/framework 2>/dev/null
     mv $TMP_LIB_ADDON $SYSTEM/lib 2>/dev/null
     mv $TMP_LIB64_ADDON $SYSTEM/lib64 2>/dev/null
   fi
