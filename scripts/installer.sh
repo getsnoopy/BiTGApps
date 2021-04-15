@@ -2894,6 +2894,7 @@ on_pkg_inst() {
   if [ "$ZIPTYPE" == "addon" ]; then
     pkg_TMPSys
     pkg_TMPPriv
+    pkg_TMPFramework
     pkg_TMPLib
     pkg_TMPLib64
   fi
@@ -4800,6 +4801,47 @@ target_lib64() {
   chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_LIB64/libsketchology_native.so"
 }
 
+dialer_config() {
+  # Set default packages and unpack
+  ZIP="zip/Permissions.tar.xz" && unpack_zip
+  # Unpack system files
+  tar tvf $ZIP_FILE/Permissions.tar.xz >> $LOG
+  tar -xf $ZIP_FILE/Permissions.tar.xz -C $TMP_G_PERM
+  # Install package
+  pkg_TMPPerm
+  # Keep API based config
+  if [ "$android_sdk" -le "$supported_sdk_v25" ]; then
+    mv -f $SYSTEM_ETC_PERM/com.google.android.dialer.framework.25.xml $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.29.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.30.xml
+  fi
+  if [ "$android_sdk" == "$supported_sdk_v29" ]; then
+    mv -f $SYSTEM_ETC_PERM/com.google.android.dialer.framework.29.xml $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.25.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.30.xml
+  fi
+  if [ "$android_sdk" -ge "$supported_sdk_v30" ]; then
+    mv -f $SYSTEM_ETC_PERM/com.google.android.dialer.framework.30.xml $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.25.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.29.xml
+  fi
+  # Set selinux context
+  chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml"
+  chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.dialer.support.xml"
+}
+
+dialer_framework() {
+  # Set default packages and unpack
+  ZIP="zip/DialerFramework.tar.xz" && unpack_zip
+  # Unpack system files
+  tar tvf $ZIP_FILE/DialerFramework.tar.xz >> $LOG
+  tar -xf $ZIP_FILE/DialerFramework.tar.xz -C $TMP_FRAMEWORK
+  # Install package
+  on_pkg_inst
+  # Set selinux context
+  chcon -h u:object_r:system_file:s0 "$SYSTEM_FRAMEWORK/com.google.android.dialer.support.jar"
+}
+
 # Set Google Assistant as default
 set_google_assistant_default() {
   if [ "$supported_assistant_config" == "true" ] || [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
@@ -5368,6 +5410,8 @@ set_addon_zip_conf() {
       ADDON_CORE="DialerGooglePrebuilt.tar.xz"
       PKG_CORE="DialerGooglePrebuilt"
       target_core
+      dialer_config
+      dialer_framework
       set_google_dialer_default
     fi
     if [ "$supported_gboard_config" == "true" ]; then
@@ -5811,6 +5855,8 @@ set_addon_zip_sep() {
         PKG_CORE="DialerGooglePrebuilt"
       fi
       target_core
+      dialer_config
+      dialer_framework
       set_google_dialer_default
     fi
     if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
@@ -6359,6 +6405,7 @@ post_install_wipe() {
   rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreQt
   rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreRvc
   rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreSvc
+  rm -rf $SYSTEM_FRAMEWORK/com.google.android.dialer.support.jar
   rm -rf $SYSTEM_LIB/libfacenet.so
   rm -rf $SYSTEM_LIB/libfilterpack_facedetect.so
   rm -rf $SYSTEM_LIB/libfrsdk.so
@@ -6372,6 +6419,8 @@ post_install_wipe() {
   rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
   rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
   rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
+  rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
+  rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
   rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
   rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
   rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
