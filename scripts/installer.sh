@@ -138,7 +138,7 @@ set_bb() {
 }
 
 # Backup busybox in data partition for OTA script
-copy_busybox_binary() { mkdir $ANDROID_DATA/busybox; cp -f $TMP/busybox-arm $ANDROID_DATA/busybox/busybox; }
+copy_busybox_binary() { rm -rf $ANDROID_DATA/busybox; mkdir $ANDROID_DATA/busybox; cp -f $TMP/busybox-arm $ANDROID_DATA/busybox/busybox; }
 
 # Unset predefined environmental variable
 recovery_actions() {
