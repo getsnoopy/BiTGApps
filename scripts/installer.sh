@@ -979,7 +979,6 @@ unmount_all() {
 }
 
 cleanup() {
-  rm -rf $TMP/bin
   rm -rf $TMP/bitgapps*
   rm -rf $TMP/busybox-arm
   rm -rf $TMP/config.prop
@@ -994,6 +993,7 @@ cleanup() {
   rm -rf $TMP/util_functions.sh
   rm -rf $TMP/zip
   rm -rf $TMP/zipalign
+  rm -rf $TMP/bin
 }
 
 on_abort() {

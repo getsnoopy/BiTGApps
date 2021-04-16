@@ -503,13 +503,13 @@ unmount_all() {
 }
 
 cleanup() {
-  rm -rf $TMP/bin
   rm -rf $TMP/busybox-arm
   rm -rf $TMP/installer.sh
   rm -rf $TMP/mounted
   rm -rf $TMP/unzip
   rm -rf $TMP/updater
   rm -rf $TMP/zip
+  rm -rf $TMP/bin
 }
 
 on_abort() {
