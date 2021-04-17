@@ -1502,7 +1502,7 @@ ext_pathmap() {
     test -d $SYSTEM_FRAMEWORK || mkdir $SYSTEM_FRAMEWORK
     test -d $SYSTEM_LIB || mkdir $SYSTEM_LIB
     test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
-    [ ! "$AARCH64" == "true" ] && rm -rf $SYSTEM_LIB64
+    [ ! "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && rm -rf $SYSTEM_LIB64
     test -d $SYSTEM_XBIN || mkdir $SYSTEM_XBIN
     test -d $SYSTEM_OVERLAY || mkdir $SYSTEM_OVERLAY
     chmod 0755 $SYSTEM_APP
@@ -1556,7 +1556,7 @@ product_pathmap() {
     test -d $SYSTEM_FRAMEWORK || mkdir $SYSTEM_FRAMEWORK
     test -d $SYSTEM_LIB || mkdir $SYSTEM_LIB
     test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
-    [ ! "$AARCH64" == "true" ] && rm -rf $SYSTEM_LIB64
+    [ ! "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && rm -rf $SYSTEM_LIB64
     test -d $SYSTEM_XBIN || mkdir $SYSTEM_XBIN
     chmod 0755 $SYSTEM_APP
     chmod 0755 $SYSTEM_PRIV_APP
@@ -1607,7 +1607,7 @@ system_pathmap() {
     test -d $SYSTEM_FRAMEWORK || mkdir $SYSTEM_FRAMEWORK
     test -d $SYSTEM_LIB || mkdir $SYSTEM_LIB
     test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
-    [ ! "$AARCH64" == "true" ] && rm -rf $SYSTEM_LIB64
+    [ ! "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && rm -rf $SYSTEM_LIB64
     test -d $SYSTEM_XBIN || mkdir $SYSTEM_XBIN
     chmod 0755 $SYSTEM_APP
     chmod 0755 $SYSTEM_PRIV_APP
