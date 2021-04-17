@@ -139,6 +139,29 @@ on_fstab_check() {
   [ "$ANDROID_RECOVERY_FSTAB" == "false" ] && on_abort "! Unable to find valid fstab. Aborting..."
 }
 
+# Preserve fstab before it gets deleted on mount stage
+preserve_fstab() {
+  if [ "$device_abpartition" == "true" ] || [ "$SUPER_PARTITION" == "true" ]; then
+    # Remove all symlinks from /etc
+    rm -rf /etc
+    mkdir /etc && chmod 0755 /etc
+    # Copy raw fstab and other files from /system/etc to /etc without symbolic-link
+    cp -f /system/etc/cgroups.json /etc/cgroups.json 2>/dev/null
+    cp -f /system/etc/event-log-tags /etc/event-log-tags 2>/dev/null
+    cp -f /system/etc/fstab /etc/fstab 2>/dev/null
+    cp -f /system/etc/ld.config.txt /etc/ld.config.txt 2>/dev/null
+    cp -f /system/etc/mkshrc /etc/mkshrc 2>/dev/null
+    cp -f /system/etc/mtab /etc/mtab 2>/dev/null
+    cp -f /system/etc/recovery.fstab /etc/recovery.fstab 2>/dev/null
+    cp -f /system/etc/task_profiles.json /etc/task_profiles.json 2>/dev/null
+    cp -f /system/etc/twrp.fstab /etc/twrp.fstab 2>/dev/null
+    # Recursively update permission
+    chmod -R 0644 /etc
+    # Create backup of recovery system
+    mv system systembk
+  fi
+}
+
 # Set vendor mount point
 vendor_mnt() {
   device_vendorpartition="false"
@@ -151,7 +174,7 @@ vendor_mnt() {
 # Detect A/B partition layout https://source.android.com/devices/tech/ota/ab_updates
 ab_partition() {
   device_abpartition="false"
-  if [ ! -z "$active_slot" ]; then
+  if [ ! -z "$slot_suffix" ]; then
     device_abpartition="true"
   fi
   if [ "$AB_OTA_UPDATER" == "true" ]; then
@@ -308,14 +331,17 @@ mount_all() {
   # System always set as ANDROID_ROOT
   if [ "$($l/grep -w -o /product $fstab)" ]; then mkdir /product; fi
   if [ "$($l/grep -w -o /system_ext $fstab)" ]; then mkdir /system_ext; fi
+  # Set A/B slot property
+  local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
   if [ "$SUPER_PARTITION" == "true" ]; then
+    # Restore recovery system
+    mv systembk system
     if [ "$device_abpartition" == "true" ]; then
       for block in system system_ext product vendor; do
         for slot in "" _a _b; do
           blockdev --setrw /dev/block/mapper/$block$slot > /dev/null 2>&1
         done
       done
-      local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
       ui_print "- Mounting /system"
       mount -o ro -t auto /dev/block/mapper/system$slot $ANDROID_ROOT > /dev/null 2>&1
       mount -o rw,remount -t auto /dev/block/mapper/system$slot $ANDROID_ROOT
@@ -334,9 +360,8 @@ mount_all() {
       fi
       if [ -n "$(cat $fstab | grep /system_ext)" ]; then
         ui_print "- Mounting /system_ext"
-        blockdev --setrw /dev/block/mapper/system_ext
-        mount -o ro -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/system_ext /system_ext
+        mount -o ro -t auto /dev/block/mapper/system_ext$slot /system_ext > /dev/null 2>&1
+        mount -o rw,remount -t auto /dev/block/mapper/system_ext$slot /system_ext
         is_mounted /system_ext || on_abort "! Cannot mount /system_ext. Aborting..."
       fi
     fi
@@ -387,31 +412,30 @@ mount_all() {
         is_mounted /product || on_abort "! Cannot mount /product. Aborting..."
       fi
     fi
-    if [ "$device_abpartition" == "true" ]; then
-      if [ "$system_as_root" == "true" ]; then
-        local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
-        ui_print "- Mounting /system"
-        if [ "$ANDROID_ROOT" == "/system_root" ]; then
-          mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
-          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
-        fi
-        if [ "$ANDROID_ROOT" == "/system" ]; then
-          mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
-          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
-        fi
-        is_mounted $ANDROID_ROOT || on_abort "! Cannot mount $ANDROID_ROOT. Aborting..."
-        if [ "$device_vendorpartition" == "true" ]; then
-          ui_print "- Mounting /vendor"
-          mount -o ro -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
-          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR
-          is_mounted $VENDOR || on_abort "! Cannot mount $VENDOR. Aborting..."
-        fi
-        if [ -n "$(cat $fstab | grep /product)" ]; then
-          ui_print "- Mounting /product"
-          mount -o ro -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
-          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/product$slot /product
-          is_mounted /product || on_abort "! Cannot mount /product. Aborting..."
-        fi
+    if [ "$device_abpartition" == "true" ] && [ "$system_as_root" == "true" ]; then
+      # Restore recovery system
+      mv systembk system
+      ui_print "- Mounting /system"
+      if [ "$ANDROID_ROOT" == "/system_root" ]; then
+        mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
+        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
+      fi
+      if [ "$ANDROID_ROOT" == "/system" ]; then
+        mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
+        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
+      fi
+      is_mounted $ANDROID_ROOT || on_abort "! Cannot mount $ANDROID_ROOT. Aborting..."
+      if [ "$device_vendorpartition" == "true" ]; then
+        ui_print "- Mounting /vendor"
+        mount -o ro -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
+        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR
+        is_mounted $VENDOR || on_abort "! Cannot mount $VENDOR. Aborting..."
+      fi
+      if [ -n "$(cat $fstab | grep /product)" ]; then
+        ui_print "- Mounting /product"
+        mount -o ro -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
+        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/product$slot /product
+        is_mounted /product || on_abort "! Cannot mount /product. Aborting..."
       fi
     fi
   fi
@@ -739,6 +763,7 @@ ab_partition
 system_as_root
 super_partition
 ab_slot
+preserve_fstab
 vendor_mnt
 mount_all
 check_rw_status

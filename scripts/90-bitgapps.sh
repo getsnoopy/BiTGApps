@@ -228,6 +228,29 @@ on_sdk() {
   supported_sdk_v25="25"
 }
 
+# Preserve fstab before it gets deleted on mount stage
+preserve_fstab() {
+  if [ "$device_abpartition" == "true" ] || [ "$SUPER_PARTITION" == "true" ]; then
+    # Remove all symlinks from /etc
+    rm -rf /etc
+    mkdir /etc && chmod 0755 /etc
+    # Copy raw fstab and other files from /system/etc to /etc without symbolic-link
+    cp -f /system/etc/cgroups.json /etc/cgroups.json 2>/dev/null
+    cp -f /system/etc/event-log-tags /etc/event-log-tags 2>/dev/null
+    cp -f /system/etc/fstab /etc/fstab 2>/dev/null
+    cp -f /system/etc/ld.config.txt /etc/ld.config.txt 2>/dev/null
+    cp -f /system/etc/mkshrc /etc/mkshrc 2>/dev/null
+    cp -f /system/etc/mtab /etc/mtab 2>/dev/null
+    cp -f /system/etc/recovery.fstab /etc/recovery.fstab 2>/dev/null
+    cp -f /system/etc/task_profiles.json /etc/task_profiles.json 2>/dev/null
+    cp -f /system/etc/twrp.fstab /etc/twrp.fstab 2>/dev/null
+    # Recursively update permission
+    chmod -R 0644 /etc
+    # Create backup of recovery system
+    mv system systembk
+  fi
+}
+
 # Set vendor mount point
 vendor_mnt() {
   device_vendorpartition="false"
@@ -373,14 +396,17 @@ mount_all() {
   # System always set as ANDROID_ROOT
   if [ "$($BB grep -w -o /product $fstab)" ]; then mkdir /product; fi
   if [ "$($BB grep -w -o /system_ext $fstab)" ]; then mkdir /system_ext; fi
+  # Set A/B slot property
+  local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
   if [ "$SUPER_PARTITION" == "true" ]; then
+    # Restore recovery system
+    mv systembk system
     if [ "$device_abpartition" == "true" ]; then
-      for block in system product vendor; do
+      for block in system system_ext product vendor; do
         for slot in "" _a _b; do
           blockdev --setrw /dev/block/mapper/$block$slot > /dev/null 2>&1
         done
       done
-      local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
       mount -o ro -t auto /dev/block/mapper/system$slot $ANDROID_ROOT > /dev/null 2>&1
       mount -o rw,remount -t auto /dev/block/mapper/system$slot $ANDROID_ROOT
       if [ "$device_vendorpartition" == "true" ]; then
@@ -392,9 +418,8 @@ mount_all() {
         mount -o rw,remount -t auto /dev/block/mapper/product$slot /product
       fi
       if [ -n "$(cat $fstab | grep /system_ext)" ]; then
-        blockdev --setrw /dev/block/mapper/system_ext
-        mount -o ro -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/system_ext /system_ext
+        mount -o ro -t auto /dev/block/mapper/system_ext$slot /system_ext > /dev/null 2>&1
+        mount -o rw,remount -t auto /dev/block/mapper/system_ext$slot /system_ext
       fi
     fi
     if [ "$device_abpartition" == "false" ]; then
@@ -430,25 +455,24 @@ mount_all() {
         mount -o rw,remount -t auto /product
       fi
     fi
-    if [ "$device_abpartition" == "true" ]; then
-      if [ "$system_as_root" == "true" ]; then
-        local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
-        if [ "$ANDROID_ROOT" == "/system_root" ]; then
-          mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
-          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
-        fi
-        if [ "$ANDROID_ROOT" == "/system" ]; then
-          mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
-          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
-        fi
-        if [ "$device_vendorpartition" == "true" ]; then
-          mount -o ro -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
-          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR
-        fi
-        if [ -n "$(cat $fstab | grep /product)" ]; then
-          mount -o ro -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
-          mount -o rw,remount -t auto /dev/block/bootdevice/by-name/product$slot /product
-        fi
+    if [ "$device_abpartition" == "true" ] && [ "$system_as_root" == "true" ]; then
+      # Restore recovery system
+      mv systembk system
+      if [ "$ANDROID_ROOT" == "/system_root" ]; then
+        mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
+        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
+      fi
+      if [ "$ANDROID_ROOT" == "/system" ]; then
+        mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
+        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
+      fi
+      if [ "$device_vendorpartition" == "true" ]; then
+        mount -o ro -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
+        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR
+      fi
+      if [ -n "$(cat $fstab | grep /product)" ]; then
+        mount -o ro -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
+        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/product$slot /product
       fi
     fi
   fi
@@ -2287,6 +2311,7 @@ case "$1" in
     ab_partition
     system_as_root
     super_partition
+    preserve_fstab
     vendor_mnt
     mount_all
     system_layout
@@ -2334,6 +2359,7 @@ case "$1" in
     ab_partition
     system_as_root
     super_partition
+    preserve_fstab
     vendor_mnt
     mount_all
     system_layout
