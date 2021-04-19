@@ -6,37 +6,37 @@ _Note: Usable only, if you are building BiTGApps package_
 
 * This variable set release tag in GApps build file
 
-* `Example: R21`
+* `Example: R24`
 
 ### COMMONADDONRELEASE
 
 * This variable set release tag in Addon build file
 
-* `Example: R9`
+* `Example: R12`
 
 ### COMMONPATCHRELEASE
 
 * This variable set release tag in Patch build file
 
-* `Example: R1`
+* `Example: R3`
 
 ### GAPPS_RELEASE
 
 * This sets release tag in utility script
 
-* `Example: R21`
+* `Example: R24`
 
 ## ADDON_RELEASE
 
 * This sets release tag in utility script
 
-* `Example: R9`
+* `Example: R12`
 
 ### TARGET_GAPPS_RELEASE
 
 * This sets deprecated release tag and works together with TARGET_DIRTY_INSTALL
 
-* `Example: 21`
+* `Example: 23`
 
 ### TARGET_DIRTY_INSTALL
 
@@ -48,13 +48,13 @@ _Note: Usable only, if you are building BiTGApps package_
 
 * This is used by system build file and works together with TARGET_DIRTY_INSTALL
 
-* `Example: 21`
+* `Example: 24`
 
 ### GAPPS_RELEASE_TAG
 
 * This is used by build script and update GApps package release tag in OTA script
 
-* `Example: 21`
+* `Example: 24`
 
 ### COMMON_SYSTEM_LAYOUT
 
@@ -72,7 +72,7 @@ _Note: Usable only, if you are building BiTGApps package_
 
 * Set release tag in GApps property file and used by BiTGApps APK
 
-* `Example: R21`
+* `Example: R24`
 
 ### SERVER
 
