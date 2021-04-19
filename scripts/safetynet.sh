@@ -123,6 +123,8 @@ on_fstab_check() {
   fstab="$?"
   # Set fstab for getting mount point
   [ -f "/etc/fstab" ] && fstab="/etc/fstab"
+  # Set recovery system fstab
+  TARGET_SYSTEM_FSTAB="/system/etc/fstab"
   # Check fstab status
   [ "$fstab" == "0" ] && ANDROID_RECOVERY_FSTAB="false"
   # Abort, if no valid fstab found
@@ -151,6 +153,8 @@ preserve_fstab() {
     mv system systembk
   fi
 }
+
+fstab_no_symlink() { WIPE_SYSTEM_FSTAB="false"; if [ -f "$TARGET_SYSTEM_FSTAB" ]; then preserve_fstab; WIPE_SYSTEM_FSTAB="true"; fi; }
 
 # Set vendor mount point
 vendor_mnt() {
@@ -325,7 +329,7 @@ mount_all() {
   local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
   if [ "$SUPER_PARTITION" == "true" ]; then
     # Restore recovery system
-    mv systembk system
+    $WIPE_SYSTEM_FSTAB && mv systembk system
     if [ "$device_abpartition" == "true" ]; then
       for block in system system_ext product vendor; do
         for slot in "" _a _b; do
@@ -404,7 +408,7 @@ mount_all() {
     fi
     if [ "$device_abpartition" == "true" ] && [ "$system_as_root" == "true" ]; then
       # Restore recovery system
-      mv systembk system
+      $WIPE_SYSTEM_FSTAB && mv systembk system
       ui_print "- Mounting /system"
       if [ "$ANDROID_ROOT" == "/system_root" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
@@ -413,6 +417,10 @@ mount_all() {
       if [ "$ANDROID_ROOT" == "/system" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
+      fi
+      if [ ! "$($l/grep -w -o /system_root /proc/mounts)" ] || [ ! "$($l/grep -w -o /system /proc/mounts)" ]; then
+        mount -o ro -t auto $ANDROID_ROOT > /dev/null 2>&1
+        mount -o rw,remount -t auto $ANDROID_ROOT
       fi
       is_mounted $ANDROID_ROOT || on_abort "! Cannot mount $ANDROID_ROOT. Aborting..."
       if [ "$device_vendorpartition" == "true" ]; then
@@ -816,7 +824,7 @@ ab_partition
 system_as_root
 super_partition
 ab_slot
-preserve_fstab
+fstab_no_symlink
 vendor_mnt
 mount_all
 check_rw_status

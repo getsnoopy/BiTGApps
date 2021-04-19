@@ -24,6 +24,7 @@
 BB="/data/busybox/busybox"
 TMP="/tmp"
 fstab="/etc/fstab"
+TARGET_SYSTEM_FSTAB="/system/etc/fstab"
 SQLITE_TOOL="$TMP/xbin/sqlite3"
 
 # Set partition and boot slot property
@@ -251,6 +252,8 @@ preserve_fstab() {
   fi
 }
 
+fstab_no_symlink() { WIPE_SYSTEM_FSTAB="false"; if [ -f "$TARGET_SYSTEM_FSTAB" ]; then preserve_fstab; WIPE_SYSTEM_FSTAB="true"; fi; }
+
 # Set vendor mount point
 vendor_mnt() {
   device_vendorpartition="false"
@@ -400,7 +403,7 @@ mount_all() {
   local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
   if [ "$SUPER_PARTITION" == "true" ]; then
     # Restore recovery system
-    mv systembk system
+    $WIPE_SYSTEM_FSTAB && mv systembk system
     if [ "$device_abpartition" == "true" ]; then
       for block in system system_ext product vendor; do
         for slot in "" _a _b; do
@@ -457,7 +460,7 @@ mount_all() {
     fi
     if [ "$device_abpartition" == "true" ] && [ "$system_as_root" == "true" ]; then
       # Restore recovery system
-      mv systembk system
+      $WIPE_SYSTEM_FSTAB && mv systembk system
       if [ "$ANDROID_ROOT" == "/system_root" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
@@ -465,6 +468,10 @@ mount_all() {
       if [ "$ANDROID_ROOT" == "/system" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
+      fi
+      if [ ! "$($BB grep -w -o /system_root /proc/mounts)" ] || [ ! "$($BB grep -w -o /system /proc/mounts)" ]; then
+        mount -o ro -t auto $ANDROID_ROOT > /dev/null 2>&1
+        mount -o rw,remount -t auto $ANDROID_ROOT
       fi
       if [ "$device_vendorpartition" == "true" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
@@ -2311,7 +2318,7 @@ case "$1" in
     ab_partition
     system_as_root
     super_partition
-    preserve_fstab
+    fstab_no_symlink
     vendor_mnt
     mount_all
     system_layout
@@ -2359,7 +2366,7 @@ case "$1" in
     ab_partition
     system_as_root
     super_partition
-    preserve_fstab
+    fstab_no_symlink
     vendor_mnt
     mount_all
     system_layout
