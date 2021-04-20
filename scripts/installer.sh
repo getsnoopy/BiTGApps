@@ -1054,6 +1054,17 @@ on_installed() {
   sync
 }
 
+# Doing SQLite Optimization on these packages corrupts auto-generated db files
+blacklist_opt() {
+  # Contacts Package
+  rm -rf $ANDROID_DATA/data/com.android.contacts
+  rm -rf $ANDROID_DATA/data/com.google.android.syncadapters.contacts
+  rm -rf $ANDROID_DATA/data/com.android.providers.contacts
+  # Media Package
+  rm -rf $ANDROID_DATA/data/com.android.providers.media
+  rm -rf $ANDROID_DATA/data/com.android.providers.media.module
+}
+
 # Database optimization using sqlite tool
 sqlite_opt() {
   for i in $(find /d* -iname "*.db"); do
@@ -6938,6 +6949,7 @@ post_install() {
     whitelist_patch
     sdk_fix
     selinux_fix
+    blacklist_opt
     sqlite_opt
     sqlite_backup
     disk_space_after
