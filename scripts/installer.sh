@@ -1055,14 +1055,56 @@ on_installed() {
 }
 
 # Doing SQLite Optimization on these packages corrupts auto-generated db files
-blacklist_opt() {
-  # Contacts Package
-  rm -rf $ANDROID_DATA/data/com.android.contacts
-  rm -rf $ANDROID_DATA/data/com.google.android.syncadapters.contacts
-  rm -rf $ANDROID_DATA/data/com.android.providers.contacts
-  # Media Package
-  rm -rf $ANDROID_DATA/data/com.android.providers.media
-  rm -rf $ANDROID_DATA/data/com.android.providers.media.module
+blacklist_db_backup() {
+  # Create Contacts Package Database Backup
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.db $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.bak 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.db-journal $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.journal 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.db-shm $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.shm 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.db-wal $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.wal 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/contacts2.db $ANDROID_DATA/data/com.android.providers.contacts/databases/contacts2.bak 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/contacts2.db-shm $ANDROID_DATA/data/com.android.providers.contacts/databases/contacts2.shm 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/contacts2.db-wal $ANDROID_DATA/data/com.android.providers.contacts/databases/contacts2.wal 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/profile.db $ANDROID_DATA/data/com.android.providers.contacts/databases/profile.bak 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/profile.db-journal $ANDROID_DATA/data/com.android.providers.contacts/databases/profile.journal 2>/dev/null
+  # Create Media Package Database Backup
+  mv -f $ANDROID_DATA/data/com.android.providers.media/databases/external.db $ANDROID_DATA/data/com.android.providers.media/databases/external.bak 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media/databases/external.db-shm $ANDROID_DATA/data/com.android.providers.media/databases/external.shm 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media/databases/external.db-wal $ANDROID_DATA/data/com.android.providers.media/databases/external.wal 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media/databases/internal.db $ANDROID_DATA/data/com.android.providers.media/databases/internal.bak 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media/databases/internal.db-shm $ANDROID_DATA/data/com.android.providers.media/databases/internal.shm 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media/databases/internal.db-wal $ANDROID_DATA/data/com.android.providers.media/databases/internal.wal 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media.module/databases/external.db $ANDROID_DATA/data/com.android.providers.media.module/databases/external.bak 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media.module/databases/external.db-shm $ANDROID_DATA/data/com.android.providers.media.module/databases/external.shm 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media.module/databases/external.db-wal $ANDROID_DATA/data/com.android.providers.media.module/databases/external.wal 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media.module/databases/internal.db $ANDROID_DATA/data/com.android.providers.media.module/databases/internal.bak 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media.module/databases/internal.db-shm $ANDROID_DATA/data/com.android.providers.media.module/databases/internal.shm 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media.module/databases/internal.db-wal $ANDROID_DATA/data/com.android.providers.media.module/databases/internal.wal 2>/dev/null
+}
+
+blacklist_db_restore() {
+  # Restore Contacts Package Database
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.bak $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.db 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.journal $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.db-journal 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.shm $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.db-shm 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.wal $ANDROID_DATA/data/com.android.providers.contacts/databases/calllog.db-wal 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/contacts2.bak $ANDROID_DATA/data/com.android.providers.contacts/databases/contacts2.db 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/contacts2.shm $ANDROID_DATA/data/com.android.providers.contacts/databases/contacts2.db-shm 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/contacts2.wal $ANDROID_DATA/data/com.android.providers.contacts/databases/contacts2.db-wal 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/profile.bak $ANDROID_DATA/data/com.android.providers.contacts/databases/profile.db 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.contacts/databases/profile.journal $ANDROID_DATA/data/com.android.providers.contacts/databases/profile.db-journal 2>/dev/null
+  # Restore Media Package Database
+  mv -f $ANDROID_DATA/data/com.android.providers.media/databases/external.bak $ANDROID_DATA/data/com.android.providers.media/databases/external.db 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media/databases/external.shm $ANDROID_DATA/data/com.android.providers.media/databases/external.db-shm 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media/databases/external.wal $ANDROID_DATA/data/com.android.providers.media/databases/external.db-wal 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media/databases/internal.bak $ANDROID_DATA/data/com.android.providers.media/databases/internal.db 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media/databases/internal.shm $ANDROID_DATA/data/com.android.providers.media/databases/internal.db-shm 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media/databases/internal.wal $ANDROID_DATA/data/com.android.providers.media/databases/internal.db-wal 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media.module/databases/external.bak $ANDROID_DATA/data/com.android.providers.media.module/databases/external.db 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media.module/databases/external.shm $ANDROID_DATA/data/com.android.providers.media.module/databases/external.db-shm 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media.module/databases/external.wal $ANDROID_DATA/data/com.android.providers.media.module/databases/external.db-wal 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media.module/databases/internal.bak $ANDROID_DATA/data/com.android.providers.media.module/databases/internal.db 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media.module/databases/internal.shm $ANDROID_DATA/data/com.android.providers.media.module/databases/internal.db-shm 2>/dev/null
+  mv -f $ANDROID_DATA/data/com.android.providers.media.module/databases/internal.wal $ANDROID_DATA/data/com.android.providers.media.module/databases/internal.db-wal 2>/dev/null
 }
 
 # Database optimization using sqlite tool
@@ -6949,9 +6991,10 @@ post_install() {
     whitelist_patch
     sdk_fix
     selinux_fix
-    blacklist_opt
+    blacklist_db_backup
     sqlite_opt
     sqlite_backup
+    blacklist_db_restore
     disk_space_after
     on_installed
   fi
