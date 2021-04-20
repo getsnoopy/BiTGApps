@@ -17,7 +17,7 @@ In case, data wipe or backup lost, you will be notified with following texts.
 
 ## Usage
 
-Reboot to recovery, place **wipe-config.prop** and re-install BiTGApps.
+Place **wipe-config.prop** and re-install BiTGApps.
 
 ## Backup Conflicts
 
