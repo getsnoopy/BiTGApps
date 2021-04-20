@@ -637,11 +637,11 @@ chk_inst_pkg() {
 on_inst_abort() {
   if [ "$GAPPS_TYPE" == "OpenGApps" ]; then
     ui_print "! OpenGApps installed. Aborting..."
-    ui_print "! Installation failed"
-    ui_print " "
     # Wipe ZIP extracts
     cleanup
     unmount_all
+    ui_print "! Installation failed"
+    ui_print " "
     # Reset any error code
     true
     sync
@@ -649,11 +649,11 @@ on_inst_abort() {
   fi
   if [ "$GAPPS_TYPE" == "FlameGApps" ]; then
     ui_print "! FlameGApps installed. Aborting..."
-    ui_print "! Installation failed"
-    ui_print " "
     # Wipe ZIP extracts
     cleanup
     unmount_all
+    ui_print "! Installation failed"
+    ui_print " "
     # Reset any error code
     true
     sync
@@ -661,11 +661,11 @@ on_inst_abort() {
   fi
   if [ "$GAPPS_TYPE" == "NikGApps" ]; then
     ui_print "! NikGApps installed. Aborting..."
-    ui_print "! Installation failed"
-    ui_print " "
     # Wipe ZIP extracts
     cleanup
     unmount_all
+    ui_print "! Installation failed"
+    ui_print " "
     # Reset any error code
     true
     sync
