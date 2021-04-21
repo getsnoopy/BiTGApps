@@ -19,7 +19,8 @@ The root file system is no longer included in ramdisk image and is instead merge
 
 ## A-only
 
-Non-AB devices may have build property for enforcing privileged permissions in boot image. If you have a device that does not have SAR/AB/Dynamic Partition scheme, must install BiTGApps Whitelist Package.
+Non-AB devices may have build property for enforcing privileged permissions in boot image. If you have a device that does not have SAR/AB/Dynamic Partition scheme,
+must install BiTGApps Whitelist Package.
 
 ## Boot Conflicts
 

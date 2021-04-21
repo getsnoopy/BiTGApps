@@ -1,7 +1,7 @@
 # Additional BiTGApps Patch Installation Instructions
 
-Before **Bootlog/Safetynet/Whitelist** Patch embedded in main BiTGApps package. Making it somewhat hard to get things done. To ease the efforts of installing these patches and make sure there will be less compatibilty issues.
-These patches now shipped with separate packages.
+Before **Bootlog/Safetynet/Whitelist** Patch embedded in main BiTGApps package. Making it somewhat hard to get things done. To ease the efforts of
+installing these patches and make sure there will be less compatibilty issues. These patches now shipped with separate packages.
 
 ## Usage
 

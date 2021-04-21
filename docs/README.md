@@ -10,6 +10,7 @@
 * [Additional Patches](patches.md)
 * [OTA Config](ota.md)
 * [Installation Instructions](instructions.md)
+* [Upgrade Instructions](upgrade.md)
 * [Installation Logs](logs.md)
 * [Known Issue](bug.md)
 * [Device Partition](partitions.md)
