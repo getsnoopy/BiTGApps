@@ -101,7 +101,7 @@ zip_extract() {
 set_bb() {
   # Check device architecture
   ARCH=`uname -m`
-  if [ "$ARCH" == "armv7l" ] || [ "$ARCH" == "aarch64" ]; then
+  if [ "$ARCH" == "armv6l" ] || [ "$ARCH" == "armv7l" ] || [ "$ARCH" == "armv8b" ] || [ "$ARCH" == "armv8l" ] || [ "$ARCH" == "aarch64" ]; then
     ARCH="arm"
   fi
   ui_print "- Installing toolbox"
