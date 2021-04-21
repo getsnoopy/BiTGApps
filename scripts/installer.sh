@@ -4835,6 +4835,84 @@ print_title_addon() {
   fi
 }
 
+pre_installed_pkg() {
+  # Velvet
+  rm -rf $SYSTEM/priv-app/Velvet
+  rm -rf $SYSTEM/product/priv-app/Velvet
+  rm -rf $SYSTEM/system_ext/priv-app/Velvet
+  # CalculatorGooglePrebuilt
+  rm -rf $SYSTEM/app/CalculatorGooglePrebuilt
+  rm -rf $SYSTEM/product/app/CalculatorGooglePrebuilt
+  rm -rf $SYSTEM/system_ext/app/CalculatorGooglePrebuilt
+  # CalendarGooglePrebuilt
+  rm -rf $SYSTEM/app/CalendarGooglePrebuilt
+  rm -rf $SYSTEM/product/app/CalendarGooglePrebuilt
+  rm -rf $SYSTEM/system_ext/app/CalendarGooglePrebuilt
+  # ContactsGooglePrebuilt
+  rm -rf $SYSTEM/priv-app/ContactsGooglePrebuilt
+  rm -rf $SYSTEM/product/priv-app/ContactsGooglePrebuilt
+  rm -rf $SYSTEM/system_ext/priv-app/ContactsGooglePrebuilt
+  # DeskClockGooglePrebuilt
+  rm -rf $SYSTEM/app/DeskClockGooglePrebuilt
+  rm -rf $SYSTEM/product/app/DeskClockGooglePrebuilt
+  rm -rf $SYSTEM/system_ext/app/DeskClockGooglePrebuilt
+  # DialerGooglePrebuilt
+  rm -rf $SYSTEM/priv-app/DialerGooglePrebuilt
+  rm -rf $SYSTEM/product/priv-app/DialerGooglePrebuilt
+  rm -rf $SYSTEM/system_ext/priv-app/DialerGooglePrebuilt
+  rm -rf $SYSTEM/etc/permissions/com.google.android.dialer.framework.xml
+  rm -rf $SYSTEM/product/etc/permissions/com.google.android.dialer.framework.xml
+  rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.dialer.framework.xml
+  rm -rf $SYSTEM/etc/permissions/com.google.android.dialer.support.xml
+  rm -rf $SYSTEM/product/etc/permissions/com.google.android.dialer.support.xml
+  rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.dialer.support.xml
+  rm -rf $SYSTEM/framework/com.google.android.dialer.support.jar
+  rm -rf $SYSTEM/product/framework/com.google.android.dialer.support.jar
+  rm -rf $SYSTEM/system_ext/framework/com.google.android.dialer.support.jar
+  # GboardGooglePrebuilt
+  rm -rf $SYSTEM/app/GboardGooglePrebuilt
+  rm -rf $SYSTEM/product/app/GboardGooglePrebuilt
+  rm -rf $SYSTEM/system_ext/app/GboardGooglePrebuilt
+  # MarkupGooglePrebuilt
+  rm -rf $SYSTEM/app/MarkupGooglePrebuilt
+  rm -rf $SYSTEM/product/app/MarkupGooglePrebuilt
+  rm -rf $SYSTEM/system_ext/app/MarkupGooglePrebuilt
+  rm -rf $SYSTEM/lib/libsketchology_native.so
+  rm -rf $SYSTEM/product/lib/libsketchology_native.so
+  rm -rf $SYSTEM/system_ext/lib/libsketchology_native.so
+  rm -rf $SYSTEM/lib64/libsketchology_native.so
+  rm -rf $SYSTEM/product/lib64/libsketchology_native.so
+  rm -rf $SYSTEM/system_ext/lib64/libsketchology_native.so
+  # MessagesGooglePrebuilt
+  rm -rf $SYSTEM/app/MessagesGooglePrebuilt
+  rm -rf $SYSTEM/product/app/MessagesGooglePrebuilt
+  rm -rf $SYSTEM/system_ext/app/MessagesGooglePrebuilt
+  # CarrierServices
+  rm -rf $SYSTEM/priv-app/CarrierServices
+  rm -rf $SYSTEM/product/priv-app/CarrierServices
+  rm -rf $SYSTEM/system_ext/priv-app/CarrierServices
+  # PhotosGooglePrebuilt
+  rm -rf $SYSTEM/app/PhotosGooglePrebuilt
+  rm -rf $SYSTEM/product/app/PhotosGooglePrebuilt
+  rm -rf $SYSTEM/system_ext/app/PhotosGooglePrebuilt
+  # SoundPickerPrebuilt
+  rm -rf $SYSTEM/app/SoundPickerPrebuilt
+  rm -rf $SYSTEM/product/app/SoundPickerPrebuilt
+  rm -rf $SYSTEM/system_ext/app/SoundPickerPrebuilt
+  # YouTube
+  rm -rf $SYSTEM/app/YouTube
+  rm -rf $SYSTEM/product/app/YouTube
+  rm -rf $SYSTEM/system_ext/app/YouTube
+  # MicroGGMSCore
+  rm -rf $SYSTEM/app/MicroGGMSCore
+  rm -rf $SYSTEM/product/app/MicroGGMSCore
+  rm -rf $SYSTEM/system_ext/app/MicroGGMSCore
+  # WellbeingPrebuilt
+  rm -rf $SYSTEM/priv-app/WellbeingPrebuilt
+  rm -rf $SYSTEM/product/priv-app/WellbeingPrebuilt
+  rm -rf $SYSTEM/system_ext/priv-app/WellbeingPrebuilt
+}
+
 # Set addon install target
 target_sys() {
   # Set default packages and unpack
@@ -6169,6 +6247,7 @@ set_addon_install() {
 # Install config dependent packages
 on_addon_install() {
   print_title_addon
+  pre_installed_pkg
   set_addon_install
 }
 
