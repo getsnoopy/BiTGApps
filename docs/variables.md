@@ -1,105 +1,93 @@
 # Instructions On Environmental Variables
 
-_Note: Usable only, if you are building BiTGApps package_
+**Note: Usable only, if you are building BiTGApps package**
 
 ### COMMONGAPPSRELEASE
 
-* This variable set release tag in GApps build file
+* Set BiTGApps release tag
 
 * `Example: R24`
 
 ### COMMONADDONRELEASE
 
-* This variable set release tag in Addon build file
+* Set BiTGApps Addon release tag
 
 * `Example: R12`
 
 ### COMMONPATCHRELEASE
 
-* This variable set release tag in Patch build file
+* Set BiTGApps Patch release tag
 
 * `Example: R3`
 
 ### GAPPS_RELEASE
 
-* This sets release tag in utility script
+* Set BiTGApps release tag in utility script
 
 * `Example: R24`
 
-## ADDON_RELEASE
+### ADDON_RELEASE
 
-* This sets release tag in utility script
+* Set BiTGApps Addon release tag in utility script
 
 * `Example: R12`
 
-### TARGET_GAPPS_RELEASE
+### PATCH_RELEASE
 
-* This sets deprecated release tag and works together with TARGET_DIRTY_INSTALL
+* Set BiTGApps Patch release tag in utility script
 
-* `Example: 23`
+* `Example: R3`
 
 ### TARGET_DIRTY_INSTALL
 
-* This variable allow/restrict specific release from installing over older installed build
+* Allow/Restrict specific build from installing over previous build
 
 * `Example: true or false`
 
+### TARGET_GAPPS_RELEASE
+
+* Set BiTGApps release tag as deprecated
+
+* `Example: 24`
+
 ### TARGET_RELEASE_TAG
 
-* This is used by system build file and works together with TARGET_DIRTY_INSTALL
+* Set BiTGApps release tag in system property file
 
 * `Example: 24`
 
 ### GAPPS_RELEASE_TAG
 
-* This is used by build script and update GApps package release tag in OTA script
+* Set BiTGApps release tag in OTA script
 
 * `Example: 24`
 
-### COMMON_SYSTEM_LAYOUT
-
-* This is used by build script and works together with GAPPS_RELEASE_TAG
-
-* `Example: $S` or [commit](https://github.com/BiTGApps/BiTGApps-Build/commit/2941376b9fd7246389255e8d40321338999c031f)
-
 ### BuildDate
 
-* Set release date in GApps property file and used by BiTGApps APK
+* Set release date
 
 * `Example: 19960229`
 
 ### BuildID
 
-* Set release tag in GApps property file and used by BiTGApps APK
+* Set BiTGApps release tag in build property file
 
 * `Example: R24`
 
 ### SERVER
 
-* Set hosting server and used by release script
+* Set hosting server
 
-* `Example: sf for sourceforge`
+* `Example: sf`
 
 ### APKRELEASE
 
-* Set release tag in APK file and used by release script
+* Set APK release tag
 
 * `Example: 1.3`
 
-### TARGET_CONFIG_ADDON
+### BiTGAPPS_CONFIG
 
-* Set addon config for upload, by default _false_
-
-* `Example: true`
-
-### TARGET_CONFIG_SETUP
-
-* Set SetupWizard config for upload, by default _false_
-
-* `Example: true`
-
-### TARGET_CONFIG_WIPE
-
-* Set Uninstall config for upload, by default _false_
+* Set BiTGApps config for release
 
 * `Example: true`

@@ -6,7 +6,7 @@ BiTGApps can be installed in ROMs shipped with GApps. No config is required for 
 
 * Pixel Experience
 * Paranoid Android
-* EvolutionX
+* Evolution X
 
 We are removing all pre-installed Google Apps from supported ROMs. So we need stock APKs as a replacement to google ones. Below is the list of APKs given.
 - Contacts
@@ -19,7 +19,7 @@ We are removing all pre-installed Google Apps from supported ROMs. So we need st
 
 ## Usage
 
-Installation of BiTGApps must be done after flashing any of these ROMs. Do not flash after first boot else it will break several stuffs.
+Installation of BiTGApps in such ROMs can be done, before or after booting into system.
 
 ## OTA
 

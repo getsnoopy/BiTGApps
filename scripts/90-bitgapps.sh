@@ -20,42 +20,32 @@
 # GNU General Public License for more details.
 ##############################################################
 
-# Set defaults
-BB="/data/busybox/busybox"
-TMP="/tmp"
-fstab="/etc/fstab"
-TARGET_SYSTEM_FSTAB="/system/etc/fstab"
-SQLITE_TOOL="$TMP/xbin/sqlite3"
+# Set default
+if [ -z $backuptool_ab ]; then TMP="/tmp"; else TMP="/postinstall/tmp"; fi
 
-# Set partition and boot slot property
-system_as_root=$(getprop ro.build.system_root_image)
-active_slot=$(getprop ro.boot.slot_suffix)
-AB_OTA_UPDATER=$(getprop ro.build.ab_update)
-dynamic_partitions=$(getprop ro.boot.dynamic_partitions)
+# Set busybox
+BB="/data/busybox/busybox"
+
+# Set auto-generated fstab
+fstab="/etc/fstab"
+
+# A/B Partition specific
+TARGET_SYSTEM_FSTAB="/system/etc/fstab"
+
+# Set ADDOND_VERSION
+ADDOND_VERSION=""
 
 # Export functions from backuptool
 . $TMP/backuptool.functions
 
-# Export ADDOND_VERSION
-set_version() {
-  export ADDOND_VERSION=""
-  if [ "$AB_OTA_UPDATER" == "true" ] || [ "$dynamic_partitions" == "true" ]; then
-    export ADDOND_VERSION="3"
-  fi
-}
-
 # Output function
 trampoline() {
-  ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true || BOOTMODE=false
-  $BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
-  if ! $BOOTMODE; then
-    # update-binary|updater <RECOVERY_API_VERSION> <OUTFD> <ZIPFILE>
-    OUTFD=$(ps | grep -v 'grep' | grep -oE 'update(.*) 3 [0-9]+' | cut -d" " -f3)
-    [ -z $OUTFD ] && OUTFD=$(ps -Af | grep -v 'grep' | grep -oE 'update(.*) 3 [0-9]+' | cut -d" " -f3)
-    # update_engine_sideload --payload=file://<ZIPFILE> --offset=<OFFSET> --headers=<HEADERS> --status_fd=<OUTFD>
-    [ -z $OUTFD ] && OUTFD=$(ps | grep -v 'grep' | grep -oE 'status_fd=[0-9]+' | cut -d= -f2)
-    [ -z $OUTFD ] && OUTFD=$(ps -Af | grep -v 'grep' | grep -oE 'status_fd=[0-9]+' | cut -d= -f2)
-  fi
+  # update-binary|updater <RECOVERY_API_VERSION> <OUTFD> <ZIPFILE>
+  OUTFD=$(ps | grep -v 'grep' | grep -oE 'update(.*) 3 [0-9]+' | cut -d" " -f3)
+  [ -z $OUTFD ] && OUTFD=$(ps -Af | grep -v 'grep' | grep -oE 'update(.*) 3 [0-9]+' | cut -d" " -f3)
+  # update_engine_sideload --payload=file://<ZIPFILE> --offset=<OFFSET> --headers=<HEADERS> --status_fd=<OUTFD>
+  [ -z $OUTFD ] && OUTFD=$(ps | grep -v 'grep' | grep -oE 'status_fd=[0-9]+' | cut -d= -f2)
+  [ -z $OUTFD ] && OUTFD=$(ps -Af | grep -v 'grep' | grep -oE 'status_fd=[0-9]+' | cut -d= -f2)
   ui_print() { echo -e "ui_print $1\nui_print" >> /proc/self/fd/$OUTFD; }
 }
 
@@ -73,6 +63,23 @@ check_busybox() {
     # Do not output anything on restore stage
     exit 1
   fi
+}
+
+# Unset predefined environmental variable
+recovery_actions() {
+  OLD_LD_LIB=$LD_LIBRARY_PATH
+  OLD_LD_PRE=$LD_PRELOAD
+  OLD_LD_CFG=$LD_CONFIG_FILE
+  unset LD_LIBRARY_PATH
+  unset LD_PRELOAD
+  unset LD_CONFIG_FILE
+}
+
+# Restore predefined environmental variable
+recovery_cleanup() {
+  [ -z $OLD_LD_LIB ] || export LD_LIBRARY_PATH=$OLD_LD_LIB
+  [ -z $OLD_LD_PRE ] || export LD_PRELOAD=$OLD_LD_PRE
+  [ -z $OLD_LD_CFG ] || export LD_CONFIG_FILE=$OLD_LD_CFG
 }
 
 # Set pre-bundled busybox
@@ -94,9 +101,9 @@ set_bb() {
 
 # Check device architecture
 set_arch() {
-  arch=`uname -m`
-  if [ "$arch" == "armv7l" ]; then ARMEABI="true"; fi
-  if [ "$arch" == "aarch64" ]; then AARCH64="true"; fi
+  ARCH=`uname -m`
+  if [ "$ARCH" == "armv6l" ] || [ "$ARCH" == "armv7l" ]; then ARMEABI="true"; fi
+  if [ "$ARCH" == "armv8b" ] || [ "$ARCH" == "armv8l" ] || [ "$ARCH" == "aarch64" ]; then AARCH64="true"; fi
 }
 
 # insert_line <file> <if search string> <before|after> <line match string> <inserted line>
@@ -116,89 +123,6 @@ insert_line() {
   fi
 }
 
-# Doing SQLite Optimization on these packages corrupts auto-generated db files
-blacklist_db_backup() {
-  # Create Contacts Package Database Backup
-  mv -f /data/data/com.android.providers.contacts/databases/calllog.db /data/data/com.android.providers.contacts/databases/calllog.bak 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/calllog.db-journal /data/data/com.android.providers.contacts/databases/calllog.journal 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/calllog.db-shm /data/data/com.android.providers.contacts/databases/calllog.shm 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/calllog.db-wal /data/data/com.android.providers.contacts/databases/calllog.wal 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/contacts2.db /data/data/com.android.providers.contacts/databases/contacts2.bak 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/contacts2.db-shm /data/data/com.android.providers.contacts/databases/contacts2.shm 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/contacts2.db-wal /data/data/com.android.providers.contacts/databases/contacts2.wal 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/profile.db /data/data/com.android.providers.contacts/databases/profile.bak 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/profile.db-journal /data/data/com.android.providers.contacts/databases/profile.journal 2>/dev/null
-  # Create Media Package Database Backup
-  mv -f /data/data/com.android.providers.media/databases/external.db /data/data/com.android.providers.media/databases/external.bak 2>/dev/null
-  mv -f /data/data/com.android.providers.media/databases/external.db-shm /data/data/com.android.providers.media/databases/external.shm 2>/dev/null
-  mv -f /data/data/com.android.providers.media/databases/external.db-wal /data/data/com.android.providers.media/databases/external.wal 2>/dev/null
-  mv -f /data/data/com.android.providers.media/databases/internal.db /data/data/com.android.providers.media/databases/internal.bak 2>/dev/null
-  mv -f /data/data/com.android.providers.media/databases/internal.db-shm /data/data/com.android.providers.media/databases/internal.shm 2>/dev/null
-  mv -f /data/data/com.android.providers.media/databases/internal.db-wal /data/data/com.android.providers.media/databases/internal.wal 2>/dev/null
-  mv -f /data/data/com.android.providers.media.module/databases/external.db /data/data/com.android.providers.media.module/databases/external.bak 2>/dev/null
-  mv -f /data/data/com.android.providers.media.module/databases/external.db-shm /data/data/com.android.providers.media.module/databases/external.shm 2>/dev/null
-  mv -f /data/data/com.android.providers.media.module/databases/external.db-wal /data/data/com.android.providers.media.module/databases/external.wal 2>/dev/null
-  mv -f /data/data/com.android.providers.media.module/databases/internal.db /data/data/com.android.providers.media.module/databases/internal.bak 2>/dev/null
-  mv -f /data/data/com.android.providers.media.module/databases/internal.db-shm /data/data/com.android.providers.media.module/databases/internal.shm 2>/dev/null
-  mv -f /data/data/com.android.providers.media.module/databases/internal.db-wal /data/data/com.android.providers.media.module/databases/internal.wal 2>/dev/null
-}
-
-blacklist_db_restore() {
-  # Restore Contacts Package Database
-  mv -f /data/data/com.android.providers.contacts/databases/calllog.bak /data/data/com.android.providers.contacts/databases/calllog.db 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/calllog.journal /data/data/com.android.providers.contacts/databases/calllog.db-journal 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/calllog.shm /data/data/com.android.providers.contacts/databases/calllog.db-shm 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/calllog.wal /data/data/com.android.providers.contacts/databases/calllog.db-wal 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/contacts2.bak /data/data/com.android.providers.contacts/databases/contacts2.db 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/contacts2.shm /data/data/com.android.providers.contacts/databases/contacts2.db-shm 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/contacts2.wal /data/data/com.android.providers.contacts/databases/contacts2.db-wal 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/profile.bak /data/data/com.android.providers.contacts/databases/profile.db 2>/dev/null
-  mv -f /data/data/com.android.providers.contacts/databases/profile.journal /data/data/com.android.providers.contacts/databases/profile.db-journal 2>/dev/null
-  # Restore Media Package Database
-  mv -f /data/data/com.android.providers.media/databases/external.bak /data/data/com.android.providers.media/databases/external.db 2>/dev/null
-  mv -f /data/data/com.android.providers.media/databases/external.shm /data/data/com.android.providers.media/databases/external.db-shm 2>/dev/null
-  mv -f /data/data/com.android.providers.media/databases/external.wal /data/data/com.android.providers.media/databases/external.db-wal 2>/dev/null
-  mv -f /data/data/com.android.providers.media/databases/internal.bak /data/data/com.android.providers.media/databases/internal.db 2>/dev/null
-  mv -f /data/data/com.android.providers.media/databases/internal.shm /data/data/com.android.providers.media/databases/internal.db-shm 2>/dev/null
-  mv -f /data/data/com.android.providers.media/databases/internal.wal /data/data/com.android.providers.media/databases/internal.db-wal 2>/dev/null
-  mv -f /data/data/com.android.providers.media.module/databases/external.bak /data/data/com.android.providers.media.module/databases/external.db 2>/dev/null
-  mv -f /data/data/com.android.providers.media.module/databases/external.shm /data/data/com.android.providers.media.module/databases/external.db-shm 2>/dev/null
-  mv -f /data/data/com.android.providers.media.module/databases/external.wal /data/data/com.android.providers.media.module/databases/external.db-wal 2>/dev/null
-  mv -f /data/data/com.android.providers.media.module/databases/internal.bak /data/data/com.android.providers.media.module/databases/internal.db 2>/dev/null
-  mv -f /data/data/com.android.providers.media.module/databases/internal.shm /data/data/com.android.providers.media.module/databases/internal.db-shm 2>/dev/null
-  mv -f /data/data/com.android.providers.media.module/databases/internal.wal /data/data/com.android.providers.media.module/databases/internal.db-wal 2>/dev/null
-}
-
-# Database optimization using sqlite tool
-sqlite_opt() {
-  for i in $($l/find /d* -iname "*.db"); do
-    # Running VACUUM
-    $SQLITE_TOOL $i 'VACUUM;' > /dev/null 2>&1
-    resVac=$?
-    if [ $resVac == 0 ]; then
-      resVac="SUCCESS"
-    else
-      resVac="ERRCODE-$resVac"
-    fi
-    # Running INDEX
-    $SQLITE_TOOL $i 'REINDEX;' > /dev/null 2>&1
-    resIndex=$?
-    if [ $resIndex == 0 ]; then
-      resIndex="SUCCESS"
-    else
-      resIndex="ERRCODE-$resIndex"
-    fi
-    # Running ANALYZE
-    $SQLITE_TOOL $i 'ANALYZE;' > /dev/null 2>&1
-    resOpt=$?
-    if [ $resOpt == 0 ]; then
-      resOpt="SUCCESS"
-    else
-      resOpt="ERRCODE-$resOpt"
-    fi
-  done
-}
-
 # Create temporary dir
 tmp_dir() {
   test -d $TMP/app || mkdir $TMP/app
@@ -208,25 +132,18 @@ tmp_dir() {
   test -d $TMP/permissions || mkdir $TMP/permissions
   test -d $TMP/preferred-apps || mkdir $TMP/preferred-apps
   test -d $TMP/sysconfig || mkdir $TMP/sysconfig
-  test -d $TMP/framework || mkdir $TMP/framework
-  test -d $TMP/lib || mkdir $TMP/lib
-  test -d $TMP/lib64 || mkdir $TMP/lib64
-  test -d $TMP/xbin || mkdir $TMP/xbin
   test -d $TMP/addon || mkdir $TMP/addon
   test -d $TMP/addon/app || mkdir $TMP/addon/app
   test -d $TMP/addon/priv-app || mkdir $TMP/addon/priv-app
   test -d $TMP/addon/core || mkdir $TMP/addon/core
   test -d $TMP/addon/permissions || mkdir $TMP/addon/permissions
   test -d $TMP/addon/framework || mkdir $TMP/addon/framework
-  test -d $TMP/addon/lib || mkdir $TMP/addon/lib
-  test -d $TMP/addon/lib64 || mkdir $TMP/addon/lib64
   test -d $TMP/rwg || mkdir $TMP/rwg
   test -d $TMP/rwg/app || mkdir $TMP/rwg/app
   test -d $TMP/rwg/priv-app || mkdir $TMP/rwg/priv-app
   test -d $TMP/rwg/permissions || mkdir $TMP/rwg/permissions
   test -d $TMP/fboot || mkdir $TMP/fboot
   test -d $TMP/fboot/priv-app || mkdir $TMP/fboot/priv-app
-  test -d $TMP/fboot/lib64 || mkdir $TMP/fboot/lib64
   test -d $TMP/overlay || mkdir $TMP/overlay
 }
 
@@ -239,15 +156,10 @@ del_tmp_dir() {
   rm -rf $TMP/permissions
   rm -rf $TMP/preferred-apps
   rm -rf $TMP/sysconfig
-  rm -rf $TMP/framework
-  rm -rf $TMP/lib
-  rm -rf $TMP/lib64
-  rm -rf $TMP/xbin
   rm -rf $TMP/addon
   rm -rf $TMP/rwg
   rm -rf $TMP/fboot
   rm -rf $TMP/overlay
-  rm -rf $TMP/keystore
   rm -rf $TMP/SYS_APP_CP
   rm -rf $TMP/SYS_PRIV_CP
   rm -rf $TMP/PRO_APP_CP
@@ -271,20 +183,10 @@ shared_library() {
   rm -rf $S/system_ext/priv-app/ExtServices
 }
 
-# Set supported Android SDK Version
-on_sdk() {
-  supported_sdk_v31="31"
-  supported_sdk_v30="30"
-  supported_sdk_v29="29"
-  supported_sdk_v28="28"
-  supported_sdk_v27="27"
-  supported_sdk_v26="26"
-  supported_sdk_v25="25"
-}
-
 # Preserve fstab before it gets deleted on mount stage
 preserve_fstab() {
-  if [ "$device_abpartition" == "true" ] || [ "$SUPER_PARTITION" == "true" ]; then
+  RESTORE_RECOVERY_SYSTEM="false"
+  if [ -f "$TARGET_SYSTEM_FSTAB" ]; then
     # Remove all symlinks from /etc
     rm -rf /etc
     mkdir /etc && chmod 0755 /etc
@@ -302,10 +204,18 @@ preserve_fstab() {
     chmod -R 0644 /etc
     # Create backup of recovery system
     mv system systembk
+    # Set restore target
+    RESTORE_RECOVERY_SYSTEM="true"
   fi
 }
 
-fstab_no_symlink() { WIPE_SYSTEM_FSTAB="false"; if [ -f "$TARGET_SYSTEM_FSTAB" ]; then preserve_fstab; WIPE_SYSTEM_FSTAB="true"; fi; }
+# Set partition and boot slot property
+on_partition_check() {
+  system_as_root=$(getprop ro.build.system_root_image)
+  active_slot=$(getprop ro.boot.slot_suffix)
+  AB_OTA_UPDATER=$(getprop ro.build.ab_update)
+  dynamic_partitions=$(getprop ro.boot.dynamic_partitions)
+}
 
 # Set vendor mount point
 vendor_mnt() {
@@ -352,15 +262,15 @@ setup_mountpoint() {
 }
 
 mount_apex() {
-  if [ "$($BB grep -w -o /system_root $fstab)" ]; then SYSTEM="/system_root/system"; fi
-  if [ "$($BB grep -w -o /system $fstab)" ]; then SYSTEM="/system"; fi
-  if [ "$($BB grep -w -o /system $fstab)" ] && [ -d "/system/system" ]; then SYSTEM="/system/system"; fi
-  test -d "$SYSTEM/apex" || return 1
+  if [ "$($BB grep -w -o /system_root $fstab)" ]; then S="/system_root/system"; fi
+  if [ "$($BB grep -w -o /system $fstab)" ]; then S="/system"; fi
+  if [ "$($BB grep -w -o /system $fstab)" ] && [ -d "/system/system" ]; then S="/system/system"; fi
+  test -d "$S/apex" || return 1
   local apex dest loop minorx num
   setup_mountpoint /apex
   test -e /dev/block/loop1 && minorx=$(ls -l /dev/block/loop1 | awk '{ print $6 }') || minorx="1"
   num="0"
-  for apex in $SYSTEM/apex/*; do
+  for apex in $S/apex/*; do
     dest=/apex/$(basename $apex .apex)
     test "$dest" == /apex/com.android.runtime.release && dest=/apex/com.android.runtime
     mkdir -p $dest
@@ -391,7 +301,7 @@ mount_apex() {
   export ANDROID_ART_ROOT="/apex/com.android.art"
   export ANDROID_I18N_ROOT="/apex/com.android.i18n"
   local APEXJARS=$(find /apex -name '*.jar' | sort | tr '\n' ':')
-  local FWK=$SYSTEM/framework
+  local FWK=$S/framework
   export BOOTCLASSPATH="${APEXJARS}\
   $FWK/framework.jar:\
   $FWK/framework-graphics.jar:\
@@ -427,7 +337,8 @@ unmount_all() {
    umount -l /system
    umount -l /product
    umount -l /system_ext
-   umount -l /vendor) > /dev/null 2>&1
+   umount -l /vendor
+   umount -l /persist) > /dev/null 2>&1
 }
 
 # Mount partitions
@@ -456,7 +367,7 @@ mount_all() {
   local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
   if [ "$SUPER_PARTITION" == "true" ]; then
     # Restore recovery system
-    $WIPE_SYSTEM_FSTAB && mv systembk system
+    $RESTORE_RECOVERY_SYSTEM && mv systembk system
     if [ "$device_abpartition" == "true" ]; then
       for block in system system_ext product vendor; do
         for slot in "" _a _b; do
@@ -513,7 +424,7 @@ mount_all() {
     fi
     if [ "$device_abpartition" == "true" ] && [ "$system_as_root" == "true" ]; then
       # Restore recovery system
-      $WIPE_SYSTEM_FSTAB && mv systembk system
+      $RESTORE_RECOVERY_SYSTEM && mv systembk system
       if [ "$ANDROID_ROOT" == "/system_root" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
@@ -541,14 +452,16 @@ mount_all() {
 
 # Export our own system layout
 system_layout() {
+  # Wipe SYSTEM variable that is set using 'mount_apex' function
+  unset S
   if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($BB grep -w -o /system_root $fstab)" ]; then
-    export SYSTEM="/system_root/system"
+    export S="/system_root/system"
   fi
   if [ -f $ANDROID_ROOT/build.prop ] && [ "$($BB grep -w -o /system $fstab)" ]; then
-    export SYSTEM="/system"
+    export S="/system"
   fi
   if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($BB grep -w -o /system $fstab)" ]; then
-    export SYSTEM="/system/system"
+    export S="/system/system"
   fi
 }
 
@@ -574,67 +487,51 @@ get_prop() {
 
 on_version_check() { android_sdk="$(get_prop "ro.build.version.sdk")"; }
 
-api_dependent_overlay() { if [ "$android_sdk" -ge "30" ]; then OVERLAY="true"; fi; }
-
 ensure_dir() {
   SYSTEM_APP="$SYSTEM/app"
   SYSTEM_PRIV_APP="$SYSTEM/priv-app"
-  SYSTEM_ETC_DIR="$SYSTEM/etc"
+  SYSTEM_ETC="$SYSTEM/etc"
   SYSTEM_ETC_CONFIG="$SYSTEM/etc/sysconfig"
   SYSTEM_ETC_DEFAULT="$SYSTEM/etc/default-permissions"
   SYSTEM_ETC_PERM="$SYSTEM/etc/permissions"
   SYSTEM_ETC_PREF="$SYSTEM/etc/preferred-apps"
   SYSTEM_FRAMEWORK="$SYSTEM/framework"
-  SYSTEM_LIB="$SYSTEM/lib"
-  $AARCH64 && SYSTEM_LIB64="$SYSTEM/lib64"
-  SYSTEM_XBIN="$S/xbin"
-  $OVERLAY && SYSTEM_OVERLAY="$SYSTEM/overlay"
+  SYSTEM_OVERLAY="$SYSTEM/overlay"
   test -d $SYSTEM_APP || mkdir $SYSTEM_APP
   test -d $SYSTEM_PRIV_APP || mkdir $SYSTEM_PRIV_APP
-  test -d $SYSTEM_ETC_DIR || mkdir $SYSTEM_ETC_DIR
+  test -d $SYSTEM_ETC || mkdir $SYSTEM_ETC
   test -d $SYSTEM_ETC_CONFIG || mkdir $SYSTEM_ETC_CONFIG
   test -d $SYSTEM_ETC_DEFAULT || mkdir $SYSTEM_ETC_DEFAULT
   test -d $SYSTEM_ETC_PERM || mkdir $SYSTEM_ETC_PERM
   test -d $SYSTEM_ETC_PREF || mkdir $SYSTEM_ETC_PREF
   test -d $SYSTEM_FRAMEWORK || mkdir $SYSTEM_FRAMEWORK
-  test -d $SYSTEM_LIB || mkdir $SYSTEM_LIB
-  test -d $SYSTEM_LIB64 || mkdir $SYSTEM_LIB64
-  [ ! "$AARCH64" == "true" ] && rm -rf $SYSTEM_LIB64
-  test -d $SYSTEM_XBIN || mkdir $SYSTEM_XBIN
   test -d $SYSTEM_OVERLAY || mkdir $SYSTEM_OVERLAY
-  [ ! "$OVERLAY" == "true" ] && rm -rf $SYSTEM_OVERLAY
   chmod 0755 $SYSTEM_APP
   chmod 0755 $SYSTEM_PRIV_APP
-  chmod 0755 $SYSTEM_ETC_DIR
+  chmod 0755 $SYSTEM_ETC
   chmod 0755 $SYSTEM_ETC_CONFIG
   chmod 0755 $SYSTEM_ETC_DEFAULT
   chmod 0755 $SYSTEM_ETC_PERM
   chmod 0755 $SYSTEM_ETC_PREF
   chmod 0755 $SYSTEM_FRAMEWORK
-  chmod 0755 $SYSTEM_LIB
-  $AARCH64 && chmod 0755 $SYSTEM_LIB64
-  chmod 0755 $SYSTEM_XBIN
-  $OVERLAY && chmod 0755 $SYSTEM_OVERLAY
+  chmod 0755 $SYSTEM_OVERLAY
   chcon -h u:object_r:system_file:s0 "$SYSTEM_APP"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
-  chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DIR"
+  chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_FRAMEWORK"
-  chcon -h u:object_r:system_file:s0 "$SYSTEM_LIB"
-  $AARCH64 && chcon -h u:object_r:system_file:s0 "$SYSTEM_LIB64"
-  chcon -h u:object_r:system_file:s0 "$SYSTEM_XBIN"
-  $OVERLAY && chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
+  chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
 }
 
 # Set installation layout
 set_pathmap() {
-  if [ "$android_sdk" -ge "$supported_sdk_v30" ]; then
+  if [ "$android_sdk" -ge "30" ]; then
     SYSTEM="$S/system_ext"
     ensure_dir
-  elif [ "$android_sdk" == "$supported_sdk_v29" ]; then
+  elif [ "$android_sdk" == "29" ]; then
     SYSTEM="$S/product"
     ensure_dir
   else
@@ -644,133 +541,104 @@ set_pathmap() {
 }
 
 # Confirm that backup is done
-conf_addon_backup() {
-  if [ ! -f $TMP/config.prop ]; then
-    ui_print "BackupTools: Failed to create BiTGApps backup"
-  fi
-}
+conf_addon_backup() { if [ -f $TMP/config.prop ]; then ui_print "BackupTools: BiTGApps backup created"; else ui_print "BackupTools: Failed to create BiTGApps backup"; fi; }
 
 # Confirm that restore is done
-conf_addon_restore() {
-  if [ ! -f $S/config.prop ]; then
-    ui_print "BackupTools: Failed to restore BiTGApps backup"
-  fi
-}
+conf_addon_restore() { if [ -f $S/config.prop ]; then ui_print "BackupTools: BiTGApps backup restored"; else ui_print "BackupTools: Failed to restore BiTGApps backup"; fi; }
 
 # Delete existing GMS Doze entry from Android 7.1+
 opt_v25() {
-  if [ "$android_sdk" -ge "$supported_sdk_v25" ]; then
+  if [ "$android_sdk" -ge "25" ]; then
     sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/permissions/*.xml
     sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/sysconfig/*.xml
   fi
 }
 
-# Set privileged app Whitelist property
-on_whitelist_check() {
-  android_flag="$(get_prop "ro.control_privapp_permissions")"
-  supported_flag="disable"
-  PROPFLAG="ro.control_privapp_permissions"
-}
-
 # Remove Privileged App Whitelist property with flag enforce
 purge_whitelist_permission() {
   if [ -n "$(cat $S/build.prop | grep control_privapp_permissions)" ]; then
-    grep -v "$PROPFLAG" $S/build.prop > $TMP/build.prop
+    grep -v "ro.control_privapp_permissions" $S/build.prop > $TMP/build.prop
     rm -rf $S/build.prop
     cp -f $TMP/build.prop $S/build.prop
     chmod 0644 $S/build.prop
     rm -rf $TMP/build.prop
   fi
-  if [ -f "$S/product/build.prop" ]; then
-    if [ -n "$(cat $S/product/build.prop | grep control_privapp_permissions)" ]; then
-      mkdir $TMP/product
-      grep -v "$PROPFLAG" $S/product/build.prop > $TMP/product/build.prop
-      rm -rf $S/product/build.prop
-      cp -f $TMP/product/build.prop $S/product/build.prop
-      chmod 0644 $S/product/build.prop
-      rm -rf $TMP/product/build.prop
-    fi
+  if [ -f "$S/product/build.prop" ] && [ -n "$(cat $S/product/build.prop | grep control_privapp_permissions)" ]; then
+    mkdir $TMP/product
+    grep -v "ro.control_privapp_permissions" $S/product/build.prop > $TMP/product/build.prop
+    rm -rf $S/product/build.prop
+    cp -f $TMP/product/build.prop $S/product/build.prop
+    chmod 0644 $S/product/build.prop
+    rm -rf $TMP/product
   fi
-  if [ -f "$S/system_ext/build.prop" ]; then
-    if [ -n "$(cat $S/system_ext/build.prop | grep control_privapp_permissions)" ]; then
-      mkdir $TMP/system_ext
-      grep -v "$PROPFLAG" $S/system_ext/build.prop > $TMP/system_ext/build.prop
-      rm -rf $S/system_ext/build.prop
-      cp -f $TMP/system_ext/build.prop $S/system_ext/build.prop
-      chmod 0644 $S/system_ext/build.prop
-      rm -rf $TMP/system_ext/build.prop
-    fi
+  if [ -f "$S/system_ext/build.prop" ] && [ -n "$(cat $S/system_ext/build.prop | grep control_privapp_permissions)" ]; then
+    mkdir $TMP/system_ext
+    grep -v "ro.control_privapp_permissions" $S/system_ext/build.prop > $TMP/system_ext/build.prop
+    rm -rf $S/system_ext/build.prop
+    cp -f $TMP/system_ext/build.prop $S/system_ext/build.prop
+    chmod 0644 $S/system_ext/build.prop
+    rm -rf $TMP/system_ext
   fi
-  if [ -f "$S/etc/prop.default" ] && [ -f "$ANDROID_ROOT/default.prop" ]; then
-    if [ -n "$(cat $S/etc/prop.default | grep control_privapp_permissions)" ]; then
-      rm -rf $ANDROID_ROOT/default.prop
-      grep -v "$PROPFLAG" $S/etc/prop.default > $TMP/prop.default
-      rm -rf $S/etc/prop.default
-      cp -f $TMP/prop.default $S/etc/prop.default
-      chmod 0644 $S/etc/prop.default
-      ln -sfnv $S/etc/prop.default $ANDROID_ROOT/default.prop
-      rm -rf $TMP/prop.default
-    fi
+  if [ -f "$S/etc/prop.default" ] && [ -f "$ANDROID_ROOT/default.prop" ] && [ -n "$(cat $S/etc/prop.default | grep control_privapp_permissions)" ]; then
+    rm -rf $ANDROID_ROOT/default.prop
+    grep -v "ro.control_privapp_permissions" $S/etc/prop.default > $TMP/prop.default
+    rm -rf $S/etc/prop.default
+    cp -f $TMP/prop.default $S/etc/prop.default
+    chmod 0644 $S/etc/prop.default
+    ln -sfnv $S/etc/prop.default $ANDROID_ROOT/default.prop
+    rm -rf $TMP/prop.default
   fi
   if [ "$device_vendorpartition" == "false" ]; then
     if [ -n "$(cat $S/vendor/build.prop | grep control_privapp_permissions)" ]; then
-      grep -v "$PROPFLAG" $S/vendor/build.prop > $TMP/build.prop
+      grep -v "ro.control_privapp_permissions" $S/vendor/build.prop > $TMP/build.prop
       rm -rf $S/vendor/build.prop
       cp -f $TMP/build.prop $S/vendor/build.prop
       chmod 0644 $S/vendor/build.prop
       rm -rf $TMP/build.prop
     fi
-    if [ -f "$S/vendor/default.prop" ]; then
-      if [ -n "$(cat $S/vendor/default.prop | grep control_privapp_permissions)" ]; then
-        grep -v "$PROPFLAG" $S/vendor/default.prop > $TMP/default.prop
-        rm -rf $S/vendor/default.prop
-        cp -f $TMP/default.prop $S/vendor/default.prop
-        chmod 0644 $S/vendor/default.prop
-        rm -rf $TMP/default.prop
-      fi
+    if [ -f "$S/vendor/default.prop" ] && [ -n "$(cat $S/vendor/default.prop | grep control_privapp_permissions)" ]; then
+      grep -v "ro.control_privapp_permissions" $S/vendor/default.prop > $TMP/default.prop
+      rm -rf $S/vendor/default.prop
+      cp -f $TMP/default.prop $S/vendor/default.prop
+      chmod 0644 $S/vendor/default.prop
+      rm -rf $TMP/default.prop
     fi
   fi
   if [ "$device_vendorpartition" == "true" ]; then
     if [ -n "$(cat $VENDOR/build.prop | grep control_privapp_permissions)" ]; then
-      grep -v "$PROPFLAG" $VENDOR/build.prop > $TMP/build.prop
+      grep -v "ro.control_privapp_permissions" $VENDOR/build.prop > $TMP/build.prop
       rm -rf $VENDOR/build.prop
       cp -f $TMP/build.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/build.prop
     fi
     if [ -n "$(cat $VENDOR/default.prop | grep control_privapp_permissions)" ]; then
-      grep -v "$PROPFLAG" $VENDOR/default.prop > $TMP/default.prop
+      grep -v "ro.control_privapp_permissions" $VENDOR/default.prop > $TMP/default.prop
       rm -rf $VENDOR/default.prop
       cp -f $TMP/default.prop $VENDOR/default.prop
       chmod 0644 $VENDOR/default.prop
       rm -rf $TMP/default.prop
     fi
-    if [ -f "$VENDOR/odm/etc/build.prop" ]; then
-      if [ -n "$(cat $VENDOR/odm/etc/build.prop | grep control_privapp_permissions)" ]; then
-        grep -v "$PROPFLAG" $VENDOR/odm/etc/build.prop > $TMP/build.prop
-        rm -rf $VENDOR/odm/etc/build.prop
-        cp -f $TMP/build.prop $VENDOR/odm/etc/build.prop
-        chmod 0644 $VENDOR/odm/etc/build.prop
-        rm -rf $TMP/build.prop
-      fi
+    if [ -f "$VENDOR/odm/etc/build.prop" ] && [ -n "$(cat $VENDOR/odm/etc/build.prop | grep control_privapp_permissions)" ]; then
+      grep -v "ro.control_privapp_permissions" $VENDOR/odm/etc/build.prop > $TMP/build.prop
+      rm -rf $VENDOR/odm/etc/build.prop
+      cp -f $TMP/build.prop $VENDOR/odm/etc/build.prop
+      chmod 0644 $VENDOR/odm/etc/build.prop
+      rm -rf $TMP/build.prop
     fi
-    if [ -f "$VENDOR/odm_dlkm/etc/build.prop" ]; then
-      if [ -n "$(cat $VENDOR/odm_dlkm/etc/build.prop | grep control_privapp_permissions)" ]; then
-        grep -v "$PROPFLAG" $VENDOR/odm_dlkm/etc/build.prop > $TMP/build.prop
-        rm -rf $VENDOR/odm_dlkm/etc/build.prop
-        cp -f $TMP/build.prop $VENDOR/odm_dlkm/etc/build.prop
-        chmod 0644 $VENDOR/odm_dlkm/etc/build.prop
-        rm -rf $TMP/build.prop
-      fi
+    if [ -f "$VENDOR/odm_dlkm/etc/build.prop" ] && [ -n "$(cat $VENDOR/odm_dlkm/etc/build.prop | grep control_privapp_permissions)" ]; then
+      grep -v "ro.control_privapp_permissions" $VENDOR/odm_dlkm/etc/build.prop > $TMP/build.prop
+      rm -rf $VENDOR/odm_dlkm/etc/build.prop
+      cp -f $TMP/build.prop $VENDOR/odm_dlkm/etc/build.prop
+      chmod 0644 $VENDOR/odm_dlkm/etc/build.prop
+      rm -rf $TMP/build.prop
     fi
-    if [ -f "$VENDOR/vendor_dlkm/etc/build.prop" ]; then
-      if [ -n "$(cat $VENDOR/vendor_dlkm/etc/build.prop | grep control_privapp_permissions)" ]; then
-        grep -v "$PROPFLAG" $VENDOR/vendor_dlkm/etc/build.prop > $TMP/build.prop
-        rm -rf $VENDOR/vendor_dlkm/etc/build.prop
-        cp -f $TMP/build.prop $VENDOR/vendor_dlkm/etc/build.prop
-        chmod 0644 $VENDOR/vendor_dlkm/etc/build.prop
-        rm -rf $TMP/build.prop
-      fi
+    if [ -f "$VENDOR/vendor_dlkm/etc/build.prop" ] && [ -n "$(cat $VENDOR/vendor_dlkm/etc/build.prop | grep control_privapp_permissions)" ]; then
+      grep -v "ro.control_privapp_permissions" $VENDOR/vendor_dlkm/etc/build.prop > $TMP/build.prop
+      rm -rf $VENDOR/vendor_dlkm/etc/build.prop
+      cp -f $TMP/build.prop $VENDOR/vendor_dlkm/etc/build.prop
+      chmod 0644 $VENDOR/vendor_dlkm/etc/build.prop
+      rm -rf $TMP/build.prop
     fi
   fi
 }
@@ -782,7 +650,9 @@ set_whitelist_permission() { insert_line $S/build.prop "ro.control_privapp_permi
 set_assistant() { insert_line $S/build.prop "ro.opa.eligible_device=true" after 'net.bt.name=Android' 'ro.opa.eligible_device=true'; }
 
 # Set Deprecated Release Tag
-set_release_tag() { insert_line $S/build.prop "ro.gapps.release_tag=" after 'net.bt.name=Android' 'ro.gapps.release_tag='; }
+set_release_tag() {
+  insert_line $S/build.prop "ro.gapps.release_tag=" after 'net.bt.name=Android' 'ro.gapps.release_tag='
+}
 
 # Check SetupWizard Status
 on_setup_status_check() { setup_install_status="$(get_prop "ro.setup.enabled")"; }
@@ -1633,13 +1503,7 @@ pkg_Ext() {
 }
 
 # Limit installation of AOSP APKs
-lim_aosp_install() {
-  if [ "$rwg_install_status" == "true" ]; then
-    pkg_System
-    pkg_Product
-    pkg_Ext
-  fi
-}
+lim_aosp_install() { if [ "$rwg_install_status" == "true" ]; then pkg_System; pkg_Product; pkg_Ext; fi; }
 
 # Set backup function
 backupdirSYS() {
@@ -1668,16 +1532,6 @@ backupdirSYS() {
   SYS_PRIVAPP_JAR="
     $S/priv-app/GoogleExtServices"
 
-  SYS_LIB="
-    $SYSTEM/lib/libfacenet.so
-    $SYSTEM/lib/libfilterpack_facedetect.so
-    $SYSTEM/lib/libfrsdk.so"
-
-  SYS_LIB64="
-    $SYSTEM/lib64/libfacenet.so
-    $SYSTEM/lib64/libfilterpack_facedetect.so
-    $SYSTEM/lib64/libfrsdk.so"
-
   SYS_SYSCONFIG="
     $SYSTEM/etc/sysconfig/google.xml
     $SYSTEM/etc/sysconfig/google_build.xml
@@ -1698,26 +1552,18 @@ backupdirSYS() {
     $SYSTEM/etc/preferred-apps/google.xml"
 
   SYS_PROPFILE="
-    $S/etc/data.prop
     $S/etc/g.prop"
 
   SYS_BUILDFILE="
     $S/config.prop"
-
-  SYS_XBIN="
-    $S/xbin/sqlite3"
 }
 
 backupdirSYSFboot() {
   SYS_PRIVAPP_SETUP="
     $SYSTEM/priv-app/AndroidMigratePrebuilt
     $SYSTEM/priv-app/GoogleBackupTransport
-    $SYSTEM/priv-app/GoogleOneTimeInitializer
     $SYSTEM/priv-app/GoogleRestore
     $SYSTEM/priv-app/SetupWizardPrebuilt"
-
-  SYS_LIB64_SETUP="
-    $SYSTEM/lib64/libbarhopper.so"
 }
 
 backupdirSYSRwg() {
@@ -1763,12 +1609,6 @@ backupdirSYSAddon() {
 
   SYS_FRAMEWORK_ADDON="
     $SYSTEM/framework/com.google.android.dialer.support.jar"
-
-  SYS_LIB_ADDON="
-    $SYSTEM/lib/libsketchology_native.so"
-
-  SYS_LIB64_ADDON="
-    $SYSTEM/lib64/libsketchology_native.so"
 }
 
 backupdirSYSOverlay() {
@@ -1803,16 +1643,6 @@ restoredirTMP() {
   TMP_PRIVAPP_JAR="
     $TMP/priv-app/GoogleExtServices"
 
-  TMP_LIB="
-    $TMP/lib/libfacenet.so
-    $TMP/lib/libfilterpack_facedetect.so
-    $TMP/lib/libfrsdk.so"
-
-  TMP_LIB64="
-    $TMP/lib64/libfacenet.so
-    $TMP/lib64/libfilterpack_facedetect.so
-    $TMP/lib64/libfrsdk.so"
-
   TMP_SYSCONFIG="
     $TMP/sysconfig/google.xml
     $TMP/sysconfig/google_build.xml
@@ -1833,26 +1663,18 @@ restoredirTMP() {
     $TMP/preferred-apps/google.xml"
 
   TMP_PROPFILE="
-    $TMP/etc/data.prop
     $TMP/etc/g.prop"
 
   TMP_BUILDFILE="
     $TMP/config.prop"
-
-  TMP_XBIN="
-    $TMP/xbin/sqlite3"
 }
 
 restoredirTMPFboot() {
   TMP_PRIVAPP_SETUP="
     $TMP/fboot/priv-app/AndroidMigratePrebuilt
     $TMP/fboot/priv-app/GoogleBackupTransport
-    $TMP/fboot/priv-app/GoogleOneTimeInitializer
     $TMP/fboot/priv-app/GoogleRestore
     $TMP/fboot/priv-app/SetupWizardPrebuilt"
-
-  TMP_LIB64_SETUP="
-    $TMP/fboot/lib64/libbarhopper.so"
 }
 
 restoredirTMPRwg() {
@@ -1898,12 +1720,6 @@ restoredirTMPAddon() {
 
   TMP_FRAMEWORK_ADDON="
     $TMP/addon/framework/com.google.android.dialer.support.jar"
-
-  TMP_LIB_ADDON="
-    $TMP/addon/lib/libsketchology_native.so"
-
-  TMP_LIB64_ADDON="
-    $TMP/addon/lib64/libsketchology_native.so"
 }
 
 restoredirTMPOverlay() {
@@ -1981,14 +1797,12 @@ backup_conflicting_packages() {
 trigger_fboot_backup() {
   if [ "$setup_install_status" == "true" ]; then
     mv $SYS_PRIVAPP_SETUP $TMP/fboot/priv-app 2>/dev/null
-    mv $SYS_LIB64_SETUP $TMP/fboot/lib64 2>/dev/null
   fi
 }
 
 trigger_fboot_restore() {
   if [ "$setup_install_status" == "true" ]; then
     mv $TMP_PRIVAPP_SETUP $SYSTEM/priv-app 2>/dev/null
-    mv $TMP_LIB64_SETUP $SYSTEM/lib64 2>/dev/null
   fi
 }
 
@@ -2014,8 +1828,6 @@ trigger_addon_backup() {
     mv $SYS_PRIVAPP_ADDON $TMP/addon/priv-app 2>/dev/null
     mv $SYS_PERMISSIONS_ADDON $TMP/addon/permissions 2>/dev/null
     mv $SYS_FRAMEWORK_ADDON $TMP/addon/framework 2>/dev/null
-    mv $SYS_LIB_ADDON $TMP/addon/lib 2>/dev/null
-    mv $SYS_LIB64_ADDON $TMP/addon/lib64 2>/dev/null
   fi
 }
 
@@ -2025,28 +1837,12 @@ trigger_addon_restore() {
     mv $TMP_PRIVAPP_ADDON $SYSTEM/priv-app 2>/dev/null
     mv $TMP_PERMISSIONS_ADDON $SYSTEM/etc/permissions 2>/dev/null
     mv $TMP_FRAMEWORK_ADDON $SYSTEM/framework 2>/dev/null
-    mv $TMP_LIB_ADDON $SYSTEM/lib 2>/dev/null
-    mv $TMP_LIB64_ADDON $SYSTEM/lib64 2>/dev/null
-  fi
-}
-
-# Create FaceLock lib symlink
-bind_facelock_lib() {
-  if [ "$android_sdk" -le "$supported_sdk_v28" ]; then
-    ln -sfnv $SYSTEM/lib64/libfacenet.so $SYSTEM/app/FaceLock/lib/arm64/libfacenet.so
-  fi
-}
-
-# Create SetupWizard lib symlink
-bind_setupwizard_lib() {
-  if [ "$android_sdk" == "$supported_sdk_v28" ]; then
-    ln -sfnv $SYSTEM/lib64/libbarhopper.so $SYSTEM/app/SetupWizardPrebuilt/lib/arm64/libbarhopper.so
   fi
 }
 
 # Wipe conflicting packages
 fix_setup_conflict() {
-  if [ "$setup_install_status" == "conf" ]; then
+  if [ "$setup_install_status" == "true" ]; then
     rm -rf $S/app/ManagedProvisioning
     rm -rf $S/app/Provision
     rm -rf $S/app/LineageSetupWizard
@@ -2356,7 +2152,6 @@ restore_conflicting_packages() {
 copy_ota_script() { cp -f $TMP/addon.d/90-bitgapps.sh $S/addon.d/90-bitgapps.sh; }
 
 # Static functions
-set_version
 trampoline
 check_busybox "$@"
 
@@ -2365,33 +2160,30 @@ case "$1" in
     ui_print "BackupTools: Starting BiTGApps backup"
     set_bb
     unmount_all
+    recovery_actions
     set_arch
     tmp_dir
-    on_sdk
+    on_partition_check
     ab_partition
     system_as_root
     super_partition
-    fstab_no_symlink
+    preserve_fstab
     vendor_mnt
     mount_all
     system_layout
     on_version_check
-    api_dependent_overlay
     set_pathmap
     backupdirSYS
     mv $SYS_APP $TMP/app 2>/dev/null
     mv $SYS_APP_JAR $TMP/app 2>/dev/null
     mv $SYS_PRIVAPP $TMP/priv-app 2>/dev/null
     mv $SYS_PRIVAPP_JAR $TMP/priv-app 2>/dev/null
-    mv $SYS_LIB $TMP/lib 2>/dev/null
-    $AARCH64 && mv $SYS_LIB64 $TMP/lib64 2>/dev/null
     mv $SYS_SYSCONFIG $TMP/sysconfig 2>/dev/null
     mv $SYS_DEFAULTPERMISSIONS $TMP/default-permissions 2>/dev/null
     mv $SYS_PERMISSIONS $TMP/permissions 2>/dev/null
     mv $SYS_PREFERREDAPPS $TMP/preferred-apps 2>/dev/null
     mv $SYS_PROPFILE $TMP/etc 2>/dev/null
     mv $SYS_BUILDFILE $TMP 2>/dev/null
-    mv $SYS_XBIN $TMP/xbin 2>/dev/null
     backupdirSYSAddon
     on_addon_status_check
     trigger_addon_backup
@@ -2402,29 +2194,30 @@ case "$1" in
     backupdirSYSRwg
     on_rwg_status_check
     trigger_rwg_backup
-    $OVERLAY && backupdirSYSOverlay
-    $OVERLAY && mv $SYS_OVERLAY $TMP/overlay 2>/dev/null
+    backupdirSYSOverlay
+    mv $SYS_OVERLAY $TMP/overlay 2>/dev/null
     copy_ota_script
     conf_addon_backup
     umount_apex
     unmount_all
+    recovery_cleanup
   ;;
   restore)
     ui_print "BackupTools: Restoring BiTGApps backup"
     set_bb
     unmount_all
+    recovery_actions
     set_arch
     tmp_dir
-    on_sdk
+    on_partition_check
     ab_partition
     system_as_root
     super_partition
-    fstab_no_symlink
+    preserve_fstab
     vendor_mnt
     mount_all
     system_layout
     on_version_check
-    api_dependent_overlay
     set_pathmap
     on_rwg_status_check
     lim_aosp_install
@@ -2433,34 +2226,21 @@ case "$1" in
     mv $TMP_APP_JAR $S/app 2>/dev/null
     mv $TMP_PRIVAPP $SYSTEM/priv-app 2>/dev/null
     mv $TMP_PRIVAPP_JAR $S/priv-app 2>/dev/null
-    mv $TMP_LIB $SYSTEM/lib 2>/dev/null
-    $AARCH64 && mv $TMP_LIB64 $SYSTEM/lib64 2>/dev/null
     mv $TMP_SYSCONFIG $SYSTEM/etc/sysconfig 2>/dev/null
     mv $TMP_DEFAULTPERMISSIONS $SYSTEM/etc/default-permissions 2>/dev/null
     mv $TMP_PERMISSIONS $SYSTEM/etc/permissions 2>/dev/null
     mv $TMP_PREFERREDAPPS $SYSTEM/etc/preferred-apps 2>/dev/null
     mv $TMP_PROPFILE $S/etc 2>/dev/null
     mv $TMP_BUILDFILE $S 2>/dev/null
-    mv $TMP_XBIN $S/xbin 2>/dev/null
-    $OVERLAY && restoredirTMPOverlay
-    $OVERLAY && mv $TMP_OVERLAY $SYSTEM/overlay 2>/dev/null
     opt_v25
-    on_whitelist_check
     purge_whitelist_permission
     set_whitelist_permission
     set_assistant
     set_release_tag
-    sdk_fix
-    selinux_fix
-    bind_facelock_lib
-    blacklist_db_backup
-    sqlite_opt
-    blacklist_db_restore
     restoredirTMPFboot
     on_setup_status_check
     trigger_fboot_restore
     fix_setup_conflict
-    bind_setupwizard_lib
     restoredirTMPRwg
     on_rwg_status_check
     trigger_rwg_restore
@@ -2469,11 +2249,16 @@ case "$1" in
     restoredirTMPAddon
     trigger_addon_restore
     restore_conflicting_packages
+    restoredirTMPOverlay
+    mv $TMP_OVERLAY $SYSTEM/overlay 2>/dev/null
     copy_ota_script
+    sdk_fix
+    selinux_fix
     shared_library
     del_tmp_dir
     conf_addon_restore
     umount_apex
     unmount_all
+    recovery_cleanup
   ;;
 esac

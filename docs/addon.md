@@ -8,30 +8,32 @@ There are two type of Addons:
 
 * Non Config Based
 
-To install **Config Based** Addon you need **addon-config.prop** file. While **Non Config Based** does not require config file.
-When this config file not present in device, at the time of installation you will be notified with following texts.
+## Usage
 
-```! Addon config not found```
+First enable installation, without this no google app will install.
 
-```! Skip installing additional packages```
+**Example:**
 
-Config Based Addon is one package contains all google apps. Non Config Based Addon provided all google apps in separate packages.
+* `ro.config.addon=false` to `ro.config.addon=true`
 
-## Edit Config
-
-By default everything inside config file is set to false. You need change `false` to `true` for whatever google app you want to install.
+You need to change `false` to `true` for whatever google app you want to install.
 
 **Example:**
 
 * `ro.config.assistant=false` to `ro.config.assistant=true`
 
-## Android Platform
+Config Based Addon is one package contain all google apps and can only be installed using config file. Also you need to select Addon Package as per your device architecture.
 
-- ARM
-- ARM64
+Non Config Based Addon provide all google apps in separate packages and can be installed without using config file. These packages are architecture independent.
 
-## Platform Support
+## Conflcits
 
-* For Config Based Addon you need to select Addon ZIP as per your device architecture.
+When config file not present in device, at the time of installation you will be notified with following texts.
 
-* Non Config Based Addon can be installed in both platforms.
+```! Install config not found```
+
+When config file present in device, but Addon install property is disabled. You will be notified with following texts.
+
+```! Addon config not found```
+
+```! Skip installing additional packages```

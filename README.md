@@ -19,7 +19,7 @@ Here are feature highlights:
 * Enable Battery Optimization for all GApps
 * It can be installed in Custom OS shipped with GApps
 * Addon packages for supporting additional GApps packages
-* No SetupWizard after first boot
+* Disable Google SetupWizard installation
 * Our own OTA survival script
 * You can uninstall BiTGApps without doing clean installation
 
@@ -45,7 +45,7 @@ Here are feature highlights:
 <br>
 [![](https://img.shields.io/badge/BiTGApps-%20Patch-green.svg?style=flat-square)](https://bitgapps.ga/patch)
 <br>
-[![](https://img.shields.io/badge/BiTGApps-%20Configs-red.svg?style=flat-square)](https://bitgapps.ga/configs)
+[![](https://img.shields.io/badge/BiTGApps-%20Config-red.svg?style=flat-square)](https://bitgapps.ga/config)
 <br>
 [![](https://img.shields.io/badge/BiTGApps-%20APK-red.svg?style=flat-square)](https://bitgapps.ga/APK)
 
@@ -75,8 +75,8 @@ License terms used by the BiTGApps installer and pre-built packages
    * BiTGApps installer scripts are provided in such a way that it can be freely used to make personal build. But does not allow its public release.
    * You are required to give us full credits for any work you may be using from us.
    * We kindly ask you to use common sense and don't profit entirely off the work of others. Renaming pre-built packages, strip author from installer and upload it anywhere as your own, be this with or without monetization.
-   * The pre-built packages of BiTGApps are made available under the terms that they can be freely used for personal use only, and are not allowed to be mirrored to the public other than BiTGApps.com
+   * The pre-built packages of BiTGApps are made available under the terms that they can be freely used for personal use only, and are not allowed to be mirrored to the public other than BiTGApps.org
 
 ## Author
 
-The BiTGApps Project is authored by [TheHitMan](https://TheHitMan7.github.io/)
+The BiTGApps Project is authored by [TheHitMan](https://TheHitMan7.github.io)

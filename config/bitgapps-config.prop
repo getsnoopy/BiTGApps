@@ -1,10 +1,9 @@
-#!/sbin/sh
-#
 ##############################################################
-# File name       : update-binary
+# File name       : bitgapps-config.prop
 #
-# Description     : Setup installation, environmental variables
-#                   and helper functions
+# Description     : Install SetupWizard components
+#                   Install additional GApps packages
+#                   Uninstall BiTGApps components
 #
 # Copyright       : Copyright (C) 2018-2021 TheHitMan7
 #
@@ -21,19 +20,26 @@
 # GNU General Public License for more details.
 ##############################################################
 
-# Set environmental variables in the global environment
-export ZIPFILE="$3"
-export OUTFD="$2"
-export TMP="/tmp"
+# Property for installing SetupWizard components
+ro.config.setupwizard=false
 
-# Extract installer script
-unzip -o "$ZIPFILE" "installer.sh" -d "$TMP"
-chmod +x "$TMP/installer.sh"
+# Property for enabling Addons installation
+ro.config.addon=false
 
-# Extract utility script
-unzip -o "$ZIPFILE" "util_functions.sh" -d "$TMP"
-chmod +x "$TMP/util_functions.sh"
+# Property for installing Addons
+ro.config.assistant=false
+ro.config.calculator=false
+ro.config.calendar=false
+ro.config.contacts=false
+ro.config.deskclock=false
+ro.config.dialer=false
+ro.config.gboard=false
+ro.config.markup=false
+ro.config.messages=false
+ro.config.photos=false
+ro.config.soundpicker=false
+ro.config.vanced=false
+ro.config.wellbeing=false
 
-# Execute installer script
-source "$TMP/installer.sh" "$@"
-exit "$?"
+# Property for wiping BiTGApps components
+ro.config.wipe=false

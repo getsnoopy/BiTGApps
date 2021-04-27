@@ -1,25 +1,33 @@
 # Instructions On File Structure
 
-### BiTGApps-arm64-11.0.0-R20_signed.zip
+### BiTGApps-arm64-11.0.0-R26_signed.zip
 
 * `BiTGApps` - _Refers to project name_
 * `arm64` - _Refers to device architecture_
 * `11.0.0` - _Refers to android version_
-* `R20` - _Refers to release tag_
+* `R26` - _Refers to release tag_
 * `signed` - _Package signed with release key_
 
-### BiTGApps-addon-arm64-R8_signed.zip
+### BiTGApps-addon-arm64-R14_signed.zip
 
 * `BiTGApps` - _Refers to project name_
 * `addon` - _Refers to additional package_
 * `arm64` - _Refers to device architecture_
-* `R8` - _Refers to release tag_
+* `R14` - _Refers to release tag_
 * `signed` - _Package signed with release key_
 
-### BiTGApps-addon-assistant-R8_signed.zip
+### BiTGApps-addon-assistant-R14_signed.zip
 
 * `BiTGApps` - _Refers to project name_
 * `addon` - _Refers to additional package_
 * `assistant` - _Refers to specific google app_
-* `R8` - _Refers to release tag_
+* `R14` - _Refers to release tag_
+* `signed` - _Package signed with release key_
+
+### BiTGApps-safetynet-patch-R5_signed.zip
+
+* `BiTGApps` - _Refers to project name_
+* `safetynet` - _Refers to specific patch_
+* `patch` - _Refers to patch package_
+* `R5` - _Refers to release tag_
 * `signed` - _Package signed with release key_

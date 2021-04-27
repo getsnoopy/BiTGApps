@@ -10,7 +10,7 @@ If you install BiTGApps with SetupWizard components, backup/restore configuratio
 Additional Packages, OTA config then updated with backup/restore configuration of whatever Additional Packages you have installed. For any reason, again
 installing BiTGApps will wipe the old OTA config and replace with new. Lets consider that you didn't install SetupWizard also. With that setup, at the time
 of ROM upgrade, OTA survial script skip backup/restore of Additional Packages and SetupWizard components, even if you have everything related to Additional
-Packages and SetupWizard in system. The only way to counter this issue is, re-install everything in sequence, when you again install BiTGApps.
+Packages and SetupWizard in system. The only way to counter this issue is, re-install everything in sequence, when you again install or upgrade BiTGApps.
 
 ## Conflcits
 
