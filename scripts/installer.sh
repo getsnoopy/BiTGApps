@@ -5382,7 +5382,7 @@ spl_update_boot() {
   if [ -f "split_img/boot.img-os_patch_level" ]; then
     rm -rf split_img/boot.img-os_patch_level
     ui_print "- Patching Boot SPL"
-    echo "2021-04" >> split_img/boot.img-os_patch_level
+    echo "2021-05" >> split_img/boot.img-os_patch_level
     chmod 0644 split_img/boot.img-os_patch_level
     ./repackimg.sh > /dev/null 2>&1
     dd if="image-new.img" of="$block" > /dev/null 2>&1
@@ -5410,7 +5410,7 @@ set_cts_patch() {
     cp -f $TMP/system.prop $SYSTEM/build.prop
     chmod 0644 $SYSTEM/build.prop
     rm -rf $TMP/system.prop
-    CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
+    CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/coral/coral:11/RQ2A.210505.002/7246365:user/release-keys"
     insert_line $SYSTEM/build.prop "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT" after 'ro.system.build.date.utc=' "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT"
   fi
   # Build fingerprint
@@ -5421,7 +5421,7 @@ set_cts_patch() {
     cp -f $TMP/system.prop $SYSTEM/build.prop
     chmod 0644 $SYSTEM/build.prop
     rm -rf $TMP/system.prop
-    CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
+    CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:11/RQ2A.210505.002/7246365:user/release-keys"
     insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_FINGERPRINT" after 'ro.build.description=' "$CTS_SYSTEM_BUILD_FINGERPRINT"
   fi
   # Build security patch
@@ -5432,7 +5432,7 @@ set_cts_patch() {
     cp -f $TMP/system.prop $SYSTEM/build.prop
     chmod 0644 $SYSTEM/build.prop
     rm -rf $TMP/system.prop
-    CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-04-05";
+    CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-05-05";
     insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
   fi
   if [ "$device_vendorpartition" == "false" ]; then
@@ -5444,7 +5444,7 @@ set_cts_patch() {
       cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
       chmod 0644 $SYSTEM/vendor/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-04-05";
+      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-05-05";
       insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
     fi
     # Build fingerprint
@@ -5455,7 +5455,7 @@ set_cts_patch() {
       cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
       chmod 0644 $SYSTEM/vendor/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
+      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:11/RQ2A.210505.002/7246365:user/release-keys"
       insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build bootimage
@@ -5466,7 +5466,7 @@ set_cts_patch() {
       cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
       chmod 0644 $SYSTEM/vendor/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
+      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:11/RQ2A.210505.002/7246365:user/release-keys"
       insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
     fi
   fi
@@ -5480,7 +5480,7 @@ set_cts_patch() {
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-04-05";
+      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-05-05";
       insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
     fi
     # Build fingerprint
@@ -5491,7 +5491,7 @@ set_cts_patch() {
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
+      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:11/RQ2A.210505.002/7246365:user/release-keys"
       insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build bootimage
@@ -5502,7 +5502,7 @@ set_cts_patch() {
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:11/RQ2A.210405.005/7181113:user/release-keys"
+      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:11/RQ2A.210505.002/7246365:user/release-keys"
       insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
     fi
   fi
