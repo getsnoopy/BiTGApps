@@ -21,6 +21,7 @@ Here are feature highlights:
 * Addon packages for supporting additional GApps packages
 * Disable Google SetupWizard installation
 * Our own OTA survival script
+* Install BiTGApps package directly from booted system
 * You can uninstall BiTGApps without doing clean installation
 
 ## Packages

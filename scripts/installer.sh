@@ -20,6 +20,11 @@
 # GNU General Public License for more details.
 ##############################################################
 
+# Check boot state
+BOOTMODE=false
+ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
+$BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
+
 # Change selinux status to permissive
 setenforce 0
 
@@ -43,6 +48,7 @@ print_title() {
 env_vars() {
   # ZIPTYPE variable 'basic' or 'addon'
   ZIPTYPE="$ZIPTYPE"
+  BOOTMODE="$BOOTMODE"
   # ADDON variable 'conf' or 'sep'
   ADDON="$ADDON"
   INTERNAL="/sdcard"
@@ -83,8 +89,13 @@ env_vars() {
 
 # Output function
 ui_print() {
-  echo -n -e "ui_print $1\n" >> /proc/self/fd/$OUTFD
-  echo -n -e "ui_print\n" >> /proc/self/fd/$OUTFD
+  if [ "$BOOTMODE" == "true" ]; then
+    echo "$1"
+  fi
+  if [ "$BOOTMODE" == "false" ]; then
+    echo -n -e "ui_print $1\n" >> /proc/self/fd/$OUTFD
+    echo -n -e "ui_print\n" >> /proc/self/fd/$OUTFD
+  fi
 }
 
 # Set pre-bundled busybox
@@ -95,7 +106,7 @@ set_bb() {
     ARCH="arm"
   fi
   # Extract busybox
-  unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
+  [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
   chmod 0755 "$TMP/busybox-arm"
   ui_print "- Installing toolbox"
   bb="$TMP/busybox-$ARCH"
@@ -137,19 +148,23 @@ set_bb() {
 
 # Unset predefined environmental variable
 recovery_actions() {
-  OLD_LD_LIB=$LD_LIBRARY_PATH
-  OLD_LD_PRE=$LD_PRELOAD
-  OLD_LD_CFG=$LD_CONFIG_FILE
-  unset LD_LIBRARY_PATH
-  unset LD_PRELOAD
-  unset LD_CONFIG_FILE
+  if [ "$BOOTMODE" == "false" ]; then
+    OLD_LD_LIB=$LD_LIBRARY_PATH
+    OLD_LD_PRE=$LD_PRELOAD
+    OLD_LD_CFG=$LD_CONFIG_FILE
+    unset LD_LIBRARY_PATH
+    unset LD_PRELOAD
+    unset LD_CONFIG_FILE
+  fi
 }
 
 # Restore predefined environmental variable
 recovery_cleanup() {
-  [ -z $OLD_LD_LIB ] || export LD_LIBRARY_PATH=$OLD_LD_LIB
-  [ -z $OLD_LD_PRE ] || export LD_PRELOAD=$OLD_LD_PRE
-  [ -z $OLD_LD_CFG ] || export LD_CONFIG_FILE=$OLD_LD_CFG
+  if [ "$BOOTMODE" == "false" ]; then
+    [ -z $OLD_LD_LIB ] || export LD_LIBRARY_PATH=$OLD_LD_LIB
+    [ -z $OLD_LD_PRE ] || export LD_PRELOAD=$OLD_LD_PRE
+    [ -z $OLD_LD_CFG ] || export LD_CONFIG_FILE=$OLD_LD_CFG
+  fi
 }
 
 # insert_line <file> <if search string> <before|after> <line match string> <inserted line>
@@ -271,9 +286,15 @@ preserve_fstab() {
 # Set vendor mount point
 vendor_mnt() {
   device_vendorpartition="false"
-  if [ -n "$(cat $fstab | grep /vendor)" ]; then
-    device_vendorpartition="true"
-    VENDOR="/vendor"
+  if [ "$BOOTMODE" == "false" ]; then
+    if [ -n "$(cat $fstab | grep /vendor)" ]; then
+      device_vendorpartition="true"
+      VENDOR="/vendor"
+    fi
+  fi
+  if [ "$BOOTMODE" == "true" ]; then
+    DEVICE=`find /dev/block \( -type b -o -type c -o -type l \) -iname vendor | head -n 1`
+    if [ "$DEVICE" ]; then device_vendorpartition="true"; VENDOR="/vendor"; fi
   fi
 }
 
@@ -396,11 +417,13 @@ umount_apex() {
 }
 
 umount_all() {
-  (umount -l /system_root
-   umount -l /system
-   umount -l /product
-   umount -l /system_ext
-   umount -l /vendor) > /dev/null 2>&1
+  if [ "$BOOTMODE" == "false" ]; then
+    (umount -l /system_root
+     umount -l /system
+     umount -l /product
+     umount -l /system_ext
+     umount -l /vendor) > /dev/null 2>&1
+  fi
 }
 
 # Mount partitions
@@ -549,26 +572,62 @@ mount_all() {
   mount_apex
 }
 
+mount_BM() {
+  $SYSTEM_ROOT && ui_print "- Device is system-as-root"
+  $SUPER_PARTITION && ui_print "- Super partition detected"
+  # Check A/B slot
+  SLOT=`grep_cmdline androidboot.slot_suffix`
+  if [ -z $SLOT ]; then
+    SLOT=`grep_cmdline androidboot.slot`
+    [ -z $SLOT ] || SLOT=_${SLOT}
+  fi
+  [ -z $SLOT ] || ui_print "- Current boot slot: $SLOT"
+}
+
 check_rw_status() {
-  if [ "$($l/grep -w -o /system_root $fstab)" ]; then
-    system_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/system_root?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
-    if [ ! "$system_as_rw" == "rw" ]; then on_abort "! Read-only /system partition. Aborting..."; fi
+  if [ "$BOOTMODE" == "false" ]; then
+    if [ "$($l/grep -w -o /system_root $fstab)" ]; then
+      system_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/system_root?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
+      if [ ! "$system_as_rw" == "rw" ]; then on_abort "! Read-only /system partition. Aborting..."; fi
+    fi
+    if [ "$($l/grep -w -o /system $fstab)" ]; then
+      system_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/system?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
+      if [ ! "$system_as_rw" == "rw" ]; then on_abort "! Read-only /system partition. Aborting..."; fi
+    fi
+    if [ "$device_vendorpartition" == "true" ]; then
+      vendor_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/vendor?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
+      if [ ! "$vendor_as_rw" == "rw" ]; then on_abort "! Read-only /vendor partition. Aborting..."; fi
+    fi
+    if [ -n "$(cat $fstab | grep /product)" ]; then
+      product_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/product?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
+      if [ ! "$product_as_rw" == "rw" ]; then on_abort "! Read-only /product partition. Aborting..."; fi
+    fi
+    if [ -n "$(cat $fstab | grep /system_ext)" ]; then
+      system_ext_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/system_ext?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
+      if [ ! "$system_ext_as_rw" == "rw" ]; then on_abort "! Read-only /system_ext partition. Aborting..."; fi
+    fi
   fi
-  if [ "$($l/grep -w -o /system $fstab)" ]; then
-    system_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/system?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
-    if [ ! "$system_as_rw" == "rw" ]; then on_abort "! Read-only /system partition. Aborting..."; fi
-  fi
-  if [ "$device_vendorpartition" == "true" ]; then
-    vendor_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/vendor?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
-    if [ ! "$vendor_as_rw" == "rw" ]; then on_abort "! Read-only /vendor partition. Aborting..."; fi
-  fi
-  if [ -n "$(cat $fstab | grep /product)" ]; then
-    product_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/product?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
-    if [ ! "$product_as_rw" == "rw" ]; then on_abort "! Read-only /product partition. Aborting..."; fi
-  fi
-  if [ -n "$(cat $fstab | grep /system_ext)" ]; then
-    system_ext_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/system_ext?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
-    if [ ! "$system_ext_as_rw" == "rw" ]; then on_abort "! Read-only /system_ext partition. Aborting..."; fi
+  if [ "$BOOTMODE" == "true" ]; then
+    if [ "$($l/grep -w -o /dev/root /proc/mounts)" ]; then
+      system_as_rw=`$l/grep -w /dev/root /proc/mounts | $l/grep -w / | $l/grep -ow rw | head -n 1`
+      if [ ! "$system_as_rw" == "rw" ]; then on_abort "! Read-only /system partition. Aborting..."; fi
+    fi
+    if [ "$($l/grep -w -o /dev/block/dm-0 /proc/mounts)" ]; then
+      system_as_rw=`$l/grep -w /dev/block/dm-0 /proc/mounts | $l/grep -w / | $l/grep -ow rw | head -n 1`
+      if [ ! "$system_as_rw" == "rw" ]; then on_abort "! Read-only /system partition. Aborting..."; fi
+    fi
+    if [ "$device_vendorpartition" == "true" ]; then
+      vendor_as_rw=`$l/grep -w /vendor /proc/mounts | $l/grep -ow rw | head -n 1`
+      if [ ! "$vendor_as_rw" == "rw" ]; then on_abort "! Read-only /vendor partition. Aborting..."; fi
+    fi
+    if [ "$($l/grep -w -o /product /proc/mounts)" ]; then
+      product_as_rw=`$l/grep -w /product /proc/mounts | $l/grep -ow rw | head -n 1`
+      if [ ! "$product_as_rw" == "rw" ]; then on_abort "! Read-only /product partition. Aborting..."; fi
+    fi
+    if [ "$($l/grep -w -o /system_ext /proc/mounts)" ]; then
+      system_ext_as_rw=`$l/grep -w /system_ext /proc/mounts | $l/grep -ow rw | head -n 1`
+      if [ ! "$system_ext_as_rw" == "rw" ]; then on_abort "! Read-only /system_ext partition. Aborting..."; fi
+    fi
   fi
 }
 
@@ -604,9 +663,9 @@ chk_inst_pkg() {
 on_inst_abort() {
   if [ "$GAPPS_TYPE" == "OpenGApps" ]; then
     ui_print "! OpenGApps installed. Aborting..."
+    unmount_all
     # Wipe ZIP extracts
     cleanup
-    unmount_all
     ui_print "! Installation failed"
     ui_print " "
     # Reset any error code
@@ -616,9 +675,9 @@ on_inst_abort() {
   fi
   if [ "$GAPPS_TYPE" == "FlameGApps" ]; then
     ui_print "! FlameGApps installed. Aborting..."
+    unmount_all
     # Wipe ZIP extracts
     cleanup
-    unmount_all
     ui_print "! Installation failed"
     ui_print " "
     # Reset any error code
@@ -628,9 +687,9 @@ on_inst_abort() {
   fi
   if [ "$GAPPS_TYPE" == "NikGApps" ]; then
     ui_print "! NikGApps installed. Aborting..."
+    unmount_all
     # Wipe ZIP extracts
     cleanup
-    unmount_all
     ui_print "! Installation failed"
     ui_print " "
     # Reset any error code
@@ -944,35 +1003,37 @@ on_install_complete() {
 }
 
 unmount_all() {
-  ui_print "- Unmounting partitions"
-  umount_apex
-  if [ "$device_abpartition" == "true" ]; then
-    if [ -d /system_root ]; then
-      mount -o ro /system_root
-    else
-      mount -o ro /system
-    fi
-  fi
-  if [ "$device_abpartition" == "false" ]; then
-    if [ -d /system_root ]; then
-      umount /system_root
-    else
-      umount /system
-    fi
-  fi
-  if [ "$device_vendorpartition" == "true" ]; then
+  if [ "$BOOTMODE" == "false" ]; then
+    ui_print "- Unmounting partitions"
+    umount_apex
     if [ "$device_abpartition" == "true" ]; then
-      mount -o ro $VENDOR
-    else
-      umount $VENDOR
+      if [ -d /system_root ]; then
+        mount -o ro /system_root
+      else
+        mount -o ro /system
+      fi
     fi
+    if [ "$device_abpartition" == "false" ]; then
+      if [ -d /system_root ]; then
+        umount /system_root
+      else
+        umount /system
+      fi
+    fi
+    if [ "$device_vendorpartition" == "true" ]; then
+      if [ "$device_abpartition" == "true" ]; then
+        mount -o ro $VENDOR
+      else
+        umount $VENDOR
+      fi
+    fi
+    umount /system_ext > /dev/null 2>&1
+    umount /product > /dev/null 2>&1
+    umount /persist > /dev/null 2>&1
+    umount /dev/random > /dev/null 2>&1
+    # Restore predefined environmental variable
+    [ -z $OLD_ANDROID_ROOT ] || export ANDROID_ROOT=$OLD_ANDROID_ROOT
   fi
-  umount /system_ext > /dev/null 2>&1
-  umount /product > /dev/null 2>&1
-  umount /persist > /dev/null 2>&1
-  umount /dev/random > /dev/null 2>&1
-  # Restore predefined environmental variable
-  [ -z $OLD_ANDROID_ROOT ] || export ANDROID_ROOT=$OLD_ANDROID_ROOT
 }
 
 cleanup() {
@@ -983,6 +1044,8 @@ cleanup() {
   rm -rf $TMP/g.prop
   rm -rf $TMP/installer.sh
   rm -rf $TMP/init.logcat.rc
+  rm -rf $TMP/LICENSE
+  rm -rf $TMP/META-INF
   rm -rf $TMP/out
   rm -rf $TMP/unzip
   rm -rf $TMP/updater
@@ -1018,7 +1081,7 @@ on_installed() {
 }
 
 get_bitgapps_config() {
-  for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage; do
+  for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage /data/media/0; do
     for b in $(find $f -iname "bitgapps-config.prop" 2>/dev/null); do
       if [ -f "$b" ]; then
         BITGAPPS_CONFIG="$b" && ui_print "- Install config detected"
@@ -2698,7 +2761,7 @@ sdk_v31_install() {
       zip/Preferred.tar.xz
       zip/overlay/PlayStoreOverlay.tar.xz"
 
-    unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
+    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
 
     # Unpack system files
     extract_app() {
@@ -2762,7 +2825,7 @@ sdk_v30_install() {
       zip/Preferred.tar.xz
       zip/overlay/PlayStoreOverlay.tar.xz"
 
-    unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
+    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
 
     # Unpack system files
     extract_app() {
@@ -2826,7 +2889,7 @@ sdk_v29_install() {
       zip/Permissions.tar.xz
       zip/Preferred.tar.xz"
 
-    unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
+    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
 
     # Unpack system files
     extract_app() {
@@ -2891,7 +2954,7 @@ sdk_v28_install() {
       zip/Permissions.tar.xz
       zip/Preferred.tar.xz"
 
-    unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
+    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
 
     # Unpack system files
     extract_app() {
@@ -2958,7 +3021,7 @@ sdk_v27_install() {
       zip/Permissions.tar.xz
       zip/Preferred.tar.xz"
 
-    unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
+    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
 
     # Unpack system files
     extract_app() {
@@ -3026,7 +3089,7 @@ sdk_v26_install() {
       zip/Permissions.tar.xz
       zip/Preferred.tar.xz"
 
-    unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
+    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
 
     # Unpack system files
     extract_app() {
@@ -3095,7 +3158,7 @@ sdk_v25_install() {
       zip/Permissions.tar.xz
       zip/Preferred.tar.xz"
 
-    unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
+    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
 
     # Unpack system files
     extract_app() {
@@ -3156,7 +3219,7 @@ aosp_pkg_install() {
       zip/aosp/sys/Messaging.tar.xz
       zip/aosp/Permissions.tar.xz"
 
-    unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
+    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
 
     # Unpack system files
     extract_app() {
@@ -3188,7 +3251,7 @@ aosp_pkg_install() {
 # BiTGApps build property
 build_prop_file() {
   rm -rf $SYSTEM/etc/g.prop
-  unzip -o "$ZIPFILE" "g.prop" -d "$TMP"
+  [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "g.prop" -d "$TMP"
   cp -f $TMP/g.prop $SYSTEM/etc/g.prop
   chmod 0644 $SYSTEM/etc/g.prop
   chcon -h u:object_r:system_file:s0 "$SYSTEM/etc/g.prop"
@@ -3197,7 +3260,7 @@ build_prop_file() {
 # Additional build properties for OTA survival script
 ota_prop_file() {
   rm -rf $SYSTEM/config.prop
-  unzip -o "$ZIPFILE" "config.prop" -d "$TMP"
+  [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "config.prop" -d "$TMP"
   cp -f $TMP/config.prop $SYSTEM/config.prop
   chmod 0644 $SYSTEM/config.prop
   chcon -h u:object_r:system_file:s0 "$SYSTEM/config.prop"
@@ -3208,7 +3271,7 @@ backup_script() {
   if [ -d "$SYSTEM_ADDOND" ]; then
     ui_print "- Installing OTA survival script"
     rm -rf $SYSTEM_ADDOND/90-bitgapps.sh
-    unzip -o "$ZIPFILE" "90-bitgapps.sh" -d "$TMP"
+    [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "90-bitgapps.sh" -d "$TMP"
     cp -f $TMP/90-bitgapps.sh $SYSTEM_ADDOND/90-bitgapps.sh
     chmod 0755 $SYSTEM_ADDOND/90-bitgapps.sh
     chcon -h u:object_r:system_file:s0 "$SYSTEM_ADDOND/90-bitgapps.sh"
@@ -3328,7 +3391,7 @@ set_setup_install() {
       ZIP="zip/core/AndroidMigratePrebuilt.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"
     fi
 
-    unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
+    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
 
     # Unpack system files
     extract_app() {
@@ -3474,7 +3537,7 @@ pre_installed_pkg() {
 target_sys() {
   # Set default packages and unpack
   ZIP="zip/sys/$ADDON_SYS"
-  for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
   tar -xf $ZIP_FILE/sys/$ADDON_SYS -C $TMP_SYS
   # Install package
@@ -3487,7 +3550,7 @@ target_sys() {
 target_core() {
   # Set default packages and unpack
   ZIP="zip/core/$ADDON_CORE"
-  for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
   tar -xf $ZIP_FILE/core/$ADDON_CORE -C $TMP_PRIV
   # Install package
@@ -3500,7 +3563,7 @@ target_core() {
 dialer_config() {
   # Set default packages and unpack
   ZIP="zip/DialerPermissions.tar.xz"
-  for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
   tar -xf $ZIP_FILE/DialerPermissions.tar.xz -C $TMP_PERMISSION
   # Install package
@@ -3529,7 +3592,7 @@ dialer_config() {
 dialer_framework() {
   # Set default packages and unpack
   ZIP="zip/DialerFramework.tar.xz"
-  for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
   tar -xf $ZIP_FILE/DialerFramework.tar.xz -C $TMP_FRAMEWORK
   # Install package
@@ -5236,14 +5299,12 @@ post_uninstall() {
 boot_image_editor() {
   if [ "$device_architecture" == "armeabi-v7a" ]; then
     ZIP="zip/AIK_arm.tar.xz"
-    for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
-    tar tvf $ZIP_FILE/AIK_arm.tar.xz > /dev/null 2>&1
+    [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
     tar -xf $ZIP_FILE/AIK_arm.tar.xz -C $TMP_AIK
   fi
   if [ "$device_architecture" == "arm64-v8a" ]; then
     ZIP="zip/AIK_arm64.tar.xz"
-    for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
-    tar tvf $ZIP_FILE/AIK_arm64.tar.xz > /dev/null 2>&1
+    [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
     tar -xf $ZIP_FILE/AIK_arm64.tar.xz -C $TMP_AIK
   fi
   chmod -R 0755 $TMP_AIK
@@ -5252,12 +5313,19 @@ boot_image_editor() {
 # Bootlog function, trigger at 'on fs' stage
 patch_bootimg() {
   # Extract logcat script
-  unzip -o "$ZIPFILE" "init.logcat.rc" -d "$TMP"
+  [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "init.logcat.rc" -d "$TMP"
   if [ ! "$SYSTEM_ROOT" == "true" ] && [ ! "$device_abpartition" == "true" ] && [ ! "$SUPER_PARTITION" == "true" ]; then
     cd $TMP_AIK
     # Lets see what fstab tells me
-    block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
-    dd if="$block" of="boot.img" > /dev/null 2>&1
+    if [ "$BOOTMODE" == "false" ]; then
+      block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
+      dd if="$block" of="boot.img" > /dev/null 2>&1
+    fi
+    # Extract using block device
+    if [ "$BOOTMODE" == "true" ]; then
+      block=`find /dev/block \( -type b -o -type c -o -type l \) -iname boot | head -n 1`
+      dd if="$block" of="boot.img" > /dev/null 2>&1
+    fi
     ./unpackimg.sh boot.img > /dev/null 2>&1
     if [ -f "split_img/boot.img-cmdline" ] && [ -f "ramdisk/init.rc" ]; then
       ui_print "- Apply bootlog patch"
@@ -5290,9 +5358,15 @@ patch_bootimg() {
   if [ "$SYSTEM_ROOT" == "true" ] || [ "$device_abpartition" == "true" ] || [ "$SUPER_PARTITION" == "true" ]; then
     cd $TMP_AIK
     # Lets see what fstab tells me
-    block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
-    # Copy boot image
-    dd if="$block" of="boot.img" > /dev/null 2>&1
+    if [ "$BOOTMODE" == "false" ]; then
+      block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
+      dd if="$block" of="boot.img" > /dev/null 2>&1
+    fi
+    # Extract using block device
+    if [ "$BOOTMODE" == "true" ]; then
+      block=`find /dev/block \( -type b -o -type c -o -type l \) -iname boot | head -n 1`
+      dd if="$block" of="boot.img" > /dev/null 2>&1
+    fi
     ./unpackimg.sh boot.img > /dev/null 2>&1
     cd ../../..
     if [ -f "$TMP_AIK/split_img/boot.img-cmdline" ] && [ -f "/system_root/init.rc" ]; then
@@ -5331,9 +5405,15 @@ patch_bootimg() {
   if [ "$SYSTEM_ROOT" == "true" ] || [ "$device_abpartition" == "true" ] || [ "$SUPER_PARTITION" == "true" ]; then
     cd $TMP_AIK
     # Lets see what fstab tells me
-    block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
-    # Copy boot image
-    dd if="$block" of="boot.img" > /dev/null 2>&1
+    if [ "$BOOTMODE" == "false" ]; then
+      block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
+      dd if="$block" of="boot.img" > /dev/null 2>&1
+    fi
+    # Extract using block device
+    if [ "$BOOTMODE" == "true" ]; then
+      block=`find /dev/block \( -type b -o -type c -o -type l \) -iname boot | head -n 1`
+      dd if="$block" of="boot.img" > /dev/null 2>&1
+    fi
     ./unpackimg.sh boot.img > /dev/null 2>&1
     cd ../../..
     if [ -f "$TMP_AIK/split_img/boot.img-cmdline" ] && [ -f "/system_root/system/etc/init/hw/init.rc" ]; then
@@ -5376,8 +5456,15 @@ patch_bootimg() {
 spl_update_boot() {
   cd $TMP_AIK
   # Lets see what fstab tells me
-  block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
-  dd if="$block" of="boot.img" > /dev/null 2>&1
+  if [ "$BOOTMODE" == "false" ]; then
+    block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
+    dd if="$block" of="boot.img" > /dev/null 2>&1
+  fi
+  # Extract using block device
+  if [ "$BOOTMODE" == "true" ]; then
+    block=`find /dev/block \( -type b -o -type c -o -type l \) -iname boot | head -n 1`
+    dd if="$block" of="boot.img" > /dev/null 2>&1
+  fi
   ./unpackimg.sh boot.img > /dev/null 2>&1
   if [ -f "split_img/boot.img-os_patch_level" ]; then
     rm -rf split_img/boot.img-os_patch_level
@@ -5510,7 +5597,7 @@ set_cts_patch() {
 
 # Universal SafetyNet Fix; Works together with CTS patch
 usf_v26() {
-  unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
+  unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
   # Set defaults and unpack
   if [ "$android_sdk" == "26" ]; then ZIP="zip/Keystore26.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore26.tar.xz -C $TMP_KEYSTORE; fi
   if [ "$android_sdk" == "27" ]; then ZIP="zip/Keystore27.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore27.tar.xz -C $TMP_KEYSTORE; fi
@@ -5565,9 +5652,15 @@ check_partition_status() {
 boot_whitelist_permission() {
   cd $TMP_AIK
   # Lets see what fstab tells me
-  block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
-  # Copy boot image
-  dd if="$block" of="boot.img" > /dev/null 2>&1
+  if [ "$BOOTMODE" == "false" ]; then
+    block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
+    dd if="$block" of="boot.img" > /dev/null 2>&1
+  fi
+  # Extract using block device
+  if [ "$BOOTMODE" == "true" ]; then
+    block=`find /dev/block \( -type b -o -type c -o -type l \) -iname boot | head -n 1`
+    dd if="$block" of="boot.img" > /dev/null 2>&1
+  fi
   ./unpackimg.sh boot.img > /dev/null 2>&1
   if [ -f "ramdisk/default.prop" ] && [ -n "$(cat ramdisk/default.prop | grep control_privapp_permissions)" ]; then
     ui_print "- Purge whitelist property"
@@ -5606,7 +5699,7 @@ helper() {
 
 # These set of functions should be executed after 'helper' function
 pre_install() {
-  if [ "$ZIPTYPE" == "addon" ]; then
+  if [ "$ZIPTYPE" == "addon" ] && [ "$BOOTMODE" == "false" ]; then
     on_partition_check
     on_fstab_check
     ab_partition
@@ -5626,7 +5719,24 @@ pre_install() {
     on_wipe_check
     set_wipe_config
   fi
-  if [ "$ZIPTYPE" == "basic" ]; then
+  if [ "$ZIPTYPE" == "addon" ] && [ "$BOOTMODE" == "true" ]; then
+    on_partition_check
+    ab_partition
+    system_as_root
+    super_partition
+    vendor_mnt
+    mount_BM
+    check_rw_status
+    mount_status
+    get_bitgapps_config
+    profile
+    on_version_check
+    on_platform_check
+    on_target_platform
+    on_wipe_check
+    set_wipe_config
+  fi
+  if [ "$ZIPTYPE" == "basic" ] && [ "$BOOTMODE" == "false" ]; then
     on_partition_check
     on_fstab_check
     ab_partition
@@ -5655,7 +5765,33 @@ pre_install() {
     on_wipe_check
     set_wipe_config
   fi
-  if [ "$ZIPTYPE" == "patch" ]; then
+  if [ "$ZIPTYPE" == "basic" ] && [ "$BOOTMODE" == "true" ]; then
+    on_partition_check
+    ab_partition
+    system_as_root
+    super_partition
+    vendor_mnt
+    mount_BM
+    check_rw_status
+    mount_status
+    chk_inst_pkg
+    on_inst_abort
+    get_bitgapps_config
+    profile
+    on_release_tag
+    check_release_tag
+    on_version_check
+    check_sdk
+    check_version
+    on_platform_check
+    on_target_platform
+    build_platform
+    check_platform
+    clean_inst
+    on_wipe_check
+    set_wipe_config
+  fi
+  if [ "$ZIPTYPE" == "patch" ] && [ "$BOOTMODE" == "false" ]; then
     on_partition_check
     on_fstab_check
     ab_partition
@@ -5671,12 +5807,39 @@ pre_install() {
     on_version_check
     on_platform_check
   fi
+  if [ "$ZIPTYPE" == "patch" ] && [ "$BOOTMODE" == "true" ]; then
+    on_partition_check
+    ab_partition
+    system_as_root
+    super_partition
+    vendor_mnt
+    mount_BM
+    check_rw_status
+    mount_status
+    profile
+    on_version_check
+    on_platform_check
+  fi
 }
 
 # Check availability of Product partition
 chk_product() {
-  if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "29" ]; then
+  if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "29" ] && [ "$BOOTMODE" == "false" ]; then
     if [ ! -n "$(cat $fstab | grep /product)" ]; then
+      ui_print "! Product partition not found. Aborting..."
+      # Wipe ZIP extracts
+      cleanup
+      unmount_all
+      ui_print "! Installation failed"
+      ui_print " "
+      # Reset any error code
+      true
+      sync
+      exit 1
+    fi
+  fi
+  if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "29" ] && [ "$BOOTMODE" == "true" ]; then
+    if [ ! "$($l/grep -w -o /product /proc/mounts)" ]; then
       ui_print "! Product partition not found. Aborting..."
       # Wipe ZIP extracts
       cleanup
@@ -5693,8 +5856,22 @@ chk_product() {
 
 # Check availability of SystemExt partition
 chk_system_Ext() {
-  if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; then
+  if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ] && [ "$BOOTMODE" == "false" ]; then
     if [ ! -n "$(cat $fstab | grep /system_ext)" ]; then
+      ui_print "! SystemExt partition not found. Aborting..."
+      # Wipe ZIP extracts
+      cleanup
+      unmount_all
+      ui_print "! Installation failed"
+      ui_print " "
+      # Reset any error code
+      true
+      sync
+      exit 1
+    fi
+  fi
+  if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ] && [ "$BOOTMODE" == "true" ]; then
+    if [ ! "$($l/grep -w -o /system_ext /proc/mounts)" ]; then
       ui_print "! SystemExt partition not found. Aborting..."
       # Wipe ZIP extracts
       cleanup
