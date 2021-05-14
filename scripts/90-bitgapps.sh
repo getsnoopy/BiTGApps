@@ -2012,6 +2012,14 @@ fix_addon_conflict() {
       rm -rf $S/system_ext/priv-app/Gboard*
       rm -rf $S/system_ext/priv-app/gboard*
       rm -rf $S/system_ext/priv-app/LatinIMEGooglePrebuilt
+      if [ -n "$(cat $S/config.prop | grep ro.config.keyboard)" ]; then
+        rm -rf $S/app/LatinIME
+        rm -rf $S/priv-app/LatinIME
+        rm -rf $S/product/app/LatinIME
+        rm -rf $S/product/priv-app/LatinIME
+        rm -rf $S/system_ext/app/LatinIME
+        rm -rf $S/system_ext/priv-app/LatinIME
+      fi
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.markup)" ]; then
       rm -rf $S/app/MarkupGoogle*

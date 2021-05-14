@@ -4214,6 +4214,16 @@ set_addon_zip_conf() {
       rm -rf $SYSTEM/system_ext/priv-app/Gboard*
       rm -rf $SYSTEM/system_ext/priv-app/gboard*
       rm -rf $SYSTEM/system_ext/priv-app/LatinIMEGooglePrebuilt
+      if [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
+        rm -rf $SYSTEM/app/LatinIME
+        rm -rf $SYSTEM/priv-app/LatinIME
+        rm -rf $SYSTEM/product/app/LatinIME
+        rm -rf $SYSTEM/product/priv-app/LatinIME
+        rm -rf $SYSTEM/system_ext/app/LatinIME
+        rm -rf $SYSTEM/system_ext/priv-app/LatinIME
+        # Enable wiping of AOSP Keyboard during OTA upgrade
+        insert_line $SYSTEM/config.prop "ro.config.keyboard" after '# Begin addon properties' "ro.config.gboard"
+      fi
       # Install
       ADDON_SYS="GboardGooglePrebuilt.tar.xz"
       PKG_SYS="GboardGooglePrebuilt"
@@ -4681,6 +4691,16 @@ set_addon_zip_sep() {
       rm -rf $SYSTEM/system_ext/priv-app/Gboard*
       rm -rf $SYSTEM/system_ext/priv-app/gboard*
       rm -rf $SYSTEM/system_ext/priv-app/LatinIMEGooglePrebuilt
+      if [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
+        rm -rf $SYSTEM/app/LatinIME
+        rm -rf $SYSTEM/priv-app/LatinIME
+        rm -rf $SYSTEM/product/app/LatinIME
+        rm -rf $SYSTEM/product/priv-app/LatinIME
+        rm -rf $SYSTEM/system_ext/app/LatinIME
+        rm -rf $SYSTEM/system_ext/priv-app/LatinIME
+        # Enable wiping of AOSP Keyboard during OTA upgrade
+        insert_line $SYSTEM/config.prop "ro.config.keyboard" after '# Begin addon properties' "ro.config.gboard"
+      fi
       # Install
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         ADDON_SYS="GboardGooglePrebuilt_arm.tar.xz"
