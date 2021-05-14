@@ -1910,6 +1910,8 @@ fix_addon_conflict() {
       rm -rf $S/priv-app/Exactcalculator
       rm -rf $S/product/app/Calculator*
       rm -rf $S/product/app/calculator*
+      rm -rf $S/product/app/ExactCalculator
+      rm -rf $S/product/app/Exactcalculator
       rm -rf $S/product/priv-app/Calculator*
       rm -rf $S/product/priv-app/calculator*
       rm -rf $S/product/priv-app/ExactCalculator

@@ -3976,6 +3976,8 @@ set_addon_zip_conf() {
       rm -rf $SYSTEM/priv-app/Exactcalculator
       rm -rf $SYSTEM/product/app/Calculator*
       rm -rf $SYSTEM/product/app/calculator*
+      rm -rf $SYSTEM/product/app/ExactCalculator
+      rm -rf $SYSTEM/product/app/Exactcalculator
       rm -rf $SYSTEM/product/priv-app/Calculator*
       rm -rf $SYSTEM/product/priv-app/calculator*
       rm -rf $SYSTEM/product/priv-app/ExactCalculator
@@ -4439,6 +4441,8 @@ set_addon_zip_sep() {
       rm -rf $SYSTEM/priv-app/Exactcalculator
       rm -rf $SYSTEM/product/app/Calculator*
       rm -rf $SYSTEM/product/app/calculator*
+      rm -rf $SYSTEM/product/app/ExactCalculator
+      rm -rf $SYSTEM/product/app/Exactcalculator
       rm -rf $SYSTEM/product/priv-app/Calculator*
       rm -rf $SYSTEM/product/priv-app/calculator*
       rm -rf $SYSTEM/product/priv-app/ExactCalculator
