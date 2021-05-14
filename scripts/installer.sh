@@ -249,38 +249,10 @@ on_fstab_check() {
   fstab="$?"
   # Set fstab for getting mount point
   [ -f "/etc/fstab" ] && fstab="/etc/fstab"
-  # Set recovery system fstab
-  TARGET_SYSTEM_FSTAB="/system/etc/fstab"
   # Check fstab status
   [ "$fstab" == "0" ] && ANDROID_RECOVERY_FSTAB="false"
   # Abort, if no valid fstab found
   [ "$ANDROID_RECOVERY_FSTAB" == "false" ] && on_abort "! Unable to find valid fstab. Aborting..."
-}
-
-# Preserve fstab before it gets deleted on mount stage
-preserve_fstab() {
-  RESTORE_RECOVERY_SYSTEM="false"
-  if [ -f "$TARGET_SYSTEM_FSTAB" ]; then
-    # Remove all symlinks from /etc
-    rm -rf /etc
-    mkdir /etc && chmod 0755 /etc
-    # Copy raw fstab and other files from /system/etc to /etc without symbolic-link
-    cp -f /system/etc/cgroups.json /etc/cgroups.json 2>/dev/null
-    cp -f /system/etc/event-log-tags /etc/event-log-tags 2>/dev/null
-    cp -f /system/etc/fstab /etc/fstab 2>/dev/null
-    cp -f /system/etc/ld.config.txt /etc/ld.config.txt 2>/dev/null
-    cp -f /system/etc/mkshrc /etc/mkshrc 2>/dev/null
-    cp -f /system/etc/mtab /etc/mtab 2>/dev/null
-    cp -f /system/etc/recovery.fstab /etc/recovery.fstab 2>/dev/null
-    cp -f /system/etc/task_profiles.json /etc/task_profiles.json 2>/dev/null
-    cp -f /system/etc/twrp.fstab /etc/twrp.fstab 2>/dev/null
-    # Recursively update permission
-    chmod -R 0644 /etc
-    # Create backup of recovery system
-    mv system systembk
-    # Set restore target
-    RESTORE_RECOVERY_SYSTEM="true"
-  fi
 }
 
 # Set vendor mount point
@@ -347,6 +319,10 @@ mount_apex() {
   if [ "$($l/grep -w -o /system_root $fstab)" ]; then SYSTEM="/system_root/system"; fi
   if [ "$($l/grep -w -o /system $fstab)" ]; then SYSTEM="/system"; fi
   if [ "$($l/grep -w -o /system $fstab)" ] && [ -d "/system/system" ]; then SYSTEM="/system/system"; fi
+  # Set hardcoded system layout
+  if [ -z "$SYSTEM" ]; then
+    SYSTEM="/system_root/system"
+  fi
   test -d "$SYSTEM/apex" || return 1
   ui_print "- Mounting /apex"
   local apex dest loop minorx num
@@ -429,6 +405,12 @@ umount_all() {
 # Mount partitions
 mount_all() {
   mount -o bind /dev/urandom /dev/random
+  if ! is_mounted /data; then
+    mount /data
+    if [ -z "$(ls -A /sdcard)" ]; then
+      mount -o bind /data/media/0 /sdcard
+    fi
+  fi
   if [ -n "$(cat $fstab | grep /cache)" ]; then
     mount -o ro -t auto /cache > /dev/null 2>&1
     mount -o rw,remount -t auto /cache
@@ -447,21 +429,29 @@ mount_all() {
   OLD_ANDROID_ROOT=$ANDROID_ROOT
   unset ANDROID_ROOT
   # Wipe conflicting layouts
-  (rm -rf /system_root
-   rm -rf /system
-   rm -rf /product
-   rm -rf /system_ext)
+  rm -rf /system_root
+  rm -rf /product
+  rm -rf /system_ext
+  # Do not wipe system, if it create symlinks in root
+  if [ ! "$(readlink -f "/bin")" = "/system/bin" ] && [ ! "$(readlink -f "/etc")" = "/system/etc" ]; then
+    rm -rf /system
+  fi
   # Create initial path and set ANDROID_ROOT in the global environment
   if [ "$($l/grep -w -o /system_root $fstab)" ]; then mkdir /system_root; export ANDROID_ROOT="/system_root"; fi
   if [ "$($l/grep -w -o /system $fstab)" ]; then mkdir /system; export ANDROID_ROOT="/system"; fi
-  # System always set as ANDROID_ROOT
   if [ "$($l/grep -w -o /product $fstab)" ]; then mkdir /product; fi
   if [ "$($l/grep -w -o /system_ext $fstab)" ]; then mkdir /system_ext; fi
+  # Set '/system_root' as mount point, if previous check failed
+  # This adaption for recoveries using "/" as mount point in auto-generated,
+  # fstab but not actually mounting to "/" and using some other mount location.
+  # At this point we can mount system using its block device to any location.
+  if [ -z "$ANDROID_ROOT" ]; then
+    mkdir /system_root
+    export ANDROID_ROOT="/system_root"
+  fi
   # Set A/B slot property
   local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
   if [ "$SUPER_PARTITION" == "true" ]; then
-    # Restore recovery system
-    $RESTORE_RECOVERY_SYSTEM && mv systembk system
     if [ "$device_abpartition" == "true" ]; then
       for block in system system_ext product vendor; do
         for slot in "" _a _b; do
@@ -524,6 +514,21 @@ mount_all() {
       ui_print "- Mounting /system"
       mount -o ro -t auto $ANDROID_ROOT > /dev/null 2>&1
       mount -o rw,remount -t auto $ANDROID_ROOT
+      is_mounted $ANDROID_ROOT || NEED_BLOCK_MOUNT="true"
+      if [ "$NEED_BLOCK_MOUNT" == "true" ]; then
+        if [ -e "/dev/block/by-name/system" ]; then
+          BLK="/dev/block/by-name/system"
+        elif [ -e "/dev/block/bootdevice/by-name/system" ]; then
+          BLK="/dev/block/bootdevice/by-name/system"
+        elif [ -e "/dev/block/platform/*/by-name/system" ]; then
+          BLK="/dev/block/platform/*/by-name/system"
+        elif [ -e "/dev/block/platform/*/*/by-name/system" ]; then
+          BLK="/dev/block/platform/*/*/by-name/system"
+        else
+          on_abort "! Cannot find system block. Aborting..."
+        fi
+        mount $BLK $ANDROID_ROOT
+      fi
       is_mounted $ANDROID_ROOT || on_abort "! Cannot mount $ANDROID_ROOT. Aborting..."
       if [ "$device_vendorpartition" == "true" ]; then
         ui_print "- Mounting /vendor"
@@ -539,8 +544,6 @@ mount_all() {
       fi
     fi
     if [ "$device_abpartition" == "true" ] && [ "$system_as_root" == "true" ]; then
-      # Restore recovery system
-      $RESTORE_RECOVERY_SYSTEM && mv systembk system
       ui_print "- Mounting /system"
       if [ "$ANDROID_ROOT" == "/system_root" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
@@ -549,10 +552,6 @@ mount_all() {
       if [ "$ANDROID_ROOT" == "/system" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
-      fi
-      if [ ! "$($l/grep -w -o /system_root /proc/mounts)" ] || [ ! "$($l/grep -w -o /system /proc/mounts)" ]; then
-        mount -o ro -t auto $ANDROID_ROOT > /dev/null 2>&1
-        mount -o rw,remount -t auto $ANDROID_ROOT
       fi
       is_mounted $ANDROID_ROOT || on_abort "! Cannot mount $ANDROID_ROOT. Aborting..."
       if [ "$device_vendorpartition" == "true" ]; then
@@ -587,6 +586,10 @@ mount_BM() {
 check_rw_status() {
   if [ "$BOOTMODE" == "false" ]; then
     if [ "$($l/grep -w -o /system_root $fstab)" ]; then
+      system_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/system_root?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
+      if [ ! "$system_as_rw" == "rw" ]; then on_abort "! Read-only /system partition. Aborting..."; fi
+    fi
+    if [ "$($l/grep -w -o /system_root /proc/mounts)" ]; then
       system_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/system_root?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
       if [ ! "$system_as_rw" == "rw" ]; then on_abort "! Read-only /system partition. Aborting..."; fi
     fi
@@ -643,6 +646,9 @@ system_layout() {
   fi
   if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($l/grep -w -o /system $fstab)" ]; then
     export SYSTEM="/system/system"
+  fi
+  if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($l/grep -w -o /system_root /proc/mounts)" ]; then
+    export SYSTEM="/system_root/system"
   fi
 }
 
@@ -951,6 +957,9 @@ set_comp_log_zip() {
 }
 
 set_install_logs() {
+  cp -f /cache/recovery/last_log $TMP/bitgapps/last.log > /dev/null 2>&1
+  cp -f /cache/recovery/log $TMP/bitgapps/lineage.log > /dev/null 2>&1
+  cp -f /cache/recovery.log $TMP/bitgapps/cache.log > /dev/null 2>&1
   cp -f $TMP/recovery.log $TMP/bitgapps/recovery.log > /dev/null 2>&1
   cp -f /etc/fstab $TMP/bitgapps/fstab > /dev/null 2>&1
   cp -f /etc/recovery.fstab $TMP/bitgapps/recovery.fstab > /dev/null 2>&1
@@ -986,8 +995,6 @@ on_install_failed() {
   set_error_log_zip
   # Checkout log path
   cd /
-  # Keep a copy of recovery log in cache partition for devices with LOS recovery
-  cp -f $TMP/recovery.log /cache/recovery.log > /dev/null 2>&1
 }
 
 # Generate log file on complete installation
@@ -998,8 +1005,6 @@ on_install_complete() {
   set_comp_log_zip
   # Checkout log path
   cd /
-  # Keep a copy of recovery log in cache partition for devices with LOS recovery
-  cp -f $TMP/recovery.log /cache/recovery.log > /dev/null 2>&1
 }
 
 unmount_all() {
@@ -5705,7 +5710,6 @@ pre_install() {
     ab_partition
     system_as_root
     super_partition
-    preserve_fstab
     vendor_mnt
     mount_all
     check_rw_status
@@ -5742,7 +5746,6 @@ pre_install() {
     ab_partition
     system_as_root
     super_partition
-    preserve_fstab
     vendor_mnt
     mount_all
     check_rw_status
@@ -5797,7 +5800,6 @@ pre_install() {
     ab_partition
     system_as_root
     super_partition
-    preserve_fstab
     vendor_mnt
     mount_all
     check_rw_status

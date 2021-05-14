@@ -29,9 +29,6 @@ BB="/data/busybox/busybox"
 # Set auto-generated fstab
 fstab="/etc/fstab"
 
-# A/B Partition specific
-TARGET_SYSTEM_FSTAB="/system/etc/fstab"
-
 # Set ADDOND_VERSION
 ADDOND_VERSION=""
 
@@ -183,32 +180,6 @@ shared_library() {
   rm -rf $S/system_ext/priv-app/ExtServices
 }
 
-# Preserve fstab before it gets deleted on mount stage
-preserve_fstab() {
-  RESTORE_RECOVERY_SYSTEM="false"
-  if [ -f "$TARGET_SYSTEM_FSTAB" ]; then
-    # Remove all symlinks from /etc
-    rm -rf /etc
-    mkdir /etc && chmod 0755 /etc
-    # Copy raw fstab and other files from /system/etc to /etc without symbolic-link
-    cp -f /system/etc/cgroups.json /etc/cgroups.json 2>/dev/null
-    cp -f /system/etc/event-log-tags /etc/event-log-tags 2>/dev/null
-    cp -f /system/etc/fstab /etc/fstab 2>/dev/null
-    cp -f /system/etc/ld.config.txt /etc/ld.config.txt 2>/dev/null
-    cp -f /system/etc/mkshrc /etc/mkshrc 2>/dev/null
-    cp -f /system/etc/mtab /etc/mtab 2>/dev/null
-    cp -f /system/etc/recovery.fstab /etc/recovery.fstab 2>/dev/null
-    cp -f /system/etc/task_profiles.json /etc/task_profiles.json 2>/dev/null
-    cp -f /system/etc/twrp.fstab /etc/twrp.fstab 2>/dev/null
-    # Recursively update permission
-    chmod -R 0644 /etc
-    # Create backup of recovery system
-    mv system systembk
-    # Set restore target
-    RESTORE_RECOVERY_SYSTEM="true"
-  fi
-}
-
 # Set partition and boot slot property
 on_partition_check() {
   system_as_root=$(getprop ro.build.system_root_image)
@@ -253,6 +224,11 @@ super_partition() {
   fi
 }
 
+is_mounted() {
+  grep -q " $(readlink -f $1) " /proc/mounts 2>/dev/null
+  return $?
+}
+
 setup_mountpoint() {
   test -L $1 && mv -f $1 ${1}_link
   if [ ! -d $1 ]; then
@@ -265,6 +241,10 @@ mount_apex() {
   if [ "$($BB grep -w -o /system_root $fstab)" ]; then S="/system_root/system"; fi
   if [ "$($BB grep -w -o /system $fstab)" ]; then S="/system"; fi
   if [ "$($BB grep -w -o /system $fstab)" ] && [ -d "/system/system" ]; then S="/system/system"; fi
+  # Set hardcoded system layout
+  if [ -z "$S" ]; then
+    S="/system_root/system"
+  fi
   test -d "$S/apex" || return 1
   local apex dest loop minorx num
   setup_mountpoint /apex
@@ -344,6 +324,12 @@ unmount_all() {
 # Mount partitions
 mount_all() {
   mount -o bind /dev/urandom /dev/random
+  if ! is_mounted /data; then
+    mount /data
+    if [ -z "$(ls -A /sdcard)" ]; then
+      mount -o bind /data/media/0 /sdcard
+    fi
+  fi
   if [ -n "$(cat $fstab | grep /cache)" ]; then
     mount -o ro -t auto /cache > /dev/null 2>&1
     mount -o rw,remount -t auto /cache
@@ -353,21 +339,29 @@ mount_all() {
   OLD_ANDROID_ROOT=$ANDROID_ROOT
   unset ANDROID_ROOT
   # Wipe conflicting layouts
-  (rm -rf /system_root
-   rm -rf /system
-   rm -rf /product
-   rm -rf /system_ext)
+  rm -rf /system_root
+  rm -rf /product
+  rm -rf /system_ext
+  # Do not wipe system, if it create symlinks in root
+  if [ ! "$(readlink -f "/bin")" = "/system/bin" ] && [ ! "$(readlink -f "/etc")" = "/system/etc" ]; then
+    rm -rf /system
+  fi
   # Create initial path and set ANDROID_ROOT in the global environment
   if [ "$($BB grep -w -o /system_root $fstab)" ]; then mkdir /system_root; export ANDROID_ROOT="/system_root"; fi
   if [ "$($BB grep -w -o /system $fstab)" ]; then mkdir /system; export ANDROID_ROOT="/system"; fi
-  # System always set as ANDROID_ROOT
   if [ "$($BB grep -w -o /product $fstab)" ]; then mkdir /product; fi
   if [ "$($BB grep -w -o /system_ext $fstab)" ]; then mkdir /system_ext; fi
+  # Set '/system_root' as mount point, if previous check failed
+  # This adaption for recoveries using "/" as mount point in auto-generated,
+  # fstab but not actually mounting to "/" and using some other mount location.
+  # At this point we can mount system using its block device to any location.
+  if [ -z "$ANDROID_ROOT" ]; then
+    mkdir /system_root
+    export ANDROID_ROOT="/system_root"
+  fi
   # Set A/B slot property
   local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
   if [ "$SUPER_PARTITION" == "true" ]; then
-    # Restore recovery system
-    $RESTORE_RECOVERY_SYSTEM && mv systembk system
     if [ "$device_abpartition" == "true" ]; then
       for block in system system_ext product vendor; do
         for slot in "" _a _b; do
@@ -413,6 +407,21 @@ mount_all() {
     if [ "$device_abpartition" == "false" ]; then
       mount -o ro -t auto $ANDROID_ROOT > /dev/null 2>&1
       mount -o rw,remount -t auto $ANDROID_ROOT
+      is_mounted $ANDROID_ROOT || NEED_BLOCK_MOUNT="true"
+      if [ "$NEED_BLOCK_MOUNT" == "true" ]; then
+        if [ -e "/dev/block/by-name/system" ]; then
+          BLK="/dev/block/by-name/system"
+        elif [ -e "/dev/block/bootdevice/by-name/system" ]; then
+          BLK="/dev/block/bootdevice/by-name/system"
+        elif [ -e "/dev/block/platform/*/by-name/system" ]; then
+          BLK="/dev/block/platform/*/by-name/system"
+        elif [ -e "/dev/block/platform/*/*/by-name/system" ]; then
+          BLK="/dev/block/platform/*/*/by-name/system"
+        else
+          BLK="$?"
+        fi
+        mount $BLK $ANDROID_ROOT
+      fi
       if [ "$device_vendorpartition" == "true" ]; then
         mount -o ro -t auto $VENDOR > /dev/null 2>&1
         mount -o rw,remount -t auto $VENDOR
@@ -423,8 +432,6 @@ mount_all() {
       fi
     fi
     if [ "$device_abpartition" == "true" ] && [ "$system_as_root" == "true" ]; then
-      # Restore recovery system
-      $RESTORE_RECOVERY_SYSTEM && mv systembk system
       if [ "$ANDROID_ROOT" == "/system_root" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
@@ -432,10 +439,6 @@ mount_all() {
       if [ "$ANDROID_ROOT" == "/system" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
-      fi
-      if [ ! "$($BB grep -w -o /system_root /proc/mounts)" ] || [ ! "$($BB grep -w -o /system /proc/mounts)" ]; then
-        mount -o ro -t auto $ANDROID_ROOT > /dev/null 2>&1
-        mount -o rw,remount -t auto $ANDROID_ROOT
       fi
       if [ "$device_vendorpartition" == "true" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
@@ -462,6 +465,9 @@ system_layout() {
   fi
   if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($BB grep -w -o /system $fstab)" ]; then
     export S="/system/system"
+  fi
+  if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($l/grep -w -o /system_root /proc/mounts)" ]; then
+    export S="/system_root/system"
   fi
 }
 
@@ -2167,7 +2173,6 @@ case "$1" in
     ab_partition
     system_as_root
     super_partition
-    preserve_fstab
     vendor_mnt
     mount_all
     system_layout
@@ -2213,7 +2218,6 @@ case "$1" in
     ab_partition
     system_as_root
     super_partition
-    preserve_fstab
     vendor_mnt
     mount_all
     system_layout
