@@ -73,6 +73,9 @@ if [ "$option" == "1" ]; then
   mount -o rw,remount /vendor > /dev/null 2>&1
   mount -o rw,remount /product > /dev/null 2>&1
   mount -o rw,remount /system_ext > /dev/null 2>&1
+  # Create shell symlink
+  test -d /sbin || mkdir /sbin
+  ln -sfnv /system/bin/sh /sbin/sh > /dev/null 2>&1
   # Create temporary directory
   test -d $TMP || mkdir $TMP
   # Set installation layout
@@ -100,6 +103,8 @@ elif [ "$option" == "2" ]; then
   # Run script again
   . $SYSTEM/xbin/bootmode.sh
 elif [ "$option" == "3" ]; then
+  # Wipe sbin to prevent conflicts with magisk
+  rm -rf /sbin
   clear
   exit 1
 else
