@@ -4283,16 +4283,22 @@ set_addon_zip_conf() {
       # Remove pre-install Photos
       rm -rf $SYSTEM/app/Photos*
       rm -rf $SYSTEM/app/photos*
+      rm -rf $SYSTEM/app/Gallery*
       rm -rf $SYSTEM/priv-app/Photos*
       rm -rf $SYSTEM/priv-app/photos*
+      rm -rf $SYSTEM/priv-app/Gallery*
       rm -rf $SYSTEM/product/app/Photos*
       rm -rf $SYSTEM/product/app/photos*
+      rm -rf $SYSTEM/product/app/Gallery*
       rm -rf $SYSTEM/product/priv-app/Photos*
       rm -rf $SYSTEM/product/priv-app/photos*
+      rm -rf $SYSTEM/product/priv-app/Gallery*
       rm -rf $SYSTEM/system_ext/app/Photos*
       rm -rf $SYSTEM/system_ext/app/photos*
+      rm -rf $SYSTEM/system_ext/app/Gallery*
       rm -rf $SYSTEM/system_ext/priv-app/Photos*
       rm -rf $SYSTEM/system_ext/priv-app/photos*
+      rm -rf $SYSTEM/system_ext/priv-app/Gallery*
       # Install
       ADDON_SYS="PhotosGooglePrebuilt.tar.xz"
       PKG_SYS="PhotosGooglePrebuilt"
@@ -4750,16 +4756,22 @@ set_addon_zip_sep() {
       # Remove pre-install Photos
       rm -rf $SYSTEM/app/Photos*
       rm -rf $SYSTEM/app/photos*
+      rm -rf $SYSTEM/app/Gallery*
       rm -rf $SYSTEM/priv-app/Photos*
       rm -rf $SYSTEM/priv-app/photos*
+      rm -rf $SYSTEM/priv-app/Gallery*
       rm -rf $SYSTEM/product/app/Photos*
       rm -rf $SYSTEM/product/app/photos*
+      rm -rf $SYSTEM/product/app/Gallery*
       rm -rf $SYSTEM/product/priv-app/Photos*
       rm -rf $SYSTEM/product/priv-app/photos*
+      rm -rf $SYSTEM/product/priv-app/Gallery*
       rm -rf $SYSTEM/system_ext/app/Photos*
       rm -rf $SYSTEM/system_ext/app/photos*
+      rm -rf $SYSTEM/system_ext/app/Gallery*
       rm -rf $SYSTEM/system_ext/priv-app/Photos*
       rm -rf $SYSTEM/system_ext/priv-app/photos*
+      rm -rf $SYSTEM/system_ext/priv-app/Gallery*
       # Install
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         ADDON_SYS="PhotosGooglePrebuilt_arm.tar.xz"

@@ -2050,16 +2050,22 @@ fix_addon_conflict() {
     if [ -n "$(cat $S/config.prop | grep ro.config.photos)" ]; then
       rm -rf $S/app/Photos*
       rm -rf $S/app/photos*
+      rm -rf $S/app/Gallery*
       rm -rf $S/priv-app/Photos*
       rm -rf $S/priv-app/photos*
+      rm -rf $S/priv-app/Gallery*
       rm -rf $S/product/app/Photos*
       rm -rf $S/product/app/photos*
+      rm -rf $S/product/app/Gallery*
       rm -rf $S/product/priv-app/Photos*
       rm -rf $S/product/priv-app/photos*
+      rm -rf $S/product/priv-app/Gallery*
       rm -rf $S/system_ext/app/Photos*
       rm -rf $S/system_ext/app/photos*
+      rm -rf $S/system_ext/app/Gallery*
       rm -rf $S/system_ext/priv-app/Photos*
       rm -rf $S/system_ext/priv-app/photos*
+      rm -rf $S/system_ext/priv-app/Gallery*
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.soundpicker)" ]; then
       rm -rf $S/app/SoundPicker*
