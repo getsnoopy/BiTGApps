@@ -73,6 +73,7 @@ env_vars() {
       TARGET_ASSISTANT_GOOGLE="$TARGET_ASSISTANT_GOOGLE"
       TARGET_CALCULATOR_GOOGLE="$TARGET_CALCULATOR_GOOGLE"
       TARGET_CALENDAR_GOOGLE="$TARGET_CALENDAR_GOOGLE"
+      TARGET_CHROME_GOOGLE="$TARGET_CHROME_GOOGLE"
       TARGET_CONTACTS_GOOGLE="$TARGET_CONTACTS_GOOGLE"
       TARGET_DESKCLOCK_GOOGLE="$TARGET_DESKCLOCK_GOOGLE"
       TARGET_DIALER_GOOGLE="$TARGET_DIALER_GOOGLE"
@@ -1144,6 +1145,7 @@ on_addon_check() {
   supported_assistant_config="$(get_prop "ro.config.assistant")"
   supported_calculator_config="$(get_prop "ro.config.calculator")"
   supported_calendar_config="$(get_prop "ro.config.calendar")"
+  supported_chrome_config="$(get_prop "ro.config.chrome")"
   supported_contacts_config="$(get_prop "ro.config.contacts")"
   supported_deskclock_config="$(get_prop "ro.config.deskclock")"
   supported_dialer_config="$(get_prop "ro.config.dialer")"
@@ -3484,6 +3486,13 @@ pre_installed_pkg() {
   rm -rf $SYSTEM/app/CalendarGooglePrebuilt
   rm -rf $SYSTEM/product/app/CalendarGooglePrebuilt
   rm -rf $SYSTEM/system_ext/app/CalendarGooglePrebuilt
+  # ChromeGooglePrebuilt
+  rm -rf $SYSTEM/app/ChromeGooglePrebuilt
+  rm -rf $SYSTEM/app/TrichromeLibrary
+  rm -rf $SYSTEM/product/app/ChromeGooglePrebuilt
+  rm -rf $SYSTEM/product/app/TrichromeLibrary
+  rm -rf $SYSTEM/system_ext/app/ChromeGooglePrebuilt
+  rm -rf $SYSTEM/system_ext/app/TrichromeLibrary
   # ContactsGooglePrebuilt
   rm -rf $SYSTEM/priv-app/ContactsGooglePrebuilt
   rm -rf $SYSTEM/product/priv-app/ContactsGooglePrebuilt
@@ -4079,6 +4088,57 @@ set_addon_zip_conf() {
     else
       ui_print "! Skip installing Calendar Google"
     fi
+    if [ "$supported_chrome_config" == "true" ]; then
+      insert_line $SYSTEM/config.prop "ro.config.chrome" after '# Begin addon properties' "ro.config.chrome"
+      ui_print "- Installing Chrome Google"
+      # Remove AOSP Browser
+      rm -rf $SYSTEM/app/Browser
+      rm -rf $SYSTEM/app/Jelly
+      rm -rf $SYSTEM/priv-app/Browser
+      rm -rf $SYSTEM/priv-app/Jelly
+      rm -rf $SYSTEM/product/app/Browser
+      rm -rf $SYSTEM/product/app/Jelly
+      rm -rf $SYSTEM/product/priv-app/Browser
+      rm -rf $SYSTEM/product/priv-app/Jelly
+      rm -rf $SYSTEM/system_ext/app/Browser
+      rm -rf $SYSTEM/system_ext/app/Jelly
+      rm -rf $SYSTEM/system_ext/priv-app/Browser
+      rm -rf $SYSTEM/system_ext/priv-app/Jelly
+      # Remove pre-install Chrome and library
+      rm -rf $SYSTEM/app/Chrome*
+      rm -rf $SYSTEM/app/GoogleChrome
+      rm -rf $SYSTEM/app/TrichromeLibrary
+      rm -rf $SYSTEM/app/WebViewGoogle
+      rm -rf $SYSTEM/priv-app/Chrome*
+      rm -rf $SYSTEM/priv-app/GoogleChrome
+      rm -rf $SYSTEM/priv-app/TrichromeLibrary
+      rm -rf $SYSTEM/priv-app/WebViewGoogle
+      rm -rf $SYSTEM/product/app/Chrome*
+      rm -rf $SYSTEM/product/app/GoogleChrome
+      rm -rf $SYSTEM/product/app/TrichromeLibrary
+      rm -rf $SYSTEM/product/app/WebViewGoogle
+      rm -rf $SYSTEM/product/priv-app/Chrome*
+      rm -rf $SYSTEM/product/priv-app/GoogleChrome
+      rm -rf $SYSTEM/product/priv-app/TrichromeLibrary
+      rm -rf $SYSTEM/product/priv-app/WebViewGoogle
+      rm -rf $SYSTEM/system_ext/app/Chrome*
+      rm -rf $SYSTEM/system_ext/app/GoogleChrome
+      rm -rf $SYSTEM/system_ext/app/TrichromeLibrary
+      rm -rf $SYSTEM/system_ext/app/WebViewGoogle
+      rm -rf $SYSTEM/system_ext/priv-app/Chrome*
+      rm -rf $SYSTEM/system_ext/priv-app/GoogleChrome
+      rm -rf $SYSTEM/system_ext/priv-app/TrichromeLibrary
+      rm -rf $SYSTEM/system_ext/priv-app/WebViewGoogle
+      # Install
+      ADDON_SYS="ChromeGooglePrebuilt.tar.xz"
+      PKG_SYS="ChromeGooglePrebuilt"
+      target_sys
+      ADDON_SYS="TrichromeLibrary.tar.xz"
+      PKG_SYS="TrichromeLibrary"
+      target_sys
+    else
+      ui_print "! Skip installing Chrome Google"
+    fi
     if [ "$supported_contacts_config" == "true" ]; then
       insert_line $SYSTEM/config.prop "ro.config.contacts" after '# Begin addon properties' "ro.config.contacts"
       ui_print "- Installing Contacts Google"
@@ -4223,6 +4283,7 @@ set_addon_zip_conf() {
       rm -rf $SYSTEM/system_ext/priv-app/Gboard*
       rm -rf $SYSTEM/system_ext/priv-app/gboard*
       rm -rf $SYSTEM/system_ext/priv-app/LatinIMEGooglePrebuilt
+      # Remove AOSP keyboard
       if [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
         rm -rf $SYSTEM/app/LatinIME
         rm -rf $SYSTEM/priv-app/LatinIME
@@ -4579,6 +4640,57 @@ set_addon_zip_sep() {
         mv $TMP/out/CalendarProvider $SYSTEM/system_ext/priv-app/CalendarProvider
       fi
     fi
+    if [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
+      insert_line $SYSTEM/config.prop "ro.config.chrome" after '# Begin addon properties' "ro.config.chrome"
+      ui_print "- Installing Chrome Google"
+      # Remove AOSP Browser
+      rm -rf $SYSTEM/app/Browser
+      rm -rf $SYSTEM/app/Jelly
+      rm -rf $SYSTEM/priv-app/Browser
+      rm -rf $SYSTEM/priv-app/Jelly
+      rm -rf $SYSTEM/product/app/Browser
+      rm -rf $SYSTEM/product/app/Jelly
+      rm -rf $SYSTEM/product/priv-app/Browser
+      rm -rf $SYSTEM/product/priv-app/Jelly
+      rm -rf $SYSTEM/system_ext/app/Browser
+      rm -rf $SYSTEM/system_ext/app/Jelly
+      rm -rf $SYSTEM/system_ext/priv-app/Browser
+      rm -rf $SYSTEM/system_ext/priv-app/Jelly
+      # Remove pre-install Chrome and library
+      rm -rf $SYSTEM/app/Chrome*
+      rm -rf $SYSTEM/app/GoogleChrome
+      rm -rf $SYSTEM/app/TrichromeLibrary
+      rm -rf $SYSTEM/app/WebViewGoogle
+      rm -rf $SYSTEM/priv-app/Chrome*
+      rm -rf $SYSTEM/priv-app/GoogleChrome
+      rm -rf $SYSTEM/priv-app/TrichromeLibrary
+      rm -rf $SYSTEM/priv-app/WebViewGoogle
+      rm -rf $SYSTEM/product/app/Chrome*
+      rm -rf $SYSTEM/product/app/GoogleChrome
+      rm -rf $SYSTEM/product/app/TrichromeLibrary
+      rm -rf $SYSTEM/product/app/WebViewGoogle
+      rm -rf $SYSTEM/product/priv-app/Chrome*
+      rm -rf $SYSTEM/product/priv-app/GoogleChrome
+      rm -rf $SYSTEM/product/priv-app/TrichromeLibrary
+      rm -rf $SYSTEM/product/priv-app/WebViewGoogle
+      rm -rf $SYSTEM/system_ext/app/Chrome*
+      rm -rf $SYSTEM/system_ext/app/GoogleChrome
+      rm -rf $SYSTEM/system_ext/app/TrichromeLibrary
+      rm -rf $SYSTEM/system_ext/app/WebViewGoogle
+      rm -rf $SYSTEM/system_ext/priv-app/Chrome*
+      rm -rf $SYSTEM/system_ext/priv-app/GoogleChrome
+      rm -rf $SYSTEM/system_ext/priv-app/TrichromeLibrary
+      rm -rf $SYSTEM/system_ext/priv-app/WebViewGoogle
+      # Install
+      ADDON_SYS="ChromeGooglePrebuilt.tar.xz"
+      PKG_SYS="ChromeGooglePrebuilt"
+      target_sys
+      ADDON_SYS="TrichromeLibrary.tar.xz"
+      PKG_SYS="TrichromeLibrary"
+      target_sys
+    else
+      ui_print "! Skip installing Chrome Google"
+    fi
     if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
       insert_line $SYSTEM/config.prop "ro.config.contacts" after '# Begin addon properties' "ro.config.contacts"
       ui_print "- Installing Contacts Google"
@@ -4723,6 +4835,7 @@ set_addon_zip_sep() {
       rm -rf $SYSTEM/system_ext/priv-app/Gboard*
       rm -rf $SYSTEM/system_ext/priv-app/gboard*
       rm -rf $SYSTEM/system_ext/priv-app/LatinIMEGooglePrebuilt
+      # Remove AOSP keyboard
       if [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
         rm -rf $SYSTEM/app/LatinIME
         rm -rf $SYSTEM/priv-app/LatinIME

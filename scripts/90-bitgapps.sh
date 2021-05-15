@@ -1597,12 +1597,14 @@ backupdirSYSAddon() {
   SYS_APP_ADDON="
     $SYSTEM/app/CalculatorGooglePrebuilt
     $SYSTEM/app/CalendarGooglePrebuilt
+    $SYSTEM/app/ChromeGooglePrebuilt
     $SYSTEM/app/DeskClockGooglePrebuilt
     $SYSTEM/app/GboardGooglePrebuilt
     $SYSTEM/app/MarkupGooglePrebuilt
     $SYSTEM/app/MessagesGooglePrebuilt
     $SYSTEM/app/PhotosGooglePrebuilt
     $SYSTEM/app/SoundPickerPrebuilt
+    $SYSTEM/app/TrichromeLibrary
     $SYSTEM/app/YouTube
     $SYSTEM/app/MicroGGMSCore"
 
@@ -1709,12 +1711,14 @@ restoredirTMPAddon() {
   TMP_APP_ADDON="
     $TMP/addon/app/CalculatorGooglePrebuilt
     $TMP/addon/app/CalendarGooglePrebuilt
+    $TMP/addon/app/ChromeGooglePrebuilt
     $TMP/addon/app/DeskClockGooglePrebuilt
     $TMP/addon/app/GboardGooglePrebuilt
     $TMP/addon/app/MarkupGooglePrebuilt
     $TMP/addon/app/MessagesGooglePrebuilt
     $TMP/addon/app/PhotosGooglePrebuilt
     $TMP/addon/app/SoundPickerPrebuilt
+    $TMP/addon/app/TrichromeLibrary
     $TMP/addon/app/YouTube
     $TMP/addon/app/MicroGGMSCore"
 
@@ -1950,6 +1954,44 @@ fix_addon_conflict() {
       rm -rf $S/system_ext/priv-app/Calendar*
       rm -rf $S/system_ext/priv-app/calendar*
       rm -rf $S/system_ext/priv-app/Etar
+    fi
+    if [ -n "$(cat $S/config.prop | grep ro.config.chrome)" ]; then
+      rm -rf $S/app/Browser
+      rm -rf $S/app/Chrome*
+      rm -rf $S/app/GoogleChrome
+      rm -rf $S/app/Jelly
+      rm -rf $S/app/TrichromeLibrary
+      rm -rf $S/app/WebViewGoogle
+      rm -rf $S/priv-app/Browser
+      rm -rf $S/priv-app/Chrome*
+      rm -rf $S/priv-app/GoogleChrome
+      rm -rf $S/priv-app/Jelly
+      rm -rf $S/priv-app/TrichromeLibrary
+      rm -rf $S/priv-app/WebViewGoogle
+      rm -rf $S/product/app/Browser
+      rm -rf $S/product/app/Chrome*
+      rm -rf $S/product/app/GoogleChrome
+      rm -rf $S/product/app/Jelly
+      rm -rf $S/product/app/TrichromeLibrary
+      rm -rf $S/product/app/WebViewGoogle
+      rm -rf $S/product/priv-app/Browser
+      rm -rf $S/product/priv-app/Chrome*
+      rm -rf $S/product/priv-app/GoogleChrome
+      rm -rf $S/product/priv-app/Jelly
+      rm -rf $S/product/priv-app/TrichromeLibrary
+      rm -rf $S/product/priv-app/WebViewGoogle
+      rm -rf $S/system_ext/app/Browser
+      rm -rf $S/system_ext/app/Chrome*
+      rm -rf $S/system_ext/app/GoogleChrome
+      rm -rf $S/system_ext/app/Jelly
+      rm -rf $S/system_ext/app/TrichromeLibrary
+      rm -rf $S/system_ext/app/WebViewGoogle
+      rm -rf $S/system_ext/priv-app/Browser
+      rm -rf $S/system_ext/priv-app/Chrome*
+      rm -rf $S/system_ext/priv-app/GoogleChrome
+      rm -rf $S/system_ext/priv-app/Jelly
+      rm -rf $S/system_ext/priv-app/TrichromeLibrary
+      rm -rf $S/system_ext/priv-app/WebViewGoogle
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.contacts)" ]; then
       rm -rf $S/app/Contacts*
