@@ -60,7 +60,6 @@ Here are feature highlights:
 ## Discussion Group
 
 * [Telegram chat](https://t.me/bitgapps_group_official)
-* [Discord chat](https://discord.gg/rY2KPqkuX5)
 
 ## Support Project
 
