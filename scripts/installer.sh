@@ -4913,6 +4913,10 @@ opt_v25() {
   if [ "$android_sdk" -ge "25" ]; then
     sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/etc/permissions/*.xml
     sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/etc/sysconfig/*.xml
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/product/etc/permissions/*.xml
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/product/etc/sysconfig/*.xml
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/system_ext/etc/permissions/*.xml
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM/system_ext/etc/sysconfig/*.xml
   fi
 }
 
