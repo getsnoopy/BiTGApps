@@ -77,6 +77,7 @@ env_vars() {
       TARGET_DESKCLOCK_GOOGLE="$TARGET_DESKCLOCK_GOOGLE"
       TARGET_DIALER_GOOGLE="$TARGET_DIALER_GOOGLE"
       TARGET_GBOARD_GOOGLE="$TARGET_GBOARD_GOOGLE"
+      TARGET_GEARHEAD_GOOGLE="$TARGET_GEARHEAD_GOOGLE"
       TARGET_MARKUP_GOOGLE="$TARGET_MARKUP_GOOGLE"
       TARGET_MESSAGES_GOOGLE="$TARGET_MESSAGES_GOOGLE"
       TARGET_PHOTOS_GOOGLE="$TARGET_PHOTOS_GOOGLE"
@@ -1147,6 +1148,7 @@ on_addon_check() {
   supported_deskclock_config="$(get_prop "ro.config.deskclock")"
   supported_dialer_config="$(get_prop "ro.config.dialer")"
   supported_gboard_config="$(get_prop "ro.config.gboard")"
+  supported_gearhead_config="$(get_prop "ro.config.gearhead")"
   supported_markup_config="$(get_prop "ro.config.markup")"
   supported_messages_config="$(get_prop "ro.config.messages")"
   supported_photos_config="$(get_prop "ro.config.photos")"
@@ -3507,6 +3509,10 @@ pre_installed_pkg() {
   rm -rf $SYSTEM/app/GboardGooglePrebuilt
   rm -rf $SYSTEM/product/app/GboardGooglePrebuilt
   rm -rf $SYSTEM/system_ext/app/GboardGooglePrebuilt
+  # GearheadGooglePrebuilt
+  rm -rf $SYSTEM/priv-app/GearheadGooglePrebuilt
+  rm -rf $SYSTEM/product/priv-app/GearheadGooglePrebuilt
+  rm -rf $SYSTEM/system_ext/priv-app/GearheadGooglePrebuilt
   # MarkupGooglePrebuilt
   rm -rf $SYSTEM/app/MarkupGooglePrebuilt
   rm -rf $SYSTEM/product/app/MarkupGooglePrebuilt
@@ -4225,7 +4231,7 @@ set_addon_zip_conf() {
         rm -rf $SYSTEM/system_ext/app/LatinIME
         rm -rf $SYSTEM/system_ext/priv-app/LatinIME
         # Enable wiping of AOSP Keyboard during OTA upgrade
-        insert_line $SYSTEM/config.prop "ro.config.keyboard" after '# Begin addon properties' "ro.config.gboard"
+        insert_line $SYSTEM/config.prop "ro.config.keyboard" after '# Begin addon properties' "ro.config.keyboard"
       fi
       # Install
       ADDON_SYS="GboardGooglePrebuilt.tar.xz"
@@ -4233,6 +4239,29 @@ set_addon_zip_conf() {
       target_sys
     else
       ui_print "! Skip installing Keyboard Google"
+    fi
+    if [ "$supported_gearhead_config" == "true" ]; then
+      insert_line $SYSTEM/config.prop "ro.config.gearhead" after '# Begin addon properties' "ro.config.gearhead"
+      ui_print "- Installing Android Auto"
+      # Remove pre-install AndroidAuto
+      rm -rf $SYSTEM/app/AndroidAuto*
+      rm -rf $SYSTEM/app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM/priv-app/AndroidAuto*
+      rm -rf $SYSTEM/priv-app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM/product/app/AndroidAuto*
+      rm -rf $SYSTEM/product/app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM/product/priv-app/AndroidAuto*
+      rm -rf $SYSTEM/product/priv-app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/app/AndroidAuto*
+      rm -rf $SYSTEM/system_ext/app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/priv-app/AndroidAuto*
+      rm -rf $SYSTEM/system_ext/priv-app/GearheadGooglePrebuilt
+      # Install
+      ADDON_CORE="GearheadGooglePrebuilt.tar.xz"
+      PKG_CORE="GearheadGooglePrebuilt"
+      target_core
+    else
+      ui_print "! Skip installing Android Auto"
     fi
     if [ "$supported_markup_config" == "true" ]; then
       insert_line $SYSTEM/config.prop "ro.config.markup" after '# Begin addon properties' "ro.config.markup"
@@ -4702,7 +4731,7 @@ set_addon_zip_sep() {
         rm -rf $SYSTEM/system_ext/app/LatinIME
         rm -rf $SYSTEM/system_ext/priv-app/LatinIME
         # Enable wiping of AOSP Keyboard during OTA upgrade
-        insert_line $SYSTEM/config.prop "ro.config.keyboard" after '# Begin addon properties' "ro.config.gboard"
+        insert_line $SYSTEM/config.prop "ro.config.keyboard" after '# Begin addon properties' "ro.config.keyboard"
       fi
       # Install
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
@@ -4714,6 +4743,35 @@ set_addon_zip_sep() {
         PKG_SYS="GboardGooglePrebuilt"
       fi
       target_sys
+    fi
+    if [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
+      insert_line $SYSTEM/config.prop "ro.config.gearhead" after '# Begin addon properties' "ro.config.gearhead"
+      ui_print "- Installing Android Auto"
+      # Remove pre-install AndroidAuto
+      rm -rf $SYSTEM/app/AndroidAuto*
+      rm -rf $SYSTEM/app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM/priv-app/AndroidAuto*
+      rm -rf $SYSTEM/priv-app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM/product/app/AndroidAuto*
+      rm -rf $SYSTEM/product/app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM/product/priv-app/AndroidAuto*
+      rm -rf $SYSTEM/product/priv-app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/app/AndroidAuto*
+      rm -rf $SYSTEM/system_ext/app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/priv-app/AndroidAuto*
+      rm -rf $SYSTEM/system_ext/priv-app/GearheadGooglePrebuilt
+      # Install
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
+        ADDON_CORE="GearheadGooglePrebuilt_arm.tar.xz"
+        PKG_CORE="GearheadGooglePrebuilt"
+      fi
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
+        ADDON_CORE="GearheadGooglePrebuilt_arm64.tar.xz"
+        PKG_CORE="GearheadGooglePrebuilt"
+      fi
+      target_core
+    else
+      ui_print "! Skip installing Android Auto"
     fi
     if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
       insert_line $SYSTEM/config.prop "ro.config.markup" after '# Begin addon properties' "ro.config.markup"

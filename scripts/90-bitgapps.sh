@@ -1610,6 +1610,7 @@ backupdirSYSAddon() {
     $SYSTEM/priv-app/CarrierServices
     $SYSTEM/priv-app/ContactsGooglePrebuilt
     $SYSTEM/priv-app/DialerGooglePrebuilt
+    $SYSTEM/priv-app/GearheadGooglePrebuilt
     $SYSTEM/priv-app/Velvet
     $SYSTEM/priv-app/WellbeingPrebuilt"
 
@@ -1721,6 +1722,7 @@ restoredirTMPAddon() {
     $TMP/addon/priv-app/CarrierServices
     $TMP/addon/priv-app/ContactsGooglePrebuilt
     $TMP/addon/priv-app/DialerGooglePrebuilt
+    $TMP/addon/priv-app/GearheadGooglePrebuilt
     $TMP/addon/priv-app/Velvet
     $TMP/addon/priv-app/WellbeingPrebuilt"
 
@@ -2024,6 +2026,20 @@ fix_addon_conflict() {
         rm -rf $S/system_ext/app/LatinIME
         rm -rf $S/system_ext/priv-app/LatinIME
       fi
+    fi
+    if [ -n "$(cat $S/config.prop | grep ro.config.gearhead)" ]; then
+      rm -rf $S/app/AndroidAuto*
+      rm -rf $S/app/GearheadGooglePrebuilt
+      rm -rf $S/priv-app/AndroidAuto*
+      rm -rf $S/priv-app/GearheadGooglePrebuilt
+      rm -rf $S/product/app/AndroidAuto*
+      rm -rf $S/product/app/GearheadGooglePrebuilt
+      rm -rf $S/product/priv-app/AndroidAuto*
+      rm -rf $S/product/priv-app/GearheadGooglePrebuilt
+      rm -rf $S/system_ext/app/AndroidAuto*
+      rm -rf $S/system_ext/app/GearheadGooglePrebuilt
+      rm -rf $S/system_ext/priv-app/AndroidAuto*
+      rm -rf $S/system_ext/priv-app/GearheadGooglePrebuilt
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.markup)" ]; then
       rm -rf $S/app/MarkupGoogle*

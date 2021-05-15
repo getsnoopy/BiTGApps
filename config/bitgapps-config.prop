@@ -34,6 +34,7 @@ ro.config.contacts=false
 ro.config.deskclock=false
 ro.config.dialer=false
 ro.config.gboard=false
+ro.config.gearhead=false
 ro.config.markup=false
 ro.config.messages=false
 ro.config.photos=false
