@@ -1089,10 +1089,13 @@ get_bitgapps_config() {
   for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage /data/media/0; do
     for b in $(find $f -iname "bitgapps-config.prop" 2>/dev/null); do
       if [ -f "$b" ]; then
-        BITGAPPS_CONFIG="$b" && ui_print "- Install config detected"
+        BITGAPPS_CONFIG="$b"
       fi
     done
   done
+  if [ -f "$BITGAPPS_CONFIG" ]; then
+    ui_print "- Install config detected"
+  fi
   if [ ! -f "$BITGAPPS_CONFIG" ]; then
     ui_print "! Install config not found"
   fi
