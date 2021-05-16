@@ -59,7 +59,7 @@ Here are feature highlights:
 
 ## Discussion Group
 
-* [Telegram chat](https://t.me/bitgapps_group_official)
+* [Telegram chat](https://t.me/bitgapps_official)
 
 ## Support Project
 
