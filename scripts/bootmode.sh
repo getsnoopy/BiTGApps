@@ -34,7 +34,7 @@ sleep 1
 echo $divider
 echo "Please type 'su' first before typing 'bootmode.sh'..."
 echo $divider
-exit
+exit 1
 fi
 
 # Check Magisk
@@ -50,6 +50,9 @@ else
   echo "! Busybox not found. Aborting..."
   exit 1
 fi
+
+# Root location
+ROOT="$(pwd)"
 
 echo $divider
 $BB echo -e "\e[00;00m ========= BiTGApps Installer ========= \e[00;37;40m"
@@ -81,7 +84,7 @@ if [ "$option" == "1" ]; then
   # Set installation layout
   export SYSTEM="/system"
   # Run script again
-  . $SYSTEM/xbin/bootmode.sh
+  . $ROOT/bootmode.sh
 elif [ "$option" == "2" ]; then
   clear
   ZIPFILE="/data/media/0/BiTGApps"
@@ -101,7 +104,7 @@ elif [ "$option" == "2" ]; then
   clear
   . $TMP/installer.sh
   # Run script again
-  . $SYSTEM/xbin/bootmode.sh
+  . $ROOT/bootmode.sh
 elif [ "$option" == "3" ]; then
   # Wipe sbin to prevent conflicts with magisk
   rm -rf /sbin
@@ -115,5 +118,5 @@ else
   sleep 1
   clear
   # Run script again
-  . $SYSTEM/xbin/bootmode.sh
+  . $ROOT/bootmode.sh
 fi
