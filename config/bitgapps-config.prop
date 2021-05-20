@@ -1,8 +1,9 @@
 ##############################################################
 # File name       : bitgapps-config.prop
 #
-# Description     : Install SetupWizard components
-#                   Install additional GApps packages
+# Description     : Install BiTGApps systemless
+#                   Install SetupWizard components
+#                   Install Additional GApps packages
 #                   Uninstall BiTGApps components
 #
 # Copyright       : Copyright (C) 2018-2021 TheHitMan7
@@ -19,6 +20,9 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 ##############################################################
+
+# Property for installing BiTGApps systemless
+ro.config.systemless=false
 
 # Property for installing SetupWizard components
 ro.config.setupwizard=false

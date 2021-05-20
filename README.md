@@ -22,6 +22,7 @@ Here are feature highlights:
 * Disable Google SetupWizard installation
 * Our own OTA survival script
 * Install BiTGApps package directly from booted system
+* Install BiTGApps package systemlessly as magisk module
 * You can uninstall BiTGApps without doing clean installation
 
 ## Packages
