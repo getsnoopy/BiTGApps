@@ -134,6 +134,7 @@ tmp_dir() {
   test -d $TMP/addon/priv-app || mkdir $TMP/addon/priv-app
   test -d $TMP/addon/core || mkdir $TMP/addon/core
   test -d $TMP/addon/permissions || mkdir $TMP/addon/permissions
+  test -d $TMP/addon/sysconfig || mkdir $TMP/addon/sysconfig
   test -d $TMP/addon/framework || mkdir $TMP/addon/framework
   test -d $TMP/rwg || mkdir $TMP/rwg
   test -d $TMP/rwg/app || mkdir $TMP/rwg/app
@@ -1613,12 +1614,18 @@ backupdirSYSAddon() {
     $SYSTEM/priv-app/ContactsGooglePrebuilt
     $SYSTEM/priv-app/DialerGooglePrebuilt
     $SYSTEM/priv-app/GearheadGooglePrebuilt
+    $SYSTEM/priv-app/NexusLauncherPrebuilt
+    $SYSTEM/priv-app/QuickAccessWallet
     $SYSTEM/priv-app/Velvet
     $SYSTEM/priv-app/WellbeingPrebuilt"
 
+  SYS_SYSCONFIG_ADDON="
+    $SYSTEM/etc/sysconfig/com.google.android.apps.nexuslauncher.xml"
+
   SYS_PERMISSIONS_ADDON="
     $SYSTEM/etc/permissions/com.google.android.dialer.framework.xml
-    $SYSTEM/etc/permissions/com.google.android.dialer.support.xml"
+    $SYSTEM/etc/permissions/com.google.android.dialer.support.xml
+    $SYSTEM/etc/permissions/com.google.android.apps.nexuslauncher.xml"
 
   SYS_FRAMEWORK_ADDON="
     $SYSTEM/framework/com.google.android.dialer.support.jar"
@@ -1727,12 +1734,18 @@ restoredirTMPAddon() {
     $TMP/addon/priv-app/ContactsGooglePrebuilt
     $TMP/addon/priv-app/DialerGooglePrebuilt
     $TMP/addon/priv-app/GearheadGooglePrebuilt
+    $TMP/addon/priv-app/NexusLauncherPrebuilt
+    $TMP/addon/priv-app/QuickAccessWallet
     $TMP/addon/priv-app/Velvet
     $TMP/addon/priv-app/WellbeingPrebuilt"
 
+  TMP_SYSCONFIG_ADDON="
+    $TMP/sysconfig/com.google.android.apps.nexuslauncher.xml"
+
   TMP_PERMISSIONS_ADDON="
     $TMP/addon/permissions/com.google.android.dialer.framework.xml
-    $TMP/addon/permissions/com.google.android.dialer.support.xml"
+    $TMP/addon/permissions/com.google.android.dialer.support.xml
+    $TMP/addon/permissions/com.google.android.apps.nexuslauncher.xml"
 
   TMP_FRAMEWORK_ADDON="
     $TMP/addon/framework/com.google.android.dialer.support.jar"
@@ -1842,6 +1855,7 @@ trigger_addon_backup() {
   if [ "$addon_install_status" == "true" ]; then
     mv $SYS_APP_ADDON $TMP/addon/app 2>/dev/null
     mv $SYS_PRIVAPP_ADDON $TMP/addon/priv-app 2>/dev/null
+    mv $SYS_SYSCONFIG_ADDON $TMP/addon/sysconfig 2>/dev/null
     mv $SYS_PERMISSIONS_ADDON $TMP/addon/permissions 2>/dev/null
     mv $SYS_FRAMEWORK_ADDON $TMP/addon/framework 2>/dev/null
   fi
@@ -1851,6 +1865,7 @@ trigger_addon_restore() {
   if [ "$addon_install_status" == "true" ]; then
     mv $TMP_APP_ADDON $SYSTEM/app 2>/dev/null
     mv $TMP_PRIVAPP_ADDON $SYSTEM/priv-app 2>/dev/null
+    mv $TMP_SYSCONFIG_ADDON $SYSTEM/etc/sysconfig 2>/dev/null
     mv $TMP_PERMISSIONS_ADDON $SYSTEM/etc/permissions 2>/dev/null
     mv $TMP_FRAMEWORK_ADDON $SYSTEM/framework 2>/dev/null
   fi
@@ -2082,6 +2097,17 @@ fix_addon_conflict() {
       rm -rf $S/system_ext/app/GearheadGooglePrebuilt
       rm -rf $S/system_ext/priv-app/AndroidAuto*
       rm -rf $S/system_ext/priv-app/GearheadGooglePrebuilt
+    fi
+    if [ -n "$(cat $S/config.prop | grep ro.config.launcher)" ]; then
+      rm -rf $S/priv-app/Launcher3*
+      rm -rf $S/priv-app/NexusLauncherPrebuilt
+      rm -rf $S/priv-app/QuickAccessWallet
+      rm -rf $S/product/priv-app/Launcher3*
+      rm -rf $S/product/priv-app/NexusLauncherPrebuilt
+      rm -rf $S/product/priv-app/QuickAccessWallet
+      rm -rf $S/system_ext/priv-app/Launcher3*
+      rm -rf $S/system_ext/priv-app/NexusLauncherPrebuilt
+      rm -rf $S/system_ext/priv-app/QuickAccessWallet
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.markup)" ]; then
       rm -rf $S/app/MarkupGoogle*

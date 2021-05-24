@@ -77,6 +77,7 @@ env_vars() {
       TARGET_DIALER_GOOGLE="$TARGET_DIALER_GOOGLE"
       TARGET_GBOARD_GOOGLE="$TARGET_GBOARD_GOOGLE"
       TARGET_GEARHEAD_GOOGLE="$TARGET_GEARHEAD_GOOGLE"
+      TARGET_LAUNCHER_GOOGLE="$TARGET_LAUNCHER_GOOGLE"
       TARGET_MARKUP_GOOGLE="$TARGET_MARKUP_GOOGLE"
       TARGET_MESSAGES_GOOGLE="$TARGET_MESSAGES_GOOGLE"
       TARGET_PHOTOS_GOOGLE="$TARGET_PHOTOS_GOOGLE"
@@ -1155,6 +1156,7 @@ on_addon_check() {
   supported_dialer_config="$(get_prop "ro.config.dialer")"
   supported_gboard_config="$(get_prop "ro.config.gboard")"
   supported_gearhead_config="$(get_prop "ro.config.gearhead")"
+  supported_launcher_config="$(get_prop "ro.config.launcher")"
   supported_markup_config="$(get_prop "ro.config.markup")"
   supported_messages_config="$(get_prop "ro.config.messages")"
   supported_photos_config="$(get_prop "ro.config.photos")"
@@ -3706,6 +3708,19 @@ pre_installed_pkg() {
     rm -rf $SYSTEM/priv-app/GearheadGooglePrebuilt
     rm -rf $SYSTEM/product/priv-app/GearheadGooglePrebuilt
     rm -rf $SYSTEM/system_ext/priv-app/GearheadGooglePrebuilt
+    # NexusLauncherPrebuilt
+    rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt.apk
+    rm -rf $SYSTEM/product/priv-app/NexusLauncherPrebuilt.apk
+    rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt.apk
+    rm -rf $SYSTEM/priv-app/QuickAccessWallet.apk
+    rm -rf $SYSTEM/product/priv-app/QuickAccessWallet.apk
+    rm -rf $SYSTEM/system_ext/priv-app/QuickAccessWallet.apk
+    rm -rf $SYSTEM/etc/permissions/nexuslauncher.xml
+    rm -rf $SYSTEM/product/etc/permissions/nexuslauncher.xml
+    rm -rf $SYSTEM/system_ext/etc/permissions/nexuslauncher.xml
+    rm -rf $SYSTEM/etc/sysconfig/nexuslauncher.xml
+    rm -rf $SYSTEM/product/etc/sysconfig/nexuslauncher.xml
+    rm -rf $SYSTEM/system_ext/etc/sysconfig/nexuslauncher.xml
     # MarkupGooglePrebuilt
     rm -rf $SYSTEM/app/MarkupGooglePrebuilt
     rm -rf $SYSTEM/product/app/MarkupGooglePrebuilt
@@ -3788,6 +3803,19 @@ pre_installed_pkg() {
     rm -rf $SYSTEM_SYSTEM/priv-app/GearheadGooglePrebuilt
     rm -rf $SYSTEM_SYSTEM/product/priv-app/GearheadGooglePrebuilt
     rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/GearheadGooglePrebuilt
+    # NexusLauncherPrebuilt
+    rm -rf $SYSTEM_SYSTEM/priv-app/NexusLauncherPrebuilt.apk
+    rm -rf $SYSTEM_SYSTEM/product/priv-app/NexusLauncherPrebuilt.apk
+    rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt.apk
+    rm -rf $SYSTEM_SYSTEM/priv-app/QuickAccessWallet.apk
+    rm -rf $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet.apk
+    rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet.apk
+    rm -rf $SYSTEM_SYSTEM/etc/permissions/nexuslauncher.xml
+    rm -rf $SYSTEM_SYSTEM/product/etc/permissions/nexuslauncher.xml
+    rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/nexuslauncher.xml
+    rm -rf $SYSTEM_SYSTEM/etc/sysconfig/nexuslauncher.xml
+    rm -rf $SYSTEM_SYSTEM/product/etc/sysconfig/nexuslauncher.xml
+    rm -rf $SYSTEM_SYSTEM/system_ext/etc/sysconfig/nexuslauncher.xml
     # MarkupGooglePrebuilt
     rm -rf $SYSTEM_SYSTEM/app/MarkupGooglePrebuilt
     rm -rf $SYSTEM_SYSTEM/product/app/MarkupGooglePrebuilt
@@ -3889,6 +3917,21 @@ dialer_framework() {
   pkg_TMPFramework
   # Set selinux context
   chcon -h u:object_r:system_file:s0 "$SYSTEM_FRAMEWORK/com.google.android.dialer.support.jar"
+}
+
+launcher_config() {
+  # Set default packages and unpack
+  ZIP="zip/LauncherPermissions.tar.xz LauncherSysconfig.tar.xz"
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # Unpack system files
+  tar -xf $ZIP_FILE/LauncherPermissions.tar.xz -C $TMP_PERMISSION
+  tar -xf $ZIP_FILE/LauncherSysconfig.tar.xz -C $TMP_SYSCONFIG
+  # Install package
+  pkg_TMPPerm
+  pkg_TMPConfig
+  # Set selinux context
+  chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.apps.nexuslauncher.xml"
+  chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/com.google.android.apps.nexuslauncher.xml"
 }
 
 # Set Google Assistant as default
@@ -4726,6 +4769,47 @@ set_addon_zip_conf() {
     else
       ui_print "! Skip installing Android Auto"
     fi
+    if [ "$supported_launcher_config" == "true" ]; then
+      ui_print "- Installing Pixel Launcher"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.launcher" after '# Begin addon properties' "ro.config.launcher"
+        # Remove pre-install Launcher
+        rm -rf $SYSTEM/priv-app/Launcher3*
+        rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt
+        rm -rf $SYSTEM/priv-app/QuickAccessWallet
+        rm -rf $SYSTEM/product/priv-app/Launcher3*
+        rm -rf $SYSTEM/product/priv-app/NexusLauncherPrebuilt
+        rm -rf $SYSTEM/product/priv-app/QuickAccessWallet
+        rm -rf $SYSTEM/system_ext/priv-app/Launcher3*
+        rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
+        rm -rf $SYSTEM/system_ext/priv-app/QuickAccessWallet
+      fi
+      if [ "$supported_module_config" == "true" ]; then
+        # Remove AOSP Launcher
+        mkdir $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep
+        mkdir $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep
+        mkdir $SYSTEM_SYSTEM/system_ext/app/Launcher3QuickStep
+        mkdir $SYSTEM_SYSTEM/priv-app/QuickAccessWallet
+        mkdir $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet
+        mkdir $SYSTEM_SYSTEM/system_ext/app/QuickAccessWallet
+        touch $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep/.replace
+        touch $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep/.replace
+        touch $SYSTEM_SYSTEM/system_ext/app/Launcher3QuickStep/.replace
+        touch $SYSTEM_SYSTEM/priv-app/QuickAccessWallet/.replace
+        touch $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet/.replace
+        touch $SYSTEM_SYSTEM/system_ext/app/QuickAccessWallet/.replace
+      fi
+      # Install
+      ADDON_CORE="NexusLauncherPrebuilt.tar.xz"
+      PKG_CORE="NexusLauncherPrebuilt"
+      target_core
+      ADDON_CORE="QuickAccessWallet.tar.xz"
+      PKG_CORE="QuickAccessWallet"
+      target_core
+      launcher_config
+    else
+      ui_print "! Skip installing Pixel Launcher"
+    fi
     if [ "$supported_markup_config" == "true" ]; then
       ui_print "- Installing Markup Google"
       if [ "$supported_module_config" == "false" ]; then
@@ -5174,8 +5258,6 @@ set_addon_zip_sep() {
       ADDON_SYS="TrichromeLibrary.tar.xz"
       PKG_SYS="TrichromeLibrary"
       target_sys
-    else
-      ui_print "! Skip installing Chrome Google"
     fi
     if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
       ui_print "- Installing Contacts Google"
@@ -5449,8 +5531,45 @@ set_addon_zip_sep() {
         PKG_CORE="GearheadGooglePrebuilt"
       fi
       target_core
-    else
-      ui_print "! Skip installing Android Auto"
+    fi
+    if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
+      ui_print "- Installing Pixel Launcher"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.launcher" after '# Begin addon properties' "ro.config.launcher"
+        # Remove pre-install Launcher
+        rm -rf $SYSTEM/priv-app/Launcher3*
+        rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt
+        rm -rf $SYSTEM/priv-app/QuickAccessWallet
+        rm -rf $SYSTEM/product/priv-app/Launcher3*
+        rm -rf $SYSTEM/product/priv-app/NexusLauncherPrebuilt
+        rm -rf $SYSTEM/product/priv-app/QuickAccessWallet
+        rm -rf $SYSTEM/system_ext/priv-app/Launcher3*
+        rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
+        rm -rf $SYSTEM/system_ext/priv-app/QuickAccessWallet
+      fi
+      if [ "$supported_module_config" == "true" ]; then
+        # Remove AOSP Launcher
+        mkdir $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep
+        mkdir $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep
+        mkdir $SYSTEM_SYSTEM/system_ext/app/Launcher3QuickStep
+        mkdir $SYSTEM_SYSTEM/priv-app/QuickAccessWallet
+        mkdir $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet
+        mkdir $SYSTEM_SYSTEM/system_ext/app/QuickAccessWallet
+        touch $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep/.replace
+        touch $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep/.replace
+        touch $SYSTEM_SYSTEM/system_ext/app/Launcher3QuickStep/.replace
+        touch $SYSTEM_SYSTEM/priv-app/QuickAccessWallet/.replace
+        touch $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet/.replace
+        touch $SYSTEM_SYSTEM/system_ext/app/QuickAccessWallet/.replace
+      fi
+      # Install
+      ADDON_CORE="NexusLauncherPrebuilt.tar.xz"
+      PKG_CORE="NexusLauncherPrebuilt"
+      target_core
+      ADDON_CORE="QuickAccessWallet.tar.xz"
+      PKG_CORE="QuickAccessWallet"
+      target_core
+      launcher_config
     fi
     if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
       ui_print "- Installing Markup Google"
@@ -5951,6 +6070,7 @@ post_install_wipe() {
   rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreRvc
   rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreSvc
   rm -rf $SYSTEM_FRAMEWORK/com.google.android.dialer.support.jar
+  rm -rf $SYSTEM_ETC_CONFIG/com.google.android.apps.nexuslauncher.xml
   rm -rf $SYSTEM_ETC_CONFIG/google.xml
   rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
   rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
@@ -5958,6 +6078,7 @@ post_install_wipe() {
   rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
   rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
   rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
+  rm -rf $SYSTEM_ETC_PERM/com.google.android.apps.nexuslauncher.xml
   rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
   rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
   rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
@@ -5982,6 +6103,8 @@ post_install_wipe() {
   rm -rf $SYSTEM_PRIV_APP/CarrierServices
   rm -rf $SYSTEM_PRIV_APP/ContactsGooglePrebuilt
   rm -rf $SYSTEM_PRIV_APP/DialerGooglePrebuilt
+  rm -rf $SYSTEM_PRIV_APP/NexusLauncherPrebuilt
+  rm -rf $SYSTEM_PRIV_APP/QuickAccessWallet
   rm -rf $SYSTEM_PRIV_APP/Velvet
   rm -rf $SYSTEM_PRIV_APP/WellbeingPrebuilt
   # Non Additional packages
@@ -6056,6 +6179,8 @@ post_backup() {
         cp -fR $f/Calendar $ANDROID_DATA/.backup/Calendar > /dev/null 2>&1
         cp -fR $f/Etar $ANDROID_DATA/.backup/Etar > /dev/null 2>&1
         cp -fR $f/DeskClock $ANDROID_DATA/.backup/DeskClock > /dev/null 2>&1
+        cp -fR $f/Launcher3QuickStep $ANDROID_DATA/.backup/Launcher3QuickStep > /dev/null 2>&1
+        cp -fR $f/QuickAccessWallet $ANDROID_DATA/.backup/QuickAccessWallet > /dev/null 2>&1
         # AOSP APKs and configs
         cp -fR $f/messaging $ANDROID_DATA/.backup/messaging > /dev/null 2>&1
         cp -fR $f/Contacts $ANDROID_DATA/.backup/Contacts > /dev/null 2>&1
@@ -6090,6 +6215,8 @@ post_restore() {
       cp -fR $f/Calendar $SYSTEM/app/Calendar > /dev/null 2>&1
       cp -fR $f/Etar $SYSTEM/app/Etar > /dev/null 2>&1
       cp -fR $f/DeskClock $SYSTEM/app/DeskClock > /dev/null 2>&1
+      cp -fR $f/Launcher3QuickStep $SYSTEM/priv-app/Launcher3QuickStep > /dev/null 2>&1
+      cp -fR $f/QuickAccessWallet $SYSTEM/priv-app/QuickAccessWallet > /dev/null 2>&1
       # AOSP APKs and configs
       cp -fR $f/messaging $SYSTEM/app/messaging > /dev/null 2>&1
       cp -fR $f/Contacts $SYSTEM/priv-app/Contacts > /dev/null 2>&1
