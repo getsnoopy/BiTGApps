@@ -3,10 +3,10 @@
 ##############################################################
 # File name       : bootmode.sh
 #
-# Description     : Setup installation, environmental variables
-#                   and helper functions.
-#                   Install BiTGApps package directly from booted
-#                   system.
+# Description     : Install BiTGApps package directly from booted
+#                   system
+#                   Setup installation, environmental variables
+#                   and helper functions
 #
 # Copyright       : Copyright (C) 2018-2021 TheHitMan7
 #
@@ -43,16 +43,29 @@ if [ ! -d "/data/adb/magisk" ]; then
   exit 1
 fi
 
-# Set busybox in global environment
+# Set standalone mode and busybox in local environment
 if [ -f "/data/adb/magisk/busybox" ]; then
+  ASH_STANDALONE=1
   BB="/data/adb/magisk/busybox"
 else
   echo "! Busybox not found. Aborting..."
   exit 1
 fi
 
-# Root location
-ROOT="$(pwd)"
+# Check Magisk version
+if [ ! -f /data/adb/magisk/util_functions.sh ]; then
+  echo "! Please install Magisk v20.4+"
+  exit 1
+fi
+if [ -f /data/adb/magisk/util_functions.sh ]; then
+  rm -rf /data/BiTGApps/MAGISK_VER_CODE
+  grep -w 'MAGISK_VER_CODE' /data/adb/magisk/util_functions.sh >> /data/BiTGApps/MAGISK_VER_CODE
+  chmod 0755 /data/BiTGApps/MAGISK_VER_CODE && . /data/BiTGApps/MAGISK_VER_CODE
+  if [ "$MAGISK_VER_CODE" -lt "20400" ]; then
+    echo "! Please install Magisk v20.4+"
+    exit 1
+  fi
+fi
 
 echo $divider
 $BB echo -e "\e[00;00m ========= BiTGApps Installer ========= \e[00;37;40m"
@@ -76,15 +89,12 @@ if [ "$option" == "1" ]; then
   mount -o rw,remount /vendor > /dev/null 2>&1
   mount -o rw,remount /product > /dev/null 2>&1
   mount -o rw,remount /system_ext > /dev/null 2>&1
-  # Create shell symlink
-  test -d /sbin || mkdir /sbin
-  ln -sfnv /system/bin/sh /sbin/sh > /dev/null 2>&1
   # Create temporary directory
   test -d $TMP || mkdir $TMP
   # Set installation layout
   export SYSTEM="/system"
   # Run script again
-  . $ROOT/bootmode.sh
+  . bootmode.sh
 elif [ "$option" == "2" ]; then
   clear
   ZIPFILE="/data/media/0/BiTGApps"
@@ -102,12 +112,10 @@ elif [ "$option" == "2" ]; then
   unzip -o "${file[$input]}" -d $TMP >/dev/null
   sleep 1
   clear
-  . $TMP/installer.sh
+  exec $BB sh $TMP/installer.sh "$@"
   # Run script again
-  . $ROOT/bootmode.sh
+  . bootmode.sh
 elif [ "$option" == "3" ]; then
-  # Wipe sbin to prevent conflicts with magisk
-  rm -rf /sbin
   clear
   exit 1
 else
@@ -118,5 +126,5 @@ else
   sleep 1
   clear
   # Run script again
-  . $ROOT/bootmode.sh
+  . bootmode.sh
 fi
