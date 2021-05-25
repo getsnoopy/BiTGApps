@@ -6092,6 +6092,7 @@ post_install_wipe() {
   # Wipe Additional packages
   rm -rf $SYSTEM_APP/CalculatorGooglePrebuilt
   rm -rf $SYSTEM_APP/CalendarGooglePrebuilt
+  rm -rf $SYSTEM_APP/ChromeGooglePrebuilt
   rm -rf $SYSTEM_APP/DeskClockGooglePrebuilt
   rm -rf $SYSTEM_APP/GboardGooglePrebuilt
   rm -rf $SYSTEM_APP/MarkupGooglePrebuilt
@@ -6099,10 +6100,12 @@ post_install_wipe() {
   rm -rf $SYSTEM_APP/MicroGGMSCore
   rm -rf $SYSTEM_APP/PhotosGooglePrebuilt
   rm -rf $SYSTEM_APP/SoundPickerPrebuilt
+  rm -rf $SYSTEM_APP/TrichromeLibrary
   rm -rf $SYSTEM_APP/YouTube
   rm -rf $SYSTEM_PRIV_APP/CarrierServices
   rm -rf $SYSTEM_PRIV_APP/ContactsGooglePrebuilt
   rm -rf $SYSTEM_PRIV_APP/DialerGooglePrebuilt
+  rm -rf $SYSTEM_PRIV_APP/GearheadGooglePrebuilt
   rm -rf $SYSTEM_PRIV_APP/NexusLauncherPrebuilt
   rm -rf $SYSTEM_PRIV_APP/QuickAccessWallet
   rm -rf $SYSTEM_PRIV_APP/Velvet
@@ -6112,6 +6115,8 @@ post_install_wipe() {
   rm -rf $SYSTEM_APP/Calendar
   rm -rf $SYSTEM_APP/Etar
   rm -rf $SYSTEM_APP/DeskClock
+  rm -rf $SYSTEM_APP/Gallery2
+  rm -rf $SYSTEM_APP/Jelly
   # SetupWizard components and library
   rm -rf $SYSTEM_PRIV_APP/AndroidMigratePrebuilt
   rm -rf $SYSTEM_PRIV_APP/GoogleBackupTransport
@@ -6179,6 +6184,8 @@ post_backup() {
         cp -fR $f/Calendar $ANDROID_DATA/.backup/Calendar > /dev/null 2>&1
         cp -fR $f/Etar $ANDROID_DATA/.backup/Etar > /dev/null 2>&1
         cp -fR $f/DeskClock $ANDROID_DATA/.backup/DeskClock > /dev/null 2>&1
+        cp -fR $f/Gallery2 $ANDROID_DATA/.backup/Gallery2 > /dev/null 2>&1
+        cp -fR $f/Jelly $ANDROID_DATA/.backup/Jelly > /dev/null 2>&1
         cp -fR $f/Launcher3QuickStep $ANDROID_DATA/.backup/Launcher3QuickStep > /dev/null 2>&1
         cp -fR $f/QuickAccessWallet $ANDROID_DATA/.backup/QuickAccessWallet > /dev/null 2>&1
         # AOSP APKs and configs
@@ -6215,6 +6222,8 @@ post_restore() {
       cp -fR $f/Calendar $SYSTEM/app/Calendar > /dev/null 2>&1
       cp -fR $f/Etar $SYSTEM/app/Etar > /dev/null 2>&1
       cp -fR $f/DeskClock $SYSTEM/app/DeskClock > /dev/null 2>&1
+      cp -fR $f/Gallery2 $SYSTEM/app/Gallery2 > /dev/null 2>&1
+      cp -fR $f/Jelly $SYSTEM/app/Jelly > /dev/null 2>&1
       cp -fR $f/Launcher3QuickStep $SYSTEM/priv-app/Launcher3QuickStep > /dev/null 2>&1
       cp -fR $f/QuickAccessWallet $SYSTEM/priv-app/QuickAccessWallet > /dev/null 2>&1
       # AOSP APKs and configs
