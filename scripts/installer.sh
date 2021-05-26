@@ -69,6 +69,7 @@ env_vars() {
   if [ "$ZIPTYPE" == "addon" ]; then
     if [ "$ADDON" == "sep" ]; then
       TARGET_ASSISTANT_GOOGLE="$TARGET_ASSISTANT_GOOGLE"
+      TARGET_BROMITE_GOOGLE="$TARGET_BROMITE_GOOGLE"
       TARGET_CALCULATOR_GOOGLE="$TARGET_CALCULATOR_GOOGLE"
       TARGET_CALENDAR_GOOGLE="$TARGET_CALENDAR_GOOGLE"
       TARGET_CHROME_GOOGLE="$TARGET_CHROME_GOOGLE"
@@ -1148,6 +1149,7 @@ on_addon_config() { supported_addon_config="$(get_prop "ro.config.addon")"; }
 # Addon Config Properties
 on_addon_check() {
   supported_assistant_config="$(get_prop "ro.config.assistant")"
+  supported_bromite_config="$(get_prop "ro.config.bromite")"
   supported_calculator_config="$(get_prop "ro.config.calculator")"
   supported_calendar_config="$(get_prop "ro.config.calendar")"
   supported_chrome_config="$(get_prop "ro.config.chrome")"
@@ -3664,6 +3666,13 @@ pre_installed_pkg() {
     rm -rf $SYSTEM/priv-app/Velvet
     rm -rf $SYSTEM/product/priv-app/Velvet
     rm -rf $SYSTEM/system_ext/priv-app/Velvet
+    # BromitePrebuilt
+    rm -rf $SYSTEM/app/BromitePrebuilt
+    rm -rf $SYSTEM/app/WebViewBromite
+    rm -rf $SYSTEM/product/app/BromitePrebuilt
+    rm -rf $SYSTEM/product/app/WebViewBromite
+    rm -rf $SYSTEM/system_ext/app/BromitePrebuilt
+    rm -rf $SYSTEM/system_ext/app/WebViewBromite
     # CalculatorGooglePrebuilt
     rm -rf $SYSTEM/app/CalculatorGooglePrebuilt
     rm -rf $SYSTEM/product/app/CalculatorGooglePrebuilt
@@ -3759,6 +3768,13 @@ pre_installed_pkg() {
     rm -rf $SYSTEM_SYSTEM/priv-app/Velvet
     rm -rf $SYSTEM_SYSTEM/product/priv-app/Velvet
     rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Velvet
+    # BromitePrebuilt
+    rm -rf $SYSTEM_SYSTEM/app/BromitePrebuilt
+    rm -rf $SYSTEM_SYSTEM/app/WebViewBromite
+    rm -rf $SYSTEM_SYSTEM/product/app/BromitePrebuilt
+    rm -rf $SYSTEM_SYSTEM/product/app/WebViewBromite
+    rm -rf $SYSTEM_SYSTEM/system_ext/app/BromitePrebuilt
+    rm -rf $SYSTEM_SYSTEM/system_ext/app/WebViewBromite
     # CalculatorGooglePrebuilt
     rm -rf $SYSTEM_SYSTEM/app/CalculatorGooglePrebuilt
     rm -rf $SYSTEM_SYSTEM/product/app/CalculatorGooglePrebuilt
@@ -4291,6 +4307,87 @@ set_addon_zip_conf() {
       insert_line $SYSTEM_AS_SYSTEM/build.prop "ro.opa.eligible_device=true" after 'net.bt.name=Android' 'ro.opa.eligible_device=true'
     else
       ui_print "! Skip installing Assistant Google"
+    fi
+    if [ "$supported_bromite_config" == "true" ]; then
+      ui_print "- Installing Bromite Browser"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.bromite" after '# Begin addon properties' "ro.config.bromite"
+        # Remove AOSP Browser
+        rm -rf $SYSTEM/app/Browser
+        rm -rf $SYSTEM/app/Jelly
+        rm -rf $SYSTEM/priv-app/Browser
+        rm -rf $SYSTEM/priv-app/Jelly
+        rm -rf $SYSTEM/product/app/Browser
+        rm -rf $SYSTEM/product/app/Jelly
+        rm -rf $SYSTEM/product/priv-app/Browser
+        rm -rf $SYSTEM/product/priv-app/Jelly
+        rm -rf $SYSTEM/system_ext/app/Browser
+        rm -rf $SYSTEM/system_ext/app/Jelly
+        rm -rf $SYSTEM/system_ext/priv-app/Browser
+        rm -rf $SYSTEM/system_ext/priv-app/Jelly
+        # Remove pre-install Chrome and library
+        rm -rf $SYSTEM/app/Chrome*
+        rm -rf $SYSTEM/app/GoogleChrome
+        rm -rf $SYSTEM/app/TrichromeLibrary
+        rm -rf $SYSTEM/app/WebViewGoogle
+        rm -rf $SYSTEM/priv-app/Chrome*
+        rm -rf $SYSTEM/priv-app/GoogleChrome
+        rm -rf $SYSTEM/priv-app/TrichromeLibrary
+        rm -rf $SYSTEM/priv-app/WebViewGoogle
+        rm -rf $SYSTEM/product/app/Chrome*
+        rm -rf $SYSTEM/product/app/GoogleChrome
+        rm -rf $SYSTEM/product/app/TrichromeLibrary
+        rm -rf $SYSTEM/product/app/WebViewGoogle
+        rm -rf $SYSTEM/product/priv-app/Chrome*
+        rm -rf $SYSTEM/product/priv-app/GoogleChrome
+        rm -rf $SYSTEM/product/priv-app/TrichromeLibrary
+        rm -rf $SYSTEM/product/priv-app/WebViewGoogle
+        rm -rf $SYSTEM/system_ext/app/Chrome*
+        rm -rf $SYSTEM/system_ext/app/GoogleChrome
+        rm -rf $SYSTEM/system_ext/app/TrichromeLibrary
+        rm -rf $SYSTEM/system_ext/app/WebViewGoogle
+        rm -rf $SYSTEM/system_ext/priv-app/Chrome*
+        rm -rf $SYSTEM/system_ext/priv-app/GoogleChrome
+        rm -rf $SYSTEM/system_ext/priv-app/TrichromeLibrary
+        rm -rf $SYSTEM/system_ext/priv-app/WebViewGoogle
+        # Remove pre-install Bromite and library
+        rm -rf $SYSTEM/app/BromitePrebuilt
+        rm -rf $SYSTEM/app/WebViewBromite
+        rm -rf $SYSTEM/priv-app/BromitePrebuilt
+        rm -rf $SYSTEM/priv-app/WebViewBromite
+        rm -rf $SYSTEM/product/app/BromitePrebuilt
+        rm -rf $SYSTEM/product/app/WebViewBromite
+        rm -rf $SYSTEM/product/priv-app/BromitePrebuilt
+        rm -rf $SYSTEM/product/priv-app/WebViewBromite
+        rm -rf $SYSTEM/system_ext/app/BromitePrebuilt
+        rm -rf $SYSTEM/system_ext/app/WebViewBromite
+        rm -rf $SYSTEM/system_ext/priv-app/BromitePrebuilt
+        rm -rf $SYSTEM/system_ext/priv-app/WebViewBromite
+      fi
+      if [ "$supported_module_config" == "true" ]; then
+        # Remove AOSP Browser
+        mkdir $SYSTEM_SYSTEM/app/Jelly
+        mkdir $SYSTEM_SYSTEM/priv-app/Jelly
+        mkdir $SYSTEM_SYSTEM/product/app/Jelly
+        mkdir $SYSTEM_SYSTEM/product/priv-app/Jelly
+        mkdir $SYSTEM_SYSTEM/system_ext/app/Jelly
+        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
+        touch $SYSTEM_SYSTEM/app/Jelly/.replace
+        touch $SYSTEM_SYSTEM/priv-app/Jelly/.replace
+        touch $SYSTEM_SYSTEM/product/app/Jelly/.replace
+        touch $SYSTEM_SYSTEM/product/priv-app/Jelly/.replace
+        touch $SYSTEM_SYSTEM/system_ext/app/Jelly/.replace
+        touch $SYSTEM_SYSTEM/system_ext/priv-app/Jelly/.replace
+      fi
+      # Install
+      ADDON_SYS="BromitePrebuilt.tar.xz"
+      PKG_SYS="BromitePrebuilt"
+      target_sys
+      ADDON_SYS="WebViewBromite.tar.xz"
+      PKG_SYS="WebViewBromite"
+      target_sys
+    else
+      ui_print "! Skip installing Bromite Browser"
     fi
     if [ "$supported_calculator_config" == "true" ]; then
       ui_print "- Installing Calculator Google"
@@ -5067,6 +5164,95 @@ set_addon_zip_sep() {
       set_google_assistant_default
       # Enable Google Assistant
       insert_line $SYSTEM_AS_SYSTEM/build.prop "ro.opa.eligible_device=true" after 'net.bt.name=Android' 'ro.opa.eligible_device=true'
+    fi
+    if [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
+      ui_print "- Installing Bromite Browser"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.bromite" after '# Begin addon properties' "ro.config.bromite"
+        # Remove AOSP Browser
+        rm -rf $SYSTEM/app/Browser
+        rm -rf $SYSTEM/app/Jelly
+        rm -rf $SYSTEM/priv-app/Browser
+        rm -rf $SYSTEM/priv-app/Jelly
+        rm -rf $SYSTEM/product/app/Browser
+        rm -rf $SYSTEM/product/app/Jelly
+        rm -rf $SYSTEM/product/priv-app/Browser
+        rm -rf $SYSTEM/product/priv-app/Jelly
+        rm -rf $SYSTEM/system_ext/app/Browser
+        rm -rf $SYSTEM/system_ext/app/Jelly
+        rm -rf $SYSTEM/system_ext/priv-app/Browser
+        rm -rf $SYSTEM/system_ext/priv-app/Jelly
+        # Remove pre-install Chrome and library
+        rm -rf $SYSTEM/app/Chrome*
+        rm -rf $SYSTEM/app/GoogleChrome
+        rm -rf $SYSTEM/app/TrichromeLibrary
+        rm -rf $SYSTEM/app/WebViewGoogle
+        rm -rf $SYSTEM/priv-app/Chrome*
+        rm -rf $SYSTEM/priv-app/GoogleChrome
+        rm -rf $SYSTEM/priv-app/TrichromeLibrary
+        rm -rf $SYSTEM/priv-app/WebViewGoogle
+        rm -rf $SYSTEM/product/app/Chrome*
+        rm -rf $SYSTEM/product/app/GoogleChrome
+        rm -rf $SYSTEM/product/app/TrichromeLibrary
+        rm -rf $SYSTEM/product/app/WebViewGoogle
+        rm -rf $SYSTEM/product/priv-app/Chrome*
+        rm -rf $SYSTEM/product/priv-app/GoogleChrome
+        rm -rf $SYSTEM/product/priv-app/TrichromeLibrary
+        rm -rf $SYSTEM/product/priv-app/WebViewGoogle
+        rm -rf $SYSTEM/system_ext/app/Chrome*
+        rm -rf $SYSTEM/system_ext/app/GoogleChrome
+        rm -rf $SYSTEM/system_ext/app/TrichromeLibrary
+        rm -rf $SYSTEM/system_ext/app/WebViewGoogle
+        rm -rf $SYSTEM/system_ext/priv-app/Chrome*
+        rm -rf $SYSTEM/system_ext/priv-app/GoogleChrome
+        rm -rf $SYSTEM/system_ext/priv-app/TrichromeLibrary
+        rm -rf $SYSTEM/system_ext/priv-app/WebViewGoogle
+        # Remove pre-install Bromite and library
+        rm -rf $SYSTEM/app/BromitePrebuilt
+        rm -rf $SYSTEM/app/WebViewBromite
+        rm -rf $SYSTEM/priv-app/BromitePrebuilt
+        rm -rf $SYSTEM/priv-app/WebViewBromite
+        rm -rf $SYSTEM/product/app/BromitePrebuilt
+        rm -rf $SYSTEM/product/app/WebViewBromite
+        rm -rf $SYSTEM/product/priv-app/BromitePrebuilt
+        rm -rf $SYSTEM/product/priv-app/WebViewBromite
+        rm -rf $SYSTEM/system_ext/app/BromitePrebuilt
+        rm -rf $SYSTEM/system_ext/app/WebViewBromite
+        rm -rf $SYSTEM/system_ext/priv-app/BromitePrebuilt
+        rm -rf $SYSTEM/system_ext/priv-app/WebViewBromite
+      fi
+      if [ "$supported_module_config" == "true" ]; then
+        # Remove AOSP Browser
+        mkdir $SYSTEM_SYSTEM/app/Jelly
+        mkdir $SYSTEM_SYSTEM/priv-app/Jelly
+        mkdir $SYSTEM_SYSTEM/product/app/Jelly
+        mkdir $SYSTEM_SYSTEM/product/priv-app/Jelly
+        mkdir $SYSTEM_SYSTEM/system_ext/app/Jelly
+        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
+        touch $SYSTEM_SYSTEM/app/Jelly/.replace
+        touch $SYSTEM_SYSTEM/priv-app/Jelly/.replace
+        touch $SYSTEM_SYSTEM/product/app/Jelly/.replace
+        touch $SYSTEM_SYSTEM/product/priv-app/Jelly/.replace
+        touch $SYSTEM_SYSTEM/system_ext/app/Jelly/.replace
+        touch $SYSTEM_SYSTEM/system_ext/priv-app/Jelly/.replace
+      fi
+      # Install
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
+        ADDON_SYS="BromitePrebuilt_arm.tar.xz"
+        PKG_SYS="BromitePrebuilt"
+        target_sys
+        ADDON_SYS="WebViewBromite_arm.tar.xz"
+        PKG_SYS="WebViewBromite"
+        target_sys
+      fi
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
+        ADDON_SYS="BromitePrebuilt_arm64.tar.xz"
+        PKG_SYS="BromitePrebuilt"
+        target_sys
+        ADDON_SYS="WebViewBromite_arm64.tar.xz"
+        PKG_SYS="WebViewBromite"
+        target_sys
+      fi
     fi
     if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
       ui_print "- Installing Calculator Google"
@@ -6090,6 +6276,7 @@ post_install_wipe() {
   rm -rf $SYSTEM/etc/g.prop
   rm -rf $SYSTEM/config.prop
   # Wipe Additional packages
+  rm -rf $SYSTEM_APP/BromitePrebuilt
   rm -rf $SYSTEM_APP/CalculatorGooglePrebuilt
   rm -rf $SYSTEM_APP/CalendarGooglePrebuilt
   rm -rf $SYSTEM_APP/ChromeGooglePrebuilt
@@ -6101,6 +6288,7 @@ post_install_wipe() {
   rm -rf $SYSTEM_APP/PhotosGooglePrebuilt
   rm -rf $SYSTEM_APP/SoundPickerPrebuilt
   rm -rf $SYSTEM_APP/TrichromeLibrary
+  rm -rf $SYSTEM_APP/WebViewBromite
   rm -rf $SYSTEM_APP/YouTube
   rm -rf $SYSTEM_PRIV_APP/CarrierServices
   rm -rf $SYSTEM_PRIV_APP/ContactsGooglePrebuilt

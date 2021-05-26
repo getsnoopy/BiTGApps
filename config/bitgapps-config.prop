@@ -32,6 +32,7 @@ ro.config.addon=false
 
 # Property for installing Addons
 ro.config.assistant=false
+ro.config.bromite=false
 ro.config.calculator=false
 ro.config.calendar=false
 ro.config.chrome=false

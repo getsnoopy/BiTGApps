@@ -1596,6 +1596,7 @@ backupdirSYSRwg() {
 
 backupdirSYSAddon() {
   SYS_APP_ADDON="
+    $SYSTEM/app/BromitePrebuilt
     $SYSTEM/app/CalculatorGooglePrebuilt
     $SYSTEM/app/CalendarGooglePrebuilt
     $SYSTEM/app/ChromeGooglePrebuilt
@@ -1606,6 +1607,7 @@ backupdirSYSAddon() {
     $SYSTEM/app/PhotosGooglePrebuilt
     $SYSTEM/app/SoundPickerPrebuilt
     $SYSTEM/app/TrichromeLibrary
+    $SYSTEM/app/WebViewBromite
     $SYSTEM/app/YouTube
     $SYSTEM/app/MicroGGMSCore"
 
@@ -1716,6 +1718,7 @@ restoredirTMPRwg() {
 
 restoredirTMPAddon() {
   TMP_APP_ADDON="
+    $TMP/addon/app/BromitePrebuilt
     $TMP/addon/app/CalculatorGooglePrebuilt
     $TMP/addon/app/CalendarGooglePrebuilt
     $TMP/addon/app/ChromeGooglePrebuilt
@@ -1726,6 +1729,7 @@ restoredirTMPAddon() {
     $TMP/addon/app/PhotosGooglePrebuilt
     $TMP/addon/app/SoundPickerPrebuilt
     $TMP/addon/app/TrichromeLibrary
+    $TMP/addon/app/WebViewBromite
     $TMP/addon/app/YouTube
     $TMP/addon/app/MicroGGMSCore"
 
@@ -1923,6 +1927,56 @@ fix_addon_conflict() {
       rm -rf $S/system_ext/app/velvet*
       rm -rf $S/system_ext/priv-app/Velvet*
       rm -rf $S/system_ext/priv-app/velvet*
+    fi
+    if [ -n "$(cat $S/config.prop | grep ro.config.bromite)" ]; then
+      rm -rf $S/app/BromitePrebuilt
+      rm -rf $S/app/Browser
+      rm -rf $S/app/Chrome*
+      rm -rf $S/app/GoogleChrome
+      rm -rf $S/app/Jelly
+      rm -rf $S/app/TrichromeLibrary
+      rm -rf $S/app/WebViewBromite
+      rm -rf $S/app/WebViewGoogle
+      rm -rf $S/priv-app/BromitePrebuilt
+      rm -rf $S/priv-app/Browser
+      rm -rf $S/priv-app/Chrome*
+      rm -rf $S/priv-app/GoogleChrome
+      rm -rf $S/priv-app/Jelly
+      rm -rf $S/priv-app/TrichromeLibrary
+      rm -rf $S/priv-app/WebViewBromite
+      rm -rf $S/priv-app/WebViewGoogle
+      rm -rf $S/product/app/BromitePrebuilt
+      rm -rf $S/product/app/Browser
+      rm -rf $S/product/app/Chrome*
+      rm -rf $S/product/app/GoogleChrome
+      rm -rf $S/product/app/Jelly
+      rm -rf $S/product/app/TrichromeLibrary
+      rm -rf $S/product/app/WebViewBromite
+      rm -rf $S/product/app/WebViewGoogle
+      rm -rf $S/product/priv-app/BromitePrebuilt
+      rm -rf $S/product/priv-app/Browser
+      rm -rf $S/product/priv-app/Chrome*
+      rm -rf $S/product/priv-app/GoogleChrome
+      rm -rf $S/product/priv-app/Jelly
+      rm -rf $S/product/priv-app/TrichromeLibrary
+      rm -rf $S/product/priv-app/WebViewBromite
+      rm -rf $S/product/priv-app/WebViewGoogle
+      rm -rf $S/system_ext/app/BromitePrebuilt
+      rm -rf $S/system_ext/app/Browser
+      rm -rf $S/system_ext/app/Chrome*
+      rm -rf $S/system_ext/app/GoogleChrome
+      rm -rf $S/system_ext/app/Jelly
+      rm -rf $S/system_ext/app/TrichromeLibrary
+      rm -rf $S/system_ext/app/WebViewBromite
+      rm -rf $S/system_ext/app/WebViewGoogle
+      rm -rf $S/system_ext/priv-app/BromitePrebuilt
+      rm -rf $S/system_ext/priv-app/Browser
+      rm -rf $S/system_ext/priv-app/Chrome*
+      rm -rf $S/system_ext/priv-app/GoogleChrome
+      rm -rf $S/system_ext/priv-app/Jelly
+      rm -rf $S/system_ext/priv-app/TrichromeLibrary
+      rm -rf $S/system_ext/priv-app/WebViewBromite
+      rm -rf $S/system_ext/priv-app/WebViewGoogle
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.calculator)" ]; then
       rm -rf $S/app/Calculator*
