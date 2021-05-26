@@ -46,6 +46,7 @@ ro.config.markup=false
 ro.config.messages=false
 ro.config.photos=false
 ro.config.soundpicker=false
+ro.config.tts=false
 ro.config.vanced=false
 ro.config.wellbeing=false
 

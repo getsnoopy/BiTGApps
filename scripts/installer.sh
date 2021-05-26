@@ -83,6 +83,7 @@ env_vars() {
       TARGET_MESSAGES_GOOGLE="$TARGET_MESSAGES_GOOGLE"
       TARGET_PHOTOS_GOOGLE="$TARGET_PHOTOS_GOOGLE"
       TARGET_SOUNDPICKER_GOOGLE="$TARGET_SOUNDPICKER_GOOGLE"
+      TARGET_TTS_GOOGLE="$TARGET_TTS_GOOGLE"
       TARGET_VANCED_GOOGLE="$TARGET_VANCED_GOOGLE"
       TARGET_WELLBEING_GOOGLE="$TARGET_WELLBEING_GOOGLE"
     fi
@@ -1163,6 +1164,7 @@ on_addon_check() {
   supported_messages_config="$(get_prop "ro.config.messages")"
   supported_photos_config="$(get_prop "ro.config.photos")"
   supported_soundpicker_config="$(get_prop "ro.config.soundpicker")"
+  supported_tts_config="$(get_prop "ro.config.tts")"
   supported_vanced_config="$(get_prop "ro.config.vanced")"
   supported_wellbeing_config="$(get_prop "ro.config.wellbeing")"
 }
@@ -3750,6 +3752,10 @@ pre_installed_pkg() {
     rm -rf $SYSTEM/app/SoundPickerPrebuilt
     rm -rf $SYSTEM/product/app/SoundPickerPrebuilt
     rm -rf $SYSTEM/system_ext/app/SoundPickerPrebuilt
+    # GoogleTTSPrebuilt
+    rm -rf $SYSTEM/app/GoogleTTSPrebuilt
+    rm -rf $SYSTEM/product/app/GoogleTTSPrebuilt
+    rm -rf $SYSTEM/system_ext/app/GoogleTTSPrebuilt
     # YouTube
     rm -rf $SYSTEM/app/YouTube
     rm -rf $SYSTEM/product/app/YouTube
@@ -3852,6 +3858,10 @@ pre_installed_pkg() {
     rm -rf $SYSTEM_SYSTEM/app/SoundPickerPrebuilt
     rm -rf $SYSTEM_SYSTEM/product/app/SoundPickerPrebuilt
     rm -rf $SYSTEM_SYSTEM/system_ext/app/SoundPickerPrebuilt
+    # GoogleTTSPrebuilt
+    rm -rf $SYSTEM_SYSTEM/app/GoogleTTSPrebuilt
+    rm -rf $SYSTEM_SYSTEM/product/app/GoogleTTSPrebuilt
+    rm -rf $SYSTEM_SYSTEM/system_ext/app/GoogleTTSPrebuilt
     # YouTube
     rm -rf $SYSTEM_SYSTEM/app/YouTube
     rm -rf $SYSTEM_SYSTEM/product/app/YouTube
@@ -5047,6 +5057,25 @@ set_addon_zip_conf() {
     else
       ui_print "! Skip installing SoundPicker Google"
     fi
+    if [ "$supported_tts_config" == "true" ]; then
+      ui_print "- Installing TTS Google"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.tts" after '# Begin addon properties' "ro.config.tts"
+        # Remove pre-install TTS
+        rm -rf $SYSTEM/app/GoogleTTS*
+        rm -rf $SYSTEM/priv-app/GoogleTTS*
+        rm -rf $SYSTEM/product/app/GoogleTTS*
+        rm -rf $SYSTEM/product/priv-app/GoogleTTS*
+        rm -rf $SYSTEM/system_ext/app/GoogleTTS*
+        rm -rf $SYSTEM/system_ext/priv-app/GoogleTTS*
+      fi
+      # Install
+      ADDON_SYS="GoogleTTSPrebuilt.tar.xz"
+      PKG_SYS="GoogleTTSPrebuilt"
+      target_sys
+    else
+      ui_print "! Skip installing TTS Google"
+    fi
     if [ "$supported_vanced_config" == "true" ]; then
       ui_print "- Installing YouTube Vanced"
       if [ "$supported_module_config" == "false" ]; then
@@ -5901,6 +5930,29 @@ set_addon_zip_sep() {
       PKG_SYS="SoundPickerPrebuilt"
       target_sys
     fi
+    if [ "$TARGET_TTS_GOOGLE" == "true" ]; then
+      ui_print "- Installing TTS Google"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.tts" after '# Begin addon properties' "ro.config.tts"
+        # Remove pre-install TTS
+        rm -rf $SYSTEM/app/GoogleTTS*
+        rm -rf $SYSTEM/priv-app/GoogleTTS*
+        rm -rf $SYSTEM/product/app/GoogleTTS*
+        rm -rf $SYSTEM/product/priv-app/GoogleTTS*
+        rm -rf $SYSTEM/system_ext/app/GoogleTTS*
+        rm -rf $SYSTEM/system_ext/priv-app/GoogleTTS*
+      fi
+      # Install
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
+        ADDON_SYS="GoogleTTSPrebuilt_arm.tar.xz"
+        PKG_SYS="GoogleTTSPrebuilt"
+      fi
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
+        ADDON_SYS="GoogleTTSPrebuilt_arm64.tar.xz"
+        PKG_SYS="GoogleTTSPrebuilt"
+      fi
+      target_sys
+    fi
     if [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
       ui_print "- Installing YouTube Vanced"
       if [ "$supported_module_config" == "false" ]; then
@@ -6282,6 +6334,7 @@ post_install_wipe() {
   rm -rf $SYSTEM_APP/ChromeGooglePrebuilt
   rm -rf $SYSTEM_APP/DeskClockGooglePrebuilt
   rm -rf $SYSTEM_APP/GboardGooglePrebuilt
+  rm -rf $SYSTEM_APP/GoogleTTSPrebuilt
   rm -rf $SYSTEM_APP/MarkupGooglePrebuilt
   rm -rf $SYSTEM_APP/MessagesGooglePrebuilt
   rm -rf $SYSTEM_APP/MicroGGMSCore

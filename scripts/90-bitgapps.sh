@@ -1602,6 +1602,7 @@ backupdirSYSAddon() {
     $SYSTEM/app/ChromeGooglePrebuilt
     $SYSTEM/app/DeskClockGooglePrebuilt
     $SYSTEM/app/GboardGooglePrebuilt
+    $SYSTEM/app/GoogleTTSPrebuilt
     $SYSTEM/app/MarkupGooglePrebuilt
     $SYSTEM/app/MessagesGooglePrebuilt
     $SYSTEM/app/PhotosGooglePrebuilt
@@ -1724,6 +1725,7 @@ restoredirTMPAddon() {
     $TMP/addon/app/ChromeGooglePrebuilt
     $TMP/addon/app/DeskClockGooglePrebuilt
     $TMP/addon/app/GboardGooglePrebuilt
+    $TMP/addon/app/GoogleTTSPrebuilt
     $TMP/addon/app/MarkupGooglePrebuilt
     $TMP/addon/app/MessagesGooglePrebuilt
     $TMP/addon/app/PhotosGooglePrebuilt
@@ -2224,6 +2226,14 @@ fix_addon_conflict() {
       rm -rf $S/product/priv-app/SoundPicker*
       rm -rf $S/system_ext/app/SoundPicker*
       rm -rf $S/system_ext/priv-app/SoundPicker*
+    fi
+    if [ -n "$(cat $S/config.prop | grep ro.config.tts)" ]; then
+      rm -rf $S/app/GoogleTTS*
+      rm -rf $S/priv-app/GoogleTTS*
+      rm -rf $S/product/app/GoogleTTS*
+      rm -rf $S/product/priv-app/GoogleTTS*
+      rm -rf $S/system_ext/app/GoogleTTS*
+      rm -rf $S/system_ext/priv-app/GoogleTTS*
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.vanced)" ]; then
       rm -rf $S/app/YouTube*
