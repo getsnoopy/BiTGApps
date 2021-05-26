@@ -39,6 +39,7 @@ ro.config.chrome=false
 ro.config.contacts=false
 ro.config.deskclock=false
 ro.config.dialer=false
+ro.config.dps=false
 ro.config.gboard=false
 ro.config.gearhead=false
 ro.config.launcher=false

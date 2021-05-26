@@ -1616,6 +1616,7 @@ backupdirSYSAddon() {
     $SYSTEM/priv-app/CarrierServices
     $SYSTEM/priv-app/ContactsGooglePrebuilt
     $SYSTEM/priv-app/DialerGooglePrebuilt
+    $SYSTEM/priv-app/DPSGooglePrebuilt
     $SYSTEM/priv-app/GearheadGooglePrebuilt
     $SYSTEM/priv-app/NexusLauncherPrebuilt
     $SYSTEM/priv-app/QuickAccessWallet
@@ -1628,7 +1629,8 @@ backupdirSYSAddon() {
   SYS_PERMISSIONS_ADDON="
     $SYSTEM/etc/permissions/com.google.android.dialer.framework.xml
     $SYSTEM/etc/permissions/com.google.android.dialer.support.xml
-    $SYSTEM/etc/permissions/com.google.android.apps.nexuslauncher.xml"
+    $SYSTEM/etc/permissions/com.google.android.apps.nexuslauncher.xml
+    $SYSTEM/etc/permissions/com.google.android.as.xml"
 
   SYS_FRAMEWORK_ADDON="
     $SYSTEM/framework/com.google.android.dialer.support.jar"
@@ -1739,6 +1741,7 @@ restoredirTMPAddon() {
     $TMP/addon/priv-app/CarrierServices
     $TMP/addon/priv-app/ContactsGooglePrebuilt
     $TMP/addon/priv-app/DialerGooglePrebuilt
+    $TMP/addon/priv-app/DPSGooglePrebuilt
     $TMP/addon/priv-app/GearheadGooglePrebuilt
     $TMP/addon/priv-app/NexusLauncherPrebuilt
     $TMP/addon/priv-app/QuickAccessWallet
@@ -1751,7 +1754,8 @@ restoredirTMPAddon() {
   TMP_PERMISSIONS_ADDON="
     $TMP/addon/permissions/com.google.android.dialer.framework.xml
     $TMP/addon/permissions/com.google.android.dialer.support.xml
-    $TMP/addon/permissions/com.google.android.apps.nexuslauncher.xml"
+    $TMP/addon/permissions/com.google.android.apps.nexuslauncher.xml
+    $TMP/addon/permissions/com.google.android.as.xml"
 
   TMP_FRAMEWORK_ADDON="
     $TMP/addon/framework/com.google.android.dialer.support.jar"
@@ -2111,6 +2115,20 @@ fix_addon_conflict() {
       rm -rf $S/etc/permissions/com.android.dialer.xml
       rm -rf $S/product/etc/permissions/com.android.dialer.xml
       rm -rf $S/system_ext/etc/permissions/com.android.dialer.xml
+    fi
+    if [ -n "$(cat $S/config.prop | grep ro.config.dps)" ]; then
+      rm -rf $S/app/DPSGooglePrebuilt
+      rm -rf $S/app/Matchmaker*
+      rm -rf $S/priv-app/DPSGooglePrebuilt
+      rm -rf $S/priv-app/Matchmaker*
+      rm -rf $S/product/app/DPSGooglePrebuilt
+      rm -rf $S/product/app/Matchmaker*
+      rm -rf $S/product/priv-app/DPSGooglePrebuilt
+      rm -rf $S/product/priv-app/Matchmaker*
+      rm -rf $S/system_ext/app/DPSGooglePrebuilt
+      rm -rf $S/system_ext/app/Matchmaker*
+      rm -rf $S/system_ext/priv-app/DPSGooglePrebuilt
+      rm -rf $S/system_ext/priv-app/Matchmaker*
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.gboard)" ]; then
       rm -rf $S/app/Gboard*

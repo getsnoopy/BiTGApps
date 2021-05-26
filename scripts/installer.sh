@@ -76,6 +76,7 @@ env_vars() {
       TARGET_CONTACTS_GOOGLE="$TARGET_CONTACTS_GOOGLE"
       TARGET_DESKCLOCK_GOOGLE="$TARGET_DESKCLOCK_GOOGLE"
       TARGET_DIALER_GOOGLE="$TARGET_DIALER_GOOGLE"
+      TARGET_DPS_GOOGLE="$TARGET_DPS_GOOGLE"
       TARGET_GBOARD_GOOGLE="$TARGET_GBOARD_GOOGLE"
       TARGET_GEARHEAD_GOOGLE="$TARGET_GEARHEAD_GOOGLE"
       TARGET_LAUNCHER_GOOGLE="$TARGET_LAUNCHER_GOOGLE"
@@ -1157,6 +1158,7 @@ on_addon_check() {
   supported_contacts_config="$(get_prop "ro.config.contacts")"
   supported_deskclock_config="$(get_prop "ro.config.deskclock")"
   supported_dialer_config="$(get_prop "ro.config.dialer")"
+  supported_dps_config="$(get_prop "ro.config.dps")"
   supported_gboard_config="$(get_prop "ro.config.gboard")"
   supported_gearhead_config="$(get_prop "ro.config.gearhead")"
   supported_launcher_config="$(get_prop "ro.config.launcher")"
@@ -3711,6 +3713,13 @@ pre_installed_pkg() {
     rm -rf $SYSTEM/framework/com.google.android.dialer.support.jar
     rm -rf $SYSTEM/product/framework/com.google.android.dialer.support.jar
     rm -rf $SYSTEM/system_ext/framework/com.google.android.dialer.support.jar
+    # DPSGooglePrebuilt
+    rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt
+    rm -rf $SYSTEM/product/priv-app/DPSGooglePrebuilt
+    rm -rf $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
+    rm -rf $SYSTEM/etc/permissions/com.google.android.as.xml
+    rm -rf $SYSTEM/product/etc/permissions/com.google.android.as.xml
+    rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
     # GboardGooglePrebuilt
     rm -rf $SYSTEM/app/GboardGooglePrebuilt
     rm -rf $SYSTEM/product/app/GboardGooglePrebuilt
@@ -3817,6 +3826,13 @@ pre_installed_pkg() {
     rm -rf $SYSTEM_SYSTEM/framework/com.google.android.dialer.support.jar
     rm -rf $SYSTEM_SYSTEM/product/framework/com.google.android.dialer.support.jar
     rm -rf $SYSTEM_SYSTEM/system_ext/framework/com.google.android.dialer.support.jar
+    # DPSGooglePrebuilt
+    rm -rf $SYSTEM_SYSTEM/priv-app/DPSGooglePrebuilt
+    rm -rf $SYSTEM_SYSTEM/product/priv-app/DPSGooglePrebuilt
+    rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
+    rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.as.xml
+    rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.as.xml
+    rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
     # GboardGooglePrebuilt
     rm -rf $SYSTEM_SYSTEM/app/GboardGooglePrebuilt
     rm -rf $SYSTEM_SYSTEM/product/app/GboardGooglePrebuilt
@@ -3958,6 +3974,19 @@ launcher_config() {
   # Set selinux context
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.apps.nexuslauncher.xml"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/com.google.android.apps.nexuslauncher.xml"
+}
+
+dps_config() {
+  # Set default packages and unpack
+  ZIP="zip/DPSPermissions.tar.xz"
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # Unpack system files
+  tar -xf $ZIP_FILE/DPSPermissions.tar.xz -C $TMP_PERMISSION
+  # Install package
+  pkg_TMPPerm
+  pkg_TMPConfig
+  # Set selinux context
+  chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.as.xml"
 }
 
 # Set Google Assistant as default
@@ -4791,6 +4820,35 @@ set_addon_zip_conf() {
       set_google_dialer_default
     else
       ui_print "! Skip installing Dialer Google"
+    fi
+    if [ "$supported_dps_config" == "true" ]; then
+      ui_print "- Installing DPS Google"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.dps" after '# Begin addon properties' "ro.config.dps"
+        # Remove pre-install DPS
+        rm -rf $SYSTEM/app/DPSGooglePrebuilt
+        rm -rf $SYSTEM/app/Matchmaker*
+        rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt
+        rm -rf $SYSTEM/priv-app/Matchmaker*
+        rm -rf $SYSTEM/product/app/DPSGooglePrebuilt
+        rm -rf $SYSTEM/product/app/Matchmaker*
+        rm -rf $SYSTEM/product/priv-app/DPSGooglePrebuilt
+        rm -rf $SYSTEM/product/priv-app/Matchmaker*
+        rm -rf $SYSTEM/system_ext/app/DPSGooglePrebuilt
+        rm -rf $SYSTEM/system_ext/app/Matchmaker*
+        rm -rf $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
+        rm -rf $SYSTEM/system_ext/priv-app/Matchmaker*
+        rm -rf $SYSTEM/etc/permissions/com.google.android.as.xml
+        rm -rf $SYSTEM/product/etc/permissions/com.google.android.as.xml
+        rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
+      fi
+      # Install
+      ADDON_CORE="DPSGooglePrebuilt.tar.xz"
+      PKG_CORE="DPSGooglePrebuilt"
+      target_core
+      dps_config
+    else
+      ui_print "! Skip installing DPS Google"
     fi
     if [ "$supported_gboard_config" == "true" ]; then
       ui_print "- Installing Keyboard Google"
@@ -5655,6 +5713,39 @@ set_addon_zip_sep() {
       dialer_framework
       set_google_dialer_default
     fi
+    if [ "$TARGET_DPS_GOOGLE" == "true" ]; then
+      ui_print "- Installing DPS Google"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.dps" after '# Begin addon properties' "ro.config.dps"
+        # Remove pre-install DPS
+        rm -rf $SYSTEM/app/DPSGooglePrebuilt
+        rm -rf $SYSTEM/app/Matchmaker*
+        rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt
+        rm -rf $SYSTEM/priv-app/Matchmaker*
+        rm -rf $SYSTEM/product/app/DPSGooglePrebuilt
+        rm -rf $SYSTEM/product/app/Matchmaker*
+        rm -rf $SYSTEM/product/priv-app/DPSGooglePrebuilt
+        rm -rf $SYSTEM/product/priv-app/Matchmaker*
+        rm -rf $SYSTEM/system_ext/app/DPSGooglePrebuilt
+        rm -rf $SYSTEM/system_ext/app/Matchmaker*
+        rm -rf $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
+        rm -rf $SYSTEM/system_ext/priv-app/Matchmaker*
+        rm -rf $SYSTEM/etc/permissions/com.google.android.as.xml
+        rm -rf $SYSTEM/product/etc/permissions/com.google.android.as.xml
+        rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
+      fi
+      # Install
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
+        ADDON_CORE="DPSGooglePrebuilt_arm.tar.xz"
+        PKG_CORE="DPSGooglePrebuilt"
+      fi
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
+        ADDON_CORE="DPSGooglePrebuilt_arm64.tar.xz"
+        PKG_CORE="DPSGooglePrebuilt"
+      fi
+      target_core
+      dps_config
+    fi
     if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
       ui_print "- Installing Keyboard Google"
       if [ "$supported_module_config" == "false" ]; then
@@ -6316,6 +6407,7 @@ post_install_wipe() {
   rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
   rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
   rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
+  rm -rf $SYSTEM_ETC_PERM/com.google.android.as.xml
   rm -rf $SYSTEM_ETC_PERM/com.google.android.apps.nexuslauncher.xml
   rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
   rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
@@ -6346,6 +6438,7 @@ post_install_wipe() {
   rm -rf $SYSTEM_PRIV_APP/CarrierServices
   rm -rf $SYSTEM_PRIV_APP/ContactsGooglePrebuilt
   rm -rf $SYSTEM_PRIV_APP/DialerGooglePrebuilt
+  rm -rf $SYSTEM_PRIV_APP/DPSGooglePrebuilt
   rm -rf $SYSTEM_PRIV_APP/GearheadGooglePrebuilt
   rm -rf $SYSTEM_PRIV_APP/NexusLauncherPrebuilt
   rm -rf $SYSTEM_PRIV_APP/QuickAccessWallet
