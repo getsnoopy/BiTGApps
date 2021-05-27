@@ -106,9 +106,8 @@ ui_print() {
 set_bb() {
   # Check device architecture
   ARCH=$(uname -m)
-  if [ "$ARCH" == "armv6l" ] || [ "$ARCH" == "armv7l" ] || [ "$ARCH" == "armv8b" ] || [ "$ARCH" == "armv8l" ] || [ "$ARCH" == "aarch64" ]; then
-    ARCH="arm"
-  fi
+  if [ "$ARCH" == "x86" ]; then ARCH="x86"; fi
+  if [ "$ARCH" == "x86_64" ]; then ARCH="x86_64"; fi
   # Extract busybox
   [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
   chmod 0755 "$TMP/busybox-arm"
