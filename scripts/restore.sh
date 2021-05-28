@@ -1,9 +1,9 @@
 #!/sbin/sh
 #
 ##############################################################
-# File name       : 90-bitgapps.sh
+# File name       : restore.sh
 #
-# Description     : BiTGApps OTA survival script
+# Description     : BiTGApps OTA survival restore script
 #
 # Copyright       : Copyright (C) 2018-2021 TheHitMan7
 #
@@ -24,7 +24,13 @@
 if [ -z $backuptool_ab ]; then TMP="/tmp"; else TMP="/postinstall/tmp"; fi
 
 # Set busybox
-BB="/data/busybox/busybox"
+if [ -e "/data/busybox/busybox-arm" ]; then
+  BB="/data/busybox/busybox-arm"
+elif [ -e "$TMP/busybox-arm" ]; then
+  BB="$TMP/busybox-arm"
+else
+  BB="$?"
+fi
 
 # Set auto-generated fstab
 fstab="/etc/fstab"
@@ -46,18 +52,13 @@ trampoline() {
   ui_print() { echo -e "ui_print $1\nui_print" >> /proc/self/fd/$OUTFD; }
 }
 
-# Always use busybox backup from /data
 check_busybox() {
-  if [ "$1" == "backup" ] && [ ! -f "$BB" ]; then
+  if [ "$1" == "restore" ] && [ "$BB" == "0" ]; then
     ui_print "*************************"
     ui_print " BiTGApps addon.d failed "
     ui_print "*************************"
     ui_print "! Cannot find Busybox - was data wiped or not decrypted?"
     ui_print "! Reflash OTA from decrypted recovery or reflash BiTGApps"
-    exit 1
-  fi
-  if [ "$1" == "restore" ] && [ ! -f "$BB" ]; then
-    # Do not output anything on restore stage
     exit 1
   fi
 }
@@ -89,6 +90,7 @@ set_bb() {
       # Create script wrapper if symlinking and hardlinking failed because of restrictive selinux policy
       if ! echo "#!$BB" > "$l/$i" || ! chmod 0755 "$l/$i" ; then
         ui_print "! Failed to set-up pre-bundled busybox"
+        exit 1
       fi
     fi
   done
@@ -98,7 +100,7 @@ set_bb() {
 
 # Check device architecture
 set_arch() {
-  ARCH=`uname -m`
+  ARCH=$(uname -m)
   if [ "$ARCH" == "armv6l" ] || [ "$ARCH" == "armv7l" ]; then ARMEABI="true"; fi
   if [ "$ARCH" == "armv8b" ] || [ "$ARCH" == "armv8l" ] || [ "$ARCH" == "aarch64" ]; then AARCH64="true"; fi
 }
@@ -135,7 +137,10 @@ tmp_dir() {
   test -d $TMP/addon/core || mkdir $TMP/addon/core
   test -d $TMP/addon/permissions || mkdir $TMP/addon/permissions
   test -d $TMP/addon/sysconfig || mkdir $TMP/addon/sysconfig
+  test -d $TMP/addon/firmware || mkdir $TMP/addon/firmware
   test -d $TMP/addon/framework || mkdir $TMP/addon/framework
+  test -d $TMP/addon/overlay || mkdir $TMP/addon/overlay
+  test -d $TMP/addon/usr || mkdir $TMP/addon/usr
   test -d $TMP/rwg || mkdir $TMP/rwg
   test -d $TMP/rwg/app || mkdir $TMP/rwg/app
   test -d $TMP/rwg/priv-app || mkdir $TMP/rwg/priv-app
@@ -410,17 +415,9 @@ mount_all() {
       mount -o rw,remount -t auto $ANDROID_ROOT
       is_mounted $ANDROID_ROOT || NEED_BLOCK_MOUNT="true"
       if [ "$NEED_BLOCK_MOUNT" == "true" ]; then
-        if [ -e "/dev/block/by-name/system" ]; then
-          BLK="/dev/block/by-name/system"
-        elif [ -e "/dev/block/bootdevice/by-name/system" ]; then
-          BLK="/dev/block/bootdevice/by-name/system"
-        elif [ -e "/dev/block/platform/*/by-name/system" ]; then
-          BLK="/dev/block/platform/*/by-name/system"
-        elif [ -e "/dev/block/platform/*/*/by-name/system" ]; then
-          BLK="/dev/block/platform/*/*/by-name/system"
-        else
-          BLK="$?"
-        fi
+        # Export system block
+        . /data/SYSTEM_BLOCK
+        # Mount using block device
         mount $BLK $ANDROID_ROOT
       fi
       if [ "$device_vendorpartition" == "true" ]; then
@@ -546,9 +543,6 @@ set_pathmap() {
     ensure_dir
   fi
 }
-
-# Confirm that backup is done
-conf_addon_backup() { if [ -f $TMP/config.prop ]; then ui_print "BackupTools: BiTGApps backup created"; else ui_print "BackupTools: Failed to create BiTGApps backup"; fi; }
 
 # Confirm that restore is done
 conf_addon_restore() { if [ -f $S/config.prop ]; then ui_print "BackupTools: BiTGApps backup restored"; else ui_print "BackupTools: Failed to restore BiTGApps backup"; fi; }
@@ -1516,131 +1510,6 @@ pkg_Ext() {
 # Limit installation of AOSP APKs
 lim_aosp_install() { if [ "$rwg_install_status" == "true" ]; then pkg_System; pkg_Product; pkg_Ext; fi; }
 
-# Set backup function
-backupdirSYS() {
-  SYS_APP="
-    $SYSTEM/app/FaceLock
-    $SYSTEM/app/GoogleCalendarSyncAdapter
-    $SYSTEM/app/GoogleContactsSyncAdapter"
-
-  SYS_APP_JAR="
-    $S/app/GoogleExtShared"
-
-  SYS_PRIVAPP="
-    $SYSTEM/priv-app/AndroidPlatformServices
-    $SYSTEM/priv-app/ConfigUpdater
-    $SYSTEM/priv-app/GmsCoreSetupPrebuilt
-    $SYSTEM/priv-app/GoogleLoginService
-    $SYSTEM/priv-app/GoogleServicesFramework
-    $SYSTEM/priv-app/Phonesky
-    $SYSTEM/priv-app/PrebuiltGmsCore
-    $SYSTEM/priv-app/PrebuiltGmsCorePix
-    $SYSTEM/priv-app/PrebuiltGmsCorePi
-    $SYSTEM/priv-app/PrebuiltGmsCoreQt
-    $SYSTEM/priv-app/PrebuiltGmsCoreRvc
-    $SYSTEM/priv-app/PrebuiltGmsCoreSvc"
-
-  SYS_PRIVAPP_JAR="
-    $S/priv-app/GoogleExtServices"
-
-  SYS_SYSCONFIG="
-    $SYSTEM/etc/sysconfig/google.xml
-    $SYSTEM/etc/sysconfig/google_build.xml
-    $SYSTEM/etc/sysconfig/google_exclusives_enable.xml
-    $SYSTEM/etc/sysconfig/google-hiddenapi-package-whitelist.xml
-    $SYSTEM/etc/sysconfig/google-rollback-package-whitelist.xml
-    $SYSTEM/etc/sysconfig/google-staged-installer-whitelist.xml"
-
-  SYS_DEFAULTPERMISSIONS="
-    $SYSTEM/etc/default-permissions/default-permissions.xml"
-
-  SYS_PERMISSIONS="
-    $SYSTEM/etc/permissions/privapp-permissions-atv.xml
-    $SYSTEM/etc/permissions/privapp-permissions-google.xml
-    $SYSTEM/etc/permissions/split-permissions-google.xml"
-
-  SYS_PREFERREDAPPS="
-    $SYSTEM/etc/preferred-apps/google.xml"
-
-  SYS_PROPFILE="
-    $S/etc/g.prop"
-
-  SYS_BUILDFILE="
-    $S/config.prop"
-}
-
-backupdirSYSFboot() {
-  SYS_PRIVAPP_SETUP="
-    $SYSTEM/priv-app/AndroidMigratePrebuilt
-    $SYSTEM/priv-app/GoogleBackupTransport
-    $SYSTEM/priv-app/GoogleRestore
-    $SYSTEM/priv-app/SetupWizardPrebuilt"
-}
-
-backupdirSYSRwg() {
-  SYS_APP_RWG="
-    $SYSTEM/app/Messaging"
-
-  SYS_PRIVAPP_RWG="
-    $SYSTEM/priv-app/Contacts
-    $SYSTEM/priv-app/Dialer
-    $SYSTEM/priv-app/ManagedProvisioning
-    $SYSTEM/priv-app/Provision"
-
-  SYS_PERMISSIONS_RWG="
-    $SYSTEM/etc/permissions/com.android.contacts.xml
-    $SYSTEM/etc/permissions/com.android.dialer.xml
-    $SYSTEM/etc/permissions/com.android.managedprovisioning.xml
-    $SYSTEM/etc/permissions/com.android.provision.xml"
-}
-
-backupdirSYSAddon() {
-  SYS_APP_ADDON="
-    $SYSTEM/app/BromitePrebuilt
-    $SYSTEM/app/CalculatorGooglePrebuilt
-    $SYSTEM/app/CalendarGooglePrebuilt
-    $SYSTEM/app/ChromeGooglePrebuilt
-    $SYSTEM/app/DeskClockGooglePrebuilt
-    $SYSTEM/app/GboardGooglePrebuilt
-    $SYSTEM/app/GoogleTTSPrebuilt
-    $SYSTEM/app/MarkupGooglePrebuilt
-    $SYSTEM/app/MessagesGooglePrebuilt
-    $SYSTEM/app/PhotosGooglePrebuilt
-    $SYSTEM/app/SoundPickerPrebuilt
-    $SYSTEM/app/TrichromeLibrary
-    $SYSTEM/app/WebViewBromite
-    $SYSTEM/app/YouTube
-    $SYSTEM/app/MicroGGMSCore"
-
-  SYS_PRIVAPP_ADDON="
-    $SYSTEM/priv-app/CarrierServices
-    $SYSTEM/priv-app/ContactsGooglePrebuilt
-    $SYSTEM/priv-app/DialerGooglePrebuilt
-    $SYSTEM/priv-app/DPSGooglePrebuilt
-    $SYSTEM/priv-app/GearheadGooglePrebuilt
-    $SYSTEM/priv-app/NexusLauncherPrebuilt
-    $SYSTEM/priv-app/QuickAccessWallet
-    $SYSTEM/priv-app/Velvet
-    $SYSTEM/priv-app/WellbeingPrebuilt"
-
-  SYS_SYSCONFIG_ADDON="
-    $SYSTEM/etc/sysconfig/com.google.android.apps.nexuslauncher.xml"
-
-  SYS_PERMISSIONS_ADDON="
-    $SYSTEM/etc/permissions/com.google.android.dialer.framework.xml
-    $SYSTEM/etc/permissions/com.google.android.dialer.support.xml
-    $SYSTEM/etc/permissions/com.google.android.apps.nexuslauncher.xml
-    $SYSTEM/etc/permissions/com.google.android.as.xml"
-
-  SYS_FRAMEWORK_ADDON="
-    $SYSTEM/framework/com.google.android.dialer.support.jar"
-}
-
-backupdirSYSOverlay() {
-  SYS_OVERLAY="
-    $SYSTEM/overlay/PlayStoreOverlay"
-}
-
 # Set restore function
 restoredirTMP() {
   TMP_APP="
@@ -1728,6 +1597,7 @@ restoredirTMPAddon() {
     $TMP/addon/app/DeskClockGooglePrebuilt
     $TMP/addon/app/GboardGooglePrebuilt
     $TMP/addon/app/GoogleTTSPrebuilt
+    $TMP/addon/app/MapsGooglePrebuilt
     $TMP/addon/app/MarkupGooglePrebuilt
     $TMP/addon/app/MessagesGooglePrebuilt
     $TMP/addon/app/PhotosGooglePrebuilt
@@ -1744,21 +1614,36 @@ restoredirTMPAddon() {
     $TMP/addon/priv-app/DPSGooglePrebuilt
     $TMP/addon/priv-app/GearheadGooglePrebuilt
     $TMP/addon/priv-app/NexusLauncherPrebuilt
-    $TMP/addon/priv-app/QuickAccessWallet
+    $TMP/addon/priv-app/NexusQuickAccessWallet
     $TMP/addon/priv-app/Velvet
     $TMP/addon/priv-app/WellbeingPrebuilt"
 
   TMP_SYSCONFIG_ADDON="
-    $TMP/sysconfig/com.google.android.apps.nexuslauncher.xml"
+    $TMP/addon/sysconfig/com.google.android.apps.nexuslauncher.xml"
 
   TMP_PERMISSIONS_ADDON="
     $TMP/addon/permissions/com.google.android.dialer.framework.xml
     $TMP/addon/permissions/com.google.android.dialer.support.xml
     $TMP/addon/permissions/com.google.android.apps.nexuslauncher.xml
-    $TMP/addon/permissions/com.google.android.as.xml"
+    $TMP/addon/permissions/com.google.android.as.xml
+    $TMP/addon/permissions/com.google.android.maps.xml"
+
+  TMP_FIRMWARE_ADDON="
+    $TMP/addon/firmware/music_detector.descriptor
+    $TMP/addon/firmware/music_detector.sound_model"
 
   TMP_FRAMEWORK_ADDON="
-    $TMP/addon/framework/com.google.android.dialer.support.jar"
+    $TMP/addon/framework/com.google.android.dialer.support.jar
+    $TMP/addon/framework/com.google.android.maps.jar"
+
+  TMP_OVERLAY_ADDON="
+    $TMP/addon/overlay/NexusLauncherOverlay"
+
+  TMP_SHARE_ADDON="
+    $TMP/addon/usr/d3_lms"
+
+  TMP_SREC_ADDON="
+    $TMP/addon/usr/en-US"
 }
 
 restoredirTMPOverlay() {
@@ -1766,90 +1651,9 @@ restoredirTMPOverlay() {
     $TMP/overlay/PlayStoreOverlay"
 }
 
-backup_conflicting_packages() {
-  if [ "$addon_install_status" == "true" ]; then
-    # Backup CalendarProvider
-    test -d $S/app/CalendarProvider && SYS_APP_CP="true" || SYS_APP_CP="false"
-    test -d $S/priv-app/CalendarProvider && SYS_PRIV_CP="true" || SYS_PRIV_CP="false"
-    test -d $S/product/app/CalendarProvider && PRO_APP_CP="true" || PRO_APP_CP="false"
-    test -d $S/product/priv-app/CalendarProvider && PRO_PRIV_CP="true" || PRO_PRIV_CP="false"
-    test -d $S/system_ext/app/CalendarProvider && SYS_APP_EXT_CP="true" || SYS_APP_EXT_CP="false"
-    test -d $S/system_ext/priv-app/CalendarProvider && SYS_PRIV_EXT_CP="true" || SYS_PRIV_EXT_CP="false"
-    if [ "$SYS_APP_CP" == "true" ]; then
-      mv $S/app/CalendarProvider $TMP/addon/core/CalendarProvider
-      echo >> $TMP/SYS_APP_CP
-    fi
-    if [ "$SYS_PRIV_CP" == "true" ]; then
-      mv $S/priv-app/CalendarProvider $TMP/addon/core/CalendarProvider
-      echo >> $TMP/SYS_PRIV_CP
-    fi
-    if [ "$PRO_APP_CP" == "true" ]; then
-      mv $S/product/app/CalendarProvider $TMP/addon/core/CalendarProvider
-      echo >> $TMP/PRO_APP_CP
-    fi
-    if [ "$PRO_PRIV_CP" == "true" ]; then
-      mv $S/product/priv-app/CalendarProvider $TMP/addon/core/CalendarProvider
-      echo >> $TMP/PRO_PRIV_CP
-    fi
-    if [ "$SYS_APP_EXT_CP" == "true" ]; then
-      mv $S/system_ext/app/CalendarProvider $TMP/addon/core/CalendarProvider
-      echo >> $TMP/SYS_APP_EXT_CP
-    fi
-    if [ "$SYS_PRIV_EXT_CP" == "true" ]; then
-      mv $S/system_ext/priv-app/CalendarProvider $TMP/addon/core/CalendarProvider
-      echo >> $TMP/SYS_PRIV_EXT_CP
-    fi
-    # Backup ContactsProvider
-    test -d $S/app/ContactsProvider && SYS_APP_CTT="true" || SYS_APP_CTT="false"
-    test -d $S/priv-app/ContactsProvider && SYS_PRIV_CTT="true" || SYS_PRIV_CTT="false"
-    test -d $S/product/app/ContactsProvider && PRO_APP_CTT="true" || PRO_APP_CTT="false"
-    test -d $S/product/priv-app/ContactsProvider && PRO_PRIV_CTT="true" || PRO_PRIV_CTT="false"
-    test -d $S/system_ext/app/ContactsProvider && SYS_APP_EXT_CTT="true" || SYS_APP_EXT_CTT="false"
-    test -d $S/system_ext/priv-app/ContactsProvider && SYS_PRIV_EXT_CTT="true" || SYS_PRIV_EXT_CTT="false"
-    if [ "$SYS_APP_CTT" == "true" ]; then
-      mv $S/app/ContactsProvider $TMP/addon/core/ContactsProvider
-      echo >> $TMP/SYS_APP_CTT
-    fi
-    if [ "$SYS_PRIV_CTT" == "true" ]; then
-      mv $S/priv-app/ContactsProvider $TMP/addon/core/ContactsProvider
-      echo >> $TMP/SYS_PRIV_CTT
-    fi
-    if [ "$PRO_APP_CTT" == "true" ]; then
-      mv $S/product/app/ContactsProvider $TMP/addon/core/ContactsProvider
-      echo >> $TMP/PRO_APP_CTT
-    fi
-    if [ "$PRO_PRIV_CTT" == "true" ]; then
-      mv $S/product/priv-app/ContactsProvider $TMP/addon/core/ContactsProvider
-      echo >> $TMP/PRO_PRIV_CTT
-    fi
-    if [ "$SYS_APP_EXT_CTT" == "true" ]; then
-      mv $S/system_ext/app/ContactsProvider $TMP/addon/core/ContactsProvider
-      echo >> $TMP/SYS_APP_EXT_CTT
-    fi
-    if [ "$SYS_PRIV_EXT_CTT" == "true" ]; then
-      mv $S/system_ext/priv-app/ContactsProvider $TMP/addon/core/ContactsProvider
-      echo >> $TMP/SYS_PRIV_EXT_CTT
-    fi
-  fi
-}
-
-trigger_fboot_backup() {
-  if [ "$setup_install_status" == "true" ]; then
-    mv $SYS_PRIVAPP_SETUP $TMP/fboot/priv-app 2>/dev/null
-  fi
-}
-
 trigger_fboot_restore() {
   if [ "$setup_install_status" == "true" ]; then
     mv $TMP_PRIVAPP_SETUP $SYSTEM/priv-app 2>/dev/null
-  fi
-}
-
-trigger_rwg_backup() {
-  if [ "$rwg_install_status" == "true" ]; then
-    mv $SYS_APP_RWG $TMP/rwg/app 2>/dev/null
-    mv $SYS_PRIVAPP_RWG $TMP/rwg/priv-app 2>/dev/null
-    mv $SYS_PERMISSIONS_RWG $TMP/rwg/permissions 2>/dev/null
   fi
 }
 
@@ -1861,23 +1665,28 @@ trigger_rwg_restore() {
   fi
 }
 
-trigger_addon_backup() {
-  if [ "$addon_install_status" == "true" ]; then
-    mv $SYS_APP_ADDON $TMP/addon/app 2>/dev/null
-    mv $SYS_PRIVAPP_ADDON $TMP/addon/priv-app 2>/dev/null
-    mv $SYS_SYSCONFIG_ADDON $TMP/addon/sysconfig 2>/dev/null
-    mv $SYS_PERMISSIONS_ADDON $TMP/addon/permissions 2>/dev/null
-    mv $SYS_FRAMEWORK_ADDON $TMP/addon/framework 2>/dev/null
-  fi
-}
-
 trigger_addon_restore() {
   if [ "$addon_install_status" == "true" ]; then
     mv $TMP_APP_ADDON $SYSTEM/app 2>/dev/null
     mv $TMP_PRIVAPP_ADDON $SYSTEM/priv-app 2>/dev/null
     mv $TMP_SYSCONFIG_ADDON $SYSTEM/etc/sysconfig 2>/dev/null
     mv $TMP_PERMISSIONS_ADDON $SYSTEM/etc/permissions 2>/dev/null
+    if [ -n "$(cat $S/config.prop | grep ro.config.dps)" ]; then
+      mkdir $S/etc/firmware
+      mv $TMP_FIRMWARE_ADDON $S/etc/firmware 2>/dev/null
+    fi
     mv $TMP_FRAMEWORK_ADDON $SYSTEM/framework 2>/dev/null
+    mv $TMP_OVERLAY_ADDON $SYSTEM/overlay 2>/dev/null
+    if [ -n "$(cat $S/config.prop | grep ro.config.gboard)" ]; then
+      mkdir -p $SYSTEM/usr/share/ime/google/d3_lms
+      mkdir -p $SYSTEM/usr/srec/en-US
+      for share in $TMP_SHARE_ADDON/*; do
+        cp -f $share $SYSTEM/usr/share/ime/google/d3_lms 2>/dev/null
+      done
+      for srec in $TMP_SREC_ADDON/*; do
+        cp -f $srec $SYSTEM/usr/srec/en-US 2>/dev/null
+      done
+    fi
   fi
 }
 
@@ -2175,13 +1984,21 @@ fix_addon_conflict() {
     if [ -n "$(cat $S/config.prop | grep ro.config.launcher)" ]; then
       rm -rf $S/priv-app/Launcher3*
       rm -rf $S/priv-app/NexusLauncherPrebuilt
+      rm -rf $S/priv-app/NexusQuickAccessWallet
       rm -rf $S/priv-app/QuickAccessWallet
       rm -rf $S/product/priv-app/Launcher3*
       rm -rf $S/product/priv-app/NexusLauncherPrebuilt
+      rm -rf $S/product/priv-app/NexusQuickAccessWallet
       rm -rf $S/product/priv-app/QuickAccessWallet
       rm -rf $S/system_ext/priv-app/Launcher3*
       rm -rf $S/system_ext/priv-app/NexusLauncherPrebuilt
+      rm -rf $S/system_ext/priv-app/NexusQuickAccessWallet
       rm -rf $S/system_ext/priv-app/QuickAccessWallet
+    fi
+    if [ -n "$(cat $S/config.prop | grep ro.config.maps)" ]; then
+      rm -rf $S/app/Maps*
+      rm -rf $S/product/app/Maps*
+      rm -rf $S/system_ext/app/Maps*
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.markup)" ]; then
       rm -rf $S/app/MarkupGoogle*
@@ -2341,114 +2158,77 @@ restore_conflicting_packages() {
   fi
 }
 
-copy_ota_script() { cp -f $TMP/addon.d/90-bitgapps.sh $S/addon.d/90-bitgapps.sh; }
+copy_ota_script() {
+  for f in bitgapps.sh backup.sh restore.sh
+  do
+    cp -f $TMP/addon.d/$f $S/addon.d/$f
+  done
+}
 
 # Static functions
 trampoline
-check_busybox "$@"
+check_busybox
 
+# Runtime functions
 case "$1" in
-  backup)
-    ui_print "BackupTools: Starting BiTGApps backup"
-    set_bb
-    unmount_all
-    recovery_actions
-    set_arch
-    tmp_dir
-    on_partition_check
-    ab_partition
-    system_as_root
-    super_partition
-    vendor_mnt
-    mount_all
-    system_layout
-    on_version_check
-    set_pathmap
-    backupdirSYS
-    mv $SYS_APP $TMP/app 2>/dev/null
-    mv $SYS_APP_JAR $TMP/app 2>/dev/null
-    mv $SYS_PRIVAPP $TMP/priv-app 2>/dev/null
-    mv $SYS_PRIVAPP_JAR $TMP/priv-app 2>/dev/null
-    mv $SYS_SYSCONFIG $TMP/sysconfig 2>/dev/null
-    mv $SYS_DEFAULTPERMISSIONS $TMP/default-permissions 2>/dev/null
-    mv $SYS_PERMISSIONS $TMP/permissions 2>/dev/null
-    mv $SYS_PREFERREDAPPS $TMP/preferred-apps 2>/dev/null
-    mv $SYS_PROPFILE $TMP/etc 2>/dev/null
-    mv $SYS_BUILDFILE $TMP 2>/dev/null
-    backupdirSYSAddon
-    on_addon_status_check
-    trigger_addon_backup
-    backup_conflicting_packages
-    backupdirSYSFboot
-    on_setup_status_check
-    trigger_fboot_backup
-    backupdirSYSRwg
-    on_rwg_status_check
-    trigger_rwg_backup
-    backupdirSYSOverlay
-    mv $SYS_OVERLAY $TMP/overlay 2>/dev/null
-    copy_ota_script
-    conf_addon_backup
-    umount_apex
-    unmount_all
-    recovery_cleanup
-  ;;
   restore)
-    ui_print "BackupTools: Restoring BiTGApps backup"
-    set_bb
-    unmount_all
-    recovery_actions
-    set_arch
-    tmp_dir
-    on_partition_check
-    ab_partition
-    system_as_root
-    super_partition
-    vendor_mnt
-    mount_all
-    system_layout
-    on_version_check
-    set_pathmap
-    on_rwg_status_check
-    lim_aosp_install
-    restoredirTMP
-    mv $TMP_APP $SYSTEM/app 2>/dev/null
-    mv $TMP_APP_JAR $S/app 2>/dev/null
-    mv $TMP_PRIVAPP $SYSTEM/priv-app 2>/dev/null
-    mv $TMP_PRIVAPP_JAR $S/priv-app 2>/dev/null
-    mv $TMP_SYSCONFIG $SYSTEM/etc/sysconfig 2>/dev/null
-    mv $TMP_DEFAULTPERMISSIONS $SYSTEM/etc/default-permissions 2>/dev/null
-    mv $TMP_PERMISSIONS $SYSTEM/etc/permissions 2>/dev/null
-    mv $TMP_PREFERREDAPPS $SYSTEM/etc/preferred-apps 2>/dev/null
-    mv $TMP_PROPFILE $S/etc 2>/dev/null
-    mv $TMP_BUILDFILE $S 2>/dev/null
-    opt_v25
-    purge_whitelist_permission
-    set_whitelist_permission
-    set_assistant
-    set_release_tag
-    restoredirTMPFboot
-    on_setup_status_check
-    trigger_fboot_restore
-    fix_setup_conflict
-    restoredirTMPRwg
-    on_rwg_status_check
-    trigger_rwg_restore
-    on_addon_status_check
-    fix_addon_conflict
-    restoredirTMPAddon
-    trigger_addon_restore
-    restore_conflicting_packages
-    restoredirTMPOverlay
-    mv $TMP_OVERLAY $SYSTEM/overlay 2>/dev/null
-    copy_ota_script
-    sdk_fix
-    selinux_fix
-    shared_library
-    del_tmp_dir
-    conf_addon_restore
-    umount_apex
-    unmount_all
-    recovery_cleanup
+    if [ "$RUN_STAGE_RESTORE" == "true" ]; then
+      ui_print "BackupTools: Restoring BiTGApps backup"
+      set_bb
+      unmount_all
+      recovery_actions
+      set_arch
+      tmp_dir
+      on_partition_check
+      ab_partition
+      system_as_root
+      super_partition
+      vendor_mnt
+      mount_all
+      system_layout
+      on_version_check
+      set_pathmap
+      on_rwg_status_check
+      lim_aosp_install
+      restoredirTMP
+      mv $TMP_APP $SYSTEM/app 2>/dev/null
+      mv $TMP_APP_JAR $S/app 2>/dev/null
+      mv $TMP_PRIVAPP $SYSTEM/priv-app 2>/dev/null
+      mv $TMP_PRIVAPP_JAR $S/priv-app 2>/dev/null
+      mv $TMP_SYSCONFIG $SYSTEM/etc/sysconfig 2>/dev/null
+      mv $TMP_DEFAULTPERMISSIONS $SYSTEM/etc/default-permissions 2>/dev/null
+      mv $TMP_PERMISSIONS $SYSTEM/etc/permissions 2>/dev/null
+      mv $TMP_PREFERREDAPPS $SYSTEM/etc/preferred-apps 2>/dev/null
+      mv $TMP_PROPFILE $S/etc 2>/dev/null
+      mv $TMP_BUILDFILE $S 2>/dev/null
+      opt_v25
+      purge_whitelist_permission
+      set_whitelist_permission
+      set_assistant
+      set_release_tag
+      restoredirTMPFboot
+      on_setup_status_check
+      trigger_fboot_restore
+      fix_setup_conflict
+      restoredirTMPRwg
+      on_rwg_status_check
+      trigger_rwg_restore
+      on_addon_status_check
+      fix_addon_conflict
+      restoredirTMPAddon
+      trigger_addon_restore
+      restore_conflicting_packages
+      restoredirTMPOverlay
+      mv $TMP_OVERLAY $SYSTEM/overlay 2>/dev/null
+      copy_ota_script
+      sdk_fix
+      selinux_fix
+      shared_library
+      del_tmp_dir
+      conf_addon_restore
+      umount_apex
+      unmount_all
+      recovery_cleanup
+    fi
   ;;
 esac

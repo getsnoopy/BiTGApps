@@ -43,6 +43,7 @@ ro.config.dps=false
 ro.config.gboard=false
 ro.config.gearhead=false
 ro.config.launcher=false
+ro.config.maps=false
 ro.config.markup=false
 ro.config.messages=false
 ro.config.photos=false

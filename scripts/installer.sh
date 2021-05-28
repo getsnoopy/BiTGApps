@@ -1,3 +1,5 @@
+#!/sbin/sh
+#
 ##############################################################
 # File name       : installer.sh
 #
@@ -59,6 +61,7 @@ env_vars() {
   TARGET_ANDROID_SDK="$TARGET_ANDROID_SDK"
   # Set target Android platform
   TARGET_ANDROID_ARCH="$TARGET_ANDROID_ARCH"
+  # Set platform instruction from utility script
   ARMEABI="$ARMEABI"
   AARCH64="$AARCH64"
   # Patch
@@ -66,28 +69,27 @@ env_vars() {
   TARGET_SAFETYNET_PATCH="$TARGET_SAFETYNET_PATCH"
   TARGET_WHITELIST_PATCH="$TARGET_WHITELIST_PATCH"
   # Set addon for installation
-  if [ "$ZIPTYPE" == "addon" ]; then
-    if [ "$ADDON" == "sep" ]; then
-      TARGET_ASSISTANT_GOOGLE="$TARGET_ASSISTANT_GOOGLE"
-      TARGET_BROMITE_GOOGLE="$TARGET_BROMITE_GOOGLE"
-      TARGET_CALCULATOR_GOOGLE="$TARGET_CALCULATOR_GOOGLE"
-      TARGET_CALENDAR_GOOGLE="$TARGET_CALENDAR_GOOGLE"
-      TARGET_CHROME_GOOGLE="$TARGET_CHROME_GOOGLE"
-      TARGET_CONTACTS_GOOGLE="$TARGET_CONTACTS_GOOGLE"
-      TARGET_DESKCLOCK_GOOGLE="$TARGET_DESKCLOCK_GOOGLE"
-      TARGET_DIALER_GOOGLE="$TARGET_DIALER_GOOGLE"
-      TARGET_DPS_GOOGLE="$TARGET_DPS_GOOGLE"
-      TARGET_GBOARD_GOOGLE="$TARGET_GBOARD_GOOGLE"
-      TARGET_GEARHEAD_GOOGLE="$TARGET_GEARHEAD_GOOGLE"
-      TARGET_LAUNCHER_GOOGLE="$TARGET_LAUNCHER_GOOGLE"
-      TARGET_MARKUP_GOOGLE="$TARGET_MARKUP_GOOGLE"
-      TARGET_MESSAGES_GOOGLE="$TARGET_MESSAGES_GOOGLE"
-      TARGET_PHOTOS_GOOGLE="$TARGET_PHOTOS_GOOGLE"
-      TARGET_SOUNDPICKER_GOOGLE="$TARGET_SOUNDPICKER_GOOGLE"
-      TARGET_TTS_GOOGLE="$TARGET_TTS_GOOGLE"
-      TARGET_VANCED_GOOGLE="$TARGET_VANCED_GOOGLE"
-      TARGET_WELLBEING_GOOGLE="$TARGET_WELLBEING_GOOGLE"
-    fi
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ]; then
+    TARGET_ASSISTANT_GOOGLE="$TARGET_ASSISTANT_GOOGLE"
+    TARGET_BROMITE_GOOGLE="$TARGET_BROMITE_GOOGLE"
+    TARGET_CALCULATOR_GOOGLE="$TARGET_CALCULATOR_GOOGLE"
+    TARGET_CALENDAR_GOOGLE="$TARGET_CALENDAR_GOOGLE"
+    TARGET_CHROME_GOOGLE="$TARGET_CHROME_GOOGLE"
+    TARGET_CONTACTS_GOOGLE="$TARGET_CONTACTS_GOOGLE"
+    TARGET_DESKCLOCK_GOOGLE="$TARGET_DESKCLOCK_GOOGLE"
+    TARGET_DIALER_GOOGLE="$TARGET_DIALER_GOOGLE"
+    TARGET_DPS_GOOGLE="$TARGET_DPS_GOOGLE"
+    TARGET_GBOARD_GOOGLE="$TARGET_GBOARD_GOOGLE"
+    TARGET_GEARHEAD_GOOGLE="$TARGET_GEARHEAD_GOOGLE"
+    TARGET_LAUNCHER_GOOGLE="$TARGET_LAUNCHER_GOOGLE"
+    TARGET_MAPS_GOOGLE="$TARGET_MAPS_GOOGLE"
+    TARGET_MARKUP_GOOGLE="$TARGET_MARKUP_GOOGLE"
+    TARGET_MESSAGES_GOOGLE="$TARGET_MESSAGES_GOOGLE"
+    TARGET_PHOTOS_GOOGLE="$TARGET_PHOTOS_GOOGLE"
+    TARGET_SOUNDPICKER_GOOGLE="$TARGET_SOUNDPICKER_GOOGLE"
+    TARGET_TTS_GOOGLE="$TARGET_TTS_GOOGLE"
+    TARGET_VANCED_GOOGLE="$TARGET_VANCED_GOOGLE"
+    TARGET_WELLBEING_GOOGLE="$TARGET_WELLBEING_GOOGLE"
   fi
 }
 
@@ -106,42 +108,44 @@ ui_print() {
 set_bb() {
   # Check device architecture
   ARCH=$(uname -m)
-  if [ "$ARCH" == "x86" ]; then ARCH="x86"; fi
-  if [ "$ARCH" == "x86_64" ]; then ARCH="x86_64"; fi
-  # Extract busybox
-  [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
-  chmod 0755 "$TMP/busybox-arm"
-  ui_print "- Installing toolbox"
-  bb="$TMP/busybox-$ARCH"
-  l="$TMP/bin"
-  if [ -e "$bb" ]; then
-    install -d "$l"
-    for i in $($bb --list); do
-      if ! ln -sf "$bb" "$l/$i" && ! $bb ln -sf "$bb" "$l/$i" && ! $bb ln -f "$bb" "$l/$i" ; then
-        # Create script wrapper if symlinking and hardlinking failed because of restrictive selinux policy
-        if ! echo "#!$bb" > "$l/$i" || ! chmod 0755 "$l/$i" ; then
-          ui_print "! Failed to set-up pre-bundled busybox. Aborting..."
-          ui_print " "
-          exit 1
+  if [ ! "$ARCH" == "x86" ] || [ ! "$ARCH" == "x86_64" ]; then
+    # Extract busybox
+    if [ ! -e "$TMP/busybox-arm" ]; then
+      [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
+    fi
+    chmod 0755 "$TMP/busybox-arm"
+    ui_print "- Installing toolbox"
+    bb="$TMP/busybox-arm"
+    l="$TMP/bin"
+    # If recovery using busybox applets then avoid wiping applets at 'cleanup' stage
+    # Wipe and set-up busybox applets at 'set_bb' stage itself
+    rm -rf $l
+    if [ -e "$bb" ]; then
+      install -d "$l"
+      for i in $($bb --list); do
+        if ! ln -sf "$bb" "$l/$i" && ! $bb ln -sf "$bb" "$l/$i" && ! $bb ln -f "$bb" "$l/$i" ; then
+          # Create script wrapper if symlinking and hardlinking failed because of restrictive selinux policy
+          if ! echo "#!$bb" > "$l/$i" || ! chmod 0755 "$l/$i" ; then
+            ui_print "! Failed to set-up pre-bundled busybox. Aborting..."
+            ui_print " "
+            exit 1
+          fi
         fi
-      fi
-    done
-    # Set busybox components in environment
-    export PATH="$l:$PATH"
-    # Backup busybox in data partition for OTA script
-    rm -rf $ANDROID_DATA/busybox
-    mkdir $ANDROID_DATA/busybox
-    cp -f $TMP/busybox-arm $ANDROID_DATA/busybox/busybox
-    chmod -R 0755 $ANDROID_DATA/busybox
-  else
+      done
+      # Set busybox components in environment
+      export PATH="$l:$PATH"
+      # Backup busybox in data partition for OTA script
+      rm -rf $ANDROID_DATA/busybox
+      mkdir $ANDROID_DATA/busybox
+      cp -f $TMP/busybox-arm $ANDROID_DATA/busybox/busybox-arm
+      chmod -R 0755 $ANDROID_DATA/busybox
+    fi
+  fi
+  if [ "$ARCH" == "x86" ] || [ "$ARCH" == "x86_64" ]; then
     rm -rf $TMP/busybox-arm
-    rm -rf $TMP/config.prop
-    rm -rf $TMP/g.prop
     rm -rf $TMP/installer.sh
     rm -rf $TMP/updater
     rm -rf $TMP/util_functions.sh
-    rm -rf $TMP/sqlite3
-    rm -rf $TMP/zipalign
     ui_print "! Wrong architecture detected. Aborting..."
     ui_print "! Installation failed"
     ui_print " "
@@ -222,6 +226,7 @@ build_defaults() {
   mkdir $TMP/out
   # Create temporary links
   UNZIP_DIR="$TMP/unzip"
+  TMP_ADDON="$UNZIP_DIR/tmp_addon"
   TMP_SYS="$UNZIP_DIR/tmp_sys"
   TMP_SYS_JAR="$UNZIP_DIR/tmp_sys_jar"
   TMP_SYS_AOSP="$UNZIP_DIR/tmp_sys_aosp"
@@ -229,6 +234,7 @@ build_defaults() {
   TMP_PRIV_JAR="$UNZIP_DIR/tmp_priv_jar"
   TMP_PRIV_SETUP="$UNZIP_DIR/tmp_priv_setup"
   TMP_PRIV_AOSP="$UNZIP_DIR/tmp_priv_aosp"
+  TMP_FIRMWARE="$UNZIP_DIR/tmp_firmware"
   TMP_FRAMEWORK="$UNZIP_DIR/tmp_framework"
   TMP_SYSCONFIG="$UNZIP_DIR/tmp_config"
   TMP_DEFAULT="$UNZIP_DIR/tmp_default"
@@ -236,6 +242,8 @@ build_defaults() {
   TMP_PERMISSION_AOSP="$UNZIP_DIR/tmp_perm_aosp"
   TMP_PREFERRED="$UNZIP_DIR/tmp_pref"
   TMP_OVERLAY="$UNZIP_DIR/tmp_overlay"
+  TMP_USR_SHARE="$UNZIP_DIR/tmp_share"
+  TMP_USR_SREC="$UNZIP_DIR/tmp_srec"
   TMP_AIK="$UNZIP_DIR/tmp_aik"
   TMP_KEYSTORE="$UNZIP_DIR/tmp_keystore"
 }
@@ -530,6 +538,10 @@ mount_all() {
         else
           on_abort "! Cannot find system block. Aborting..."
         fi
+        # Keep system block for OTA survival script
+        echo "BLK=$BLK" >> $ANDROID_DATA/SYSTEM_BLOCK
+        chmod 0755 $ANDROID_DATA/SYSTEM_BLOCK
+        # Mount using block device
         mount $BLK $ANDROID_ROOT
       fi
       is_mounted $ANDROID_ROOT || on_abort "! Cannot mount $ANDROID_ROOT. Aborting..."
@@ -639,19 +651,24 @@ check_rw_status() {
 
 # Set installation layout
 system_layout() {
-  # Wipe SYSTEM variable that is set using 'mount_apex' function
-  unset SYSTEM
-  if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($l/grep -w -o /system_root $fstab)" ]; then
-    export SYSTEM="/system_root/system"
+  if [ "$BOOTMODE" == "false" ]; then
+    # Wipe SYSTEM variable that is set using 'mount_apex' function
+    unset SYSTEM
+    if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($l/grep -w -o /system_root $fstab)" ]; then
+      export SYSTEM="/system_root/system"
+    fi
+    if [ -f $ANDROID_ROOT/build.prop ] && [ "$($l/grep -w -o /system $fstab)" ]; then
+      export SYSTEM="/system"
+    fi
+    if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($l/grep -w -o /system $fstab)" ]; then
+      export SYSTEM="/system/system"
+    fi
+    if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($l/grep -w -o /system_root /proc/mounts)" ]; then
+      export SYSTEM="/system_root/system"
+    fi
   fi
-  if [ -f $ANDROID_ROOT/build.prop ] && [ "$($l/grep -w -o /system $fstab)" ]; then
+  if [ "$BOOTMODE" == "true" ]; then
     export SYSTEM="/system"
-  fi
-  if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($l/grep -w -o /system $fstab)" ]; then
-    export SYSTEM="/system/system"
-  fi
-  if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($l/grep -w -o /system_root /proc/mounts)" ]; then
-    export SYSTEM="/system_root/system"
   fi
   # Systemless install will change system layout at 'post_install' stage and default,
   # system is still used by some functions besides systemless installation. So export,
@@ -738,11 +755,17 @@ del_error_log_zip() {
       if [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_assistant_failed_logs.tar.gz
       fi
+      if [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
+        rm -rf $INTERNAL/bitgapps_addon_bromite_failed_logs.tar.gz
+      fi
       if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_calculator_failed_logs.tar.gz
       fi
       if [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_calendar_failed_logs.tar.gz
+      fi
+      if [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
+        rm -rf $INTERNAL/bitgapps_addon_chrome_failed_logs.tar.gz
       fi
       if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_contacts_failed_logs.tar.gz
@@ -753,8 +776,20 @@ del_error_log_zip() {
       if [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_dialer_failed_logs.tar.gz
       fi
+      if [ "$TARGET_DPS_GOOGLE" == "true" ]; then
+        rm -rf $INTERNAL/bitgapps_addon_dps_failed_logs.tar.gz
+      fi
       if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_gboard_failed_logs.tar.gz
+      fi
+      if [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
+        rm -rf $INTERNAL/bitgapps_addon_gearhead_failed_logs.tar.gz
+      fi
+      if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
+        rm -rf $INTERNAL/bitgapps_addon_launcher_failed_logs.tar.gz
+      fi
+      if [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
+        rm -rf $INTERNAL/bitgapps_addon_maps_failed_logs.tar.gz
       fi
       if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_markup_failed_logs.tar.gz
@@ -767,6 +802,9 @@ del_error_log_zip() {
       fi
       if [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_soundpicker_failed_logs.tar.gz
+      fi
+      if [ "$TARGET_TTS_GOOGLE" == "true" ]; then
+        rm -rf $INTERNAL/bitgapps_addon_tts_failed_logs.tar.gz
       fi
       if [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_vanced_failed_logs.tar.gz
@@ -793,6 +831,10 @@ set_error_log_zip() {
         tar -cz -f "$TMP/bitgapps_addon_assistant_failed_logs.tar.gz" *
         cp -f $TMP/bitgapps_addon_assistant_failed_logs.tar.gz $INTERNAL/bitgapps_addon_assistant_failed_logs.tar.gz
       fi
+      if [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
+        tar -cz -f "$TMP/bitgapps_addon_bromite_failed_logs.tar.gz" *
+        cp -f $TMP/bitgapps_addon_bromite_failed_logs.tar.gz $INTERNAL/bitgapps_addon_bromite_failed_logs.tar.gz
+      fi
       if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
         tar -cz -f "$TMP/bitgapps_addon_calculator_failed_logs.tar.gz" *
         cp -f $TMP/bitgapps_addon_calculator_failed_logs.tar.gz $INTERNAL/bitgapps_addon_calculator_failed_logs.tar.gz
@@ -800,6 +842,10 @@ set_error_log_zip() {
       if [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
         tar -cz -f "$TMP/bitgapps_addon_calendar_failed_logs.tar.gz" *
         cp -f $TMP/bitgapps_addon_calendar_failed_logs.tar.gz $INTERNAL/bitgapps_addon_calendar_failed_logs.tar.gz
+      fi
+      if [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
+        tar -cz -f "$TMP/bitgapps_addon_chrome_failed_logs.tar.gz" *
+        cp -f $TMP/bitgapps_addon_chrome_failed_logs.tar.gz $INTERNAL/bitgapps_addon_chrome_failed_logs.tar.gz
       fi
       if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
         tar -cz -f "$TMP/bitgapps_addon_contacts_failed_logs.tar.gz" *
@@ -813,9 +859,25 @@ set_error_log_zip() {
         tar -cz -f "$TMP/bitgapps_addon_dialer_failed_logs.tar.gz" *
         cp -f $TMP/bitgapps_addon_dialer_failed_logs.tar.gz $INTERNAL/bitgapps_addon_dialer_failed_logs.tar.gz
       fi
+      if [ "$TARGET_DPS_GOOGLE" == "true" ]; then
+        tar -cz -f "$TMP/bitgapps_addon_dps_failed_logs.tar.gz" *
+        cp -f $TMP/bitgapps_addon_dps_failed_logs.tar.gz $INTERNAL/bitgapps_addon_dps_failed_logs.tar.gz
+      fi
       if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
         tar -cz -f "$TMP/bitgapps_addon_gboard_failed_logs.tar.gz" *
         cp -f $TMP/bitgapps_addon_gboard_failed_logs.tar.gz $INTERNAL/bitgapps_addon_gboard_failed_logs.tar.gz
+      fi
+      if [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
+        tar -cz -f "$TMP/bitgapps_addon_gearhead_failed_logs.tar.gz" *
+        cp -f $TMP/bitgapps_addon_gearhead_failed_logs.tar.gz $INTERNAL/bitgapps_addon_gearhead_failed_logs.tar.gz
+      fi
+      if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
+        tar -cz -f "$TMP/bitgapps_addon_launcher_failed_logs.tar.gz" *
+        cp -f $TMP/bitgapps_addon_launcher_failed_logs.tar.gz $INTERNAL/bitgapps_addon_launcher_failed_logs.tar.gz
+      fi
+      if [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
+        tar -cz -f "$TMP/bitgapps_addon_maps_failed_logs.tar.gz" *
+        cp -f $TMP/bitgapps_addon_maps_failed_logs.tar.gz $INTERNAL/bitgapps_addon_maps_failed_logs.tar.gz
       fi
       if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
         tar -cz -f "$TMP/bitgapps_addon_markup_failed_logs.tar.gz" *
@@ -832,6 +894,10 @@ set_error_log_zip() {
       if [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
         tar -cz -f "$TMP/bitgapps_addon_soundpicker_failed_logs.tar.gz" *
         cp -f $TMP/bitgapps_addon_soundpicker_failed_logs.tar.gz $INTERNAL/bitgapps_addon_soundpicker_failed_logs.tar.gz
+      fi
+      if [ "$TARGET_TTS_GOOGLE" == "true" ]; then
+        tar -cz -f "$TMP/bitgapps_addon_tts_failed_logs.tar.gz" *
+        cp -f $TMP/bitgapps_addon_tts_failed_logs.tar.gz $INTERNAL/bitgapps_addon_tts_failed_logs.tar.gz
       fi
       if [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
         tar -cz -f "$TMP/bitgapps_addon_vanced_failed_logs.tar.gz" *
@@ -857,11 +923,17 @@ del_comp_log_zip() {
       if [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_assistant_complete_logs.tar.gz
       fi
+      if [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
+        rm -rf $INTERNAL/bitgapps_addon_bromite_complete_logs.tar.gz
+      fi
       if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_calculator_complete_logs.tar.gz
       fi
       if [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_calendar_complete_logs.tar.gz
+      fi
+      if [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
+        rm -rf $INTERNAL/bitgapps_addon_chrome_complete_logs.tar.gz
       fi
       if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_contacts_complete_logs.tar.gz
@@ -872,8 +944,20 @@ del_comp_log_zip() {
       if [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_dialer_complete_logs.tar.gz
       fi
+      if [ "$TARGET_DPS_GOOGLE" == "true" ]; then
+        rm -rf $INTERNAL/bitgapps_addon_dps_complete_logs.tar.gz
+      fi
       if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_gboard_complete_logs.tar.gz
+      fi
+      if [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
+        rm -rf $INTERNAL/bitgapps_addon_gearhead_complete_logs.tar.gz
+      fi
+      if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
+        rm -rf $INTERNAL/bitgapps_addon_launcher_complete_logs.tar.gz
+      fi
+      if [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
+        rm -rf $INTERNAL/bitgapps_addon_maps_complete_logs.tar.gz
       fi
       if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_markup_complete_logs.tar.gz
@@ -886,6 +970,9 @@ del_comp_log_zip() {
       fi
       if [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_soundpicker_complete_logs.tar.gz
+      fi
+      if [ "$TARGET_TTS_GOOGLE" == "true" ]; then
+        rm -rf $INTERNAL/bitgapps_addon_tts_complete_logs.tar.gz
       fi
       if [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
         rm -rf $INTERNAL/bitgapps_addon_vanced_complete_logs.tar.gz
@@ -912,6 +999,10 @@ set_comp_log_zip() {
         tar -cz -f "$TMP/bitgapps_addon_assistant_complete_logs.tar.gz" *
         cp -f $TMP/bitgapps_addon_assistant_complete_logs.tar.gz $INTERNAL/bitgapps_addon_assistant_complete_logs.tar.gz
       fi
+      if [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
+        tar -cz -f "$TMP/bitgapps_addon_bromite_complete_logs.tar.gz" *
+        cp -f $TMP/bitgapps_addon_bromite_complete_logs.tar.gz $INTERNAL/bitgapps_addon_bromite_complete_logs.tar.gz
+      fi
       if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
         tar -cz -f "$TMP/bitgapps_addon_calculator_complete_logs.tar.gz" *
         cp -f $TMP/bitgapps_addon_calculator_complete_logs.tar.gz $INTERNAL/bitgapps_addon_calculator_complete_logs.tar.gz
@@ -919,6 +1010,10 @@ set_comp_log_zip() {
       if [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
         tar -cz -f "$TMP/bitgapps_addon_calendar_complete_logs.tar.gz" *
         cp -f $TMP/bitgapps_addon_calendar_complete_logs.tar.gz $INTERNAL/bitgapps_addon_calendar_complete_logs.tar.gz
+      fi
+      if [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
+        tar -cz -f "$TMP/bitgapps_addon_chrome_complete_logs.tar.gz" *
+        cp -f $TMP/bitgapps_addon_chrome_complete_logs.tar.gz $INTERNAL/bitgapps_addon_chrome_complete_logs.tar.gz
       fi
       if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
         tar -cz -f "$TMP/bitgapps_addon_contacts_complete_logs.tar.gz" *
@@ -932,9 +1027,25 @@ set_comp_log_zip() {
         tar -cz -f "$TMP/bitgapps_addon_dialer_complete_logs.tar.gz" *
         cp -f $TMP/bitgapps_addon_dialer_complete_logs.tar.gz $INTERNAL/bitgapps_addon_dialer_complete_logs.tar.gz
       fi
+      if [ "$TARGET_DPS_GOOGLE" == "true" ]; then
+        tar -cz -f "$TMP/bitgapps_addon_dps_complete_logs.tar.gz" *
+        cp -f $TMP/bitgapps_addon_dps_complete_logs.tar.gz $INTERNAL/bitgapps_addon_dps_complete_logs.tar.gz
+      fi
       if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
         tar -cz -f "$TMP/bitgapps_addon_gboard_complete_logs.tar.gz" *
         cp -f $TMP/bitgapps_addon_gboard_complete_logs.tar.gz $INTERNAL/bitgapps_addon_gboard_complete_logs.tar.gz
+      fi
+      if [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
+        tar -cz -f "$TMP/bitgapps_addon_gearhead_complete_logs.tar.gz" *
+        cp -f $TMP/bitgapps_addon_gearhead_complete_logs.tar.gz $INTERNAL/bitgapps_addon_gearhead_complete_logs.tar.gz
+      fi
+      if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
+        tar -cz -f "$TMP/bitgapps_addon_launcher_complete_logs.tar.gz" *
+        cp -f $TMP/bitgapps_addon_launcher_complete_logs.tar.gz $INTERNAL/bitgapps_addon_launcher_complete_logs.tar.gz
+      fi
+      if [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
+        tar -cz -f "$TMP/bitgapps_addon_maps_complete_logs.tar.gz" *
+        cp -f $TMP/bitgapps_addon_maps_complete_logs.tar.gz $INTERNAL/bitgapps_addon_maps_complete_logs.tar.gz
       fi
       if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
         tar -cz -f "$TMP/bitgapps_addon_markup_complete_logs.tar.gz" *
@@ -952,6 +1063,10 @@ set_comp_log_zip() {
         tar -cz -f "$TMP/bitgapps_addon_soundpicker_complete_logs.tar.gz" *
         cp -f $TMP/bitgapps_addon_soundpicker_complete_logs.tar.gz $INTERNAL/bitgapps_addon_soundpicker_complete_logs.tar.gz
       fi
+      if [ "$TARGET_TTS_GOOGLE" == "true" ]; then
+        tar -cz -f "$TMP/bitgapps_addon_tts_complete_logs.tar.gz" *
+        cp -f $TMP/bitgapps_addon_tts_complete_logs.tar.gz $INTERNAL/bitgapps_addon_tts_complete_logs.tar.gz
+      fi
       if [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
         tar -cz -f "$TMP/bitgapps_addon_vanced_complete_logs.tar.gz" *
         cp -f $TMP/bitgapps_addon_vanced_complete_logs.tar.gz $INTERNAL/bitgapps_addon_vanced_complete_logs.tar.gz
@@ -966,7 +1081,7 @@ set_comp_log_zip() {
 
 set_install_logs() {
   cp -f /cache/recovery/last_log $TMP/bitgapps/last.log > /dev/null 2>&1
-  cp -f /cache/recovery/log $TMP/bitgapps/lineage.log > /dev/null 2>&1
+  cp -f /cache/recovery/log $TMP/bitgapps/log.log > /dev/null 2>&1
   cp -f /cache/recovery.log $TMP/bitgapps/cache.log > /dev/null 2>&1
   cp -f $TMP/recovery.log $TMP/bitgapps/recovery.log > /dev/null 2>&1
   cp -f /etc/fstab $TMP/bitgapps/fstab > /dev/null 2>&1
@@ -1065,7 +1180,6 @@ cleanup() {
   rm -rf $TMP/updater
   rm -rf $TMP/util_functions.sh
   rm -rf $TMP/zip
-  rm -rf $TMP/bin
 }
 
 on_abort() {
@@ -1092,6 +1206,7 @@ on_installed() {
   # Reset any error code
   true
   sync
+  exit "$?"
 }
 
 get_bitgapps_config() {
@@ -1161,6 +1276,7 @@ on_addon_check() {
   supported_gboard_config="$(get_prop "ro.config.gboard")"
   supported_gearhead_config="$(get_prop "ro.config.gearhead")"
   supported_launcher_config="$(get_prop "ro.config.launcher")"
+  supported_maps_config="$(get_prop "ro.config.maps")"
   supported_markup_config="$(get_prop "ro.config.markup")"
   supported_messages_config="$(get_prop "ro.config.messages")"
   supported_photos_config="$(get_prop "ro.config.photos")"
@@ -1345,13 +1461,15 @@ clean_inst() {
 
 # Create installation components
 mk_component() {
-  for d in $UNZIP_DIR/tmp_sys \
+  for d in $UNZIP_DIR/tmp_addon \
+           $UNZIP_DIR/tmp_sys \
            $UNZIP_DIR/tmp_sys_jar \
            $UNZIP_DIR/tmp_sys_aosp \
            $UNZIP_DIR/tmp_priv \
            $UNZIP_DIR/tmp_priv_jar \
            $UNZIP_DIR/tmp_priv_setup \
            $UNZIP_DIR/tmp_priv_aosp \
+           $UNZIP_DIR/tmp_firmware \
            $UNZIP_DIR/tmp_framework \
            $UNZIP_DIR/tmp_config \
            $UNZIP_DIR/tmp_default \
@@ -1359,6 +1477,8 @@ mk_component() {
            $UNZIP_DIR/tmp_perm_aosp \
            $UNZIP_DIR/tmp_pref \
            $UNZIP_DIR/tmp_overlay \
+           $UNZIP_DIR/tmp_share \
+           $UNZIP_DIR/tmp_srec \
            $UNZIP_DIR/tmp_aik \
            $UNZIP_DIR/tmp_keystore
   do
@@ -1380,9 +1500,29 @@ on_rwg_check() {
   if [ -n "$(cat $SYSTEM/build.prop | grep org.pixelexperience.version)" ]; then
     TARGET_RWG_STATUS="true"
   fi
-  # Add support for EvolutionX
-  if [ -n "$(cat $SYSTEM/build.prop | grep org.evolution.device)" ]; then
-    TARGET_RWG_STATUS="true"
+}
+
+# Check presence of playstore
+on_unsupported_rwg() {
+  for f in $SYSTEM/priv-app \
+           $SYSTEM/product/priv-app \
+           $SYSTEM/system_ext/priv-app
+  do
+    # Add playstore in detection
+    if [ -d "$f/Phonesky" ]; then
+      TARGET_APP_PLAYSTORE="true"
+    else
+      TARGET_APP_PLAYSTORE="false"
+    fi
+  done
+}
+
+# Abort installation for unsupported ROMs. Collectively targeting through playstore
+skip_on_unsupported() {
+  if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$TARGET_APP_PLAYSTORE" == "true" ]; then
+    if [ ! -n "$(cat $SYSTEM/etc/g.prop | grep BiTGApps)" ]; then
+      on_abort "! Unsupported RWG device. Aborting..."
+    fi
   fi
 }
 
@@ -2876,6 +3016,18 @@ pkg_TMPOverlay() {
   done
 }
 
+pkg_TMPAddon() {
+  file_list="$(find "$TMP_ADDON/" -mindepth 1 -type f | cut -d/ -f5-)"
+  dir_list="$(find "$TMP_ADDON/" -mindepth 1 -type d | cut -d/ -f5-)"
+  for file in $file_list; do
+    install -D "$TMP_ADDON/${file}" "$SYSTEM_ADDOND/${file}"
+    chmod 0755 "$SYSTEM_ADDOND/${file}"
+  done
+  for dir in $dir_list; do
+    chmod 0755 "$SYSTEM_ADDOND/${dir}"
+  done
+}
+
 # Set installation functions for Android SDK 31
 sdk_v31_install() {
   if [ "$android_sdk" == "31" ]; then
@@ -3414,11 +3566,18 @@ ota_prop_file() {
 backup_script() {
   if [ -d "$SYSTEM_ADDOND" ] && [ "$supported_module_config" == "false" ]; then
     ui_print "- Installing OTA survival script"
-    rm -rf $SYSTEM_ADDOND/90-bitgapps.sh
-    [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "90-bitgapps.sh" -d "$TMP"
-    cp -f $TMP/90-bitgapps.sh $SYSTEM_ADDOND/90-bitgapps.sh
-    chmod 0755 $SYSTEM_ADDOND/90-bitgapps.sh
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ADDOND/90-bitgapps.sh"
+    for f in 90-bitgapps.sh bitgapps.sh backup.sh restore.sh
+    do
+      rm -rf $SYSTEM_ADDOND/$f
+    done
+    ZIP="zip/Addon.tar.xz"
+    [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+    tar -xf $ZIP_FILE/Addon.tar.xz -C $TMP_ADDON
+    pkg_TMPAddon
+    for f in bitgapps.sh backup.sh restore.sh
+    do
+      chcon -h u:object_r:system_file:s0 "$SYSTEM_ADDOND/$f"
+    done
   else
     ui_print "! Skip installing OTA survival script"
   fi
@@ -3740,6 +3899,16 @@ pre_installed_pkg() {
     rm -rf $SYSTEM/etc/sysconfig/nexuslauncher.xml
     rm -rf $SYSTEM/product/etc/sysconfig/nexuslauncher.xml
     rm -rf $SYSTEM/system_ext/etc/sysconfig/nexuslauncher.xml
+    # MapsGooglePrebuilt
+    rm -rf $SYSTEM/app/MapsGooglePrebuilt
+    rm -rf $SYSTEM/product/app/MapsGooglePrebuilt
+    rm -rf $SYSTEM/system_ext/app/MapsGooglePrebuilt
+    rm -rf $SYSTEM/etc/permissions/com.google.android.maps.xml
+    rm -rf $SYSTEM/product/etc/permissions/com.google.android.maps.xml
+    rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.maps.xml
+    rm -rf $SYSTEM/framework/com.google.android.maps.jar
+    rm -rf $SYSTEM/product/framework/com.google.android.maps.jar
+    rm -rf $SYSTEM/system_ext/framework/com.google.android.maps.jar
     # MarkupGooglePrebuilt
     rm -rf $SYSTEM/app/MarkupGooglePrebuilt
     rm -rf $SYSTEM/product/app/MarkupGooglePrebuilt
@@ -3853,6 +4022,16 @@ pre_installed_pkg() {
     rm -rf $SYSTEM_SYSTEM/etc/sysconfig/nexuslauncher.xml
     rm -rf $SYSTEM_SYSTEM/product/etc/sysconfig/nexuslauncher.xml
     rm -rf $SYSTEM_SYSTEM/system_ext/etc/sysconfig/nexuslauncher.xml
+    # MapsGooglePrebuilt
+    rm -rf $SYSTEM_SYSTEM/app/MapsGooglePrebuilt
+    rm -rf $SYSTEM_SYSTEM/product/app/MapsGooglePrebuilt
+    rm -rf $SYSTEM_SYSTEM/system_ext/app/MapsGooglePrebuilt
+    rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.maps.xml
+    rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.maps.xml
+    rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.maps.xml
+    rm -rf $SYSTEM_SYSTEM/framework/com.google.android.maps.jar
+    rm -rf $SYSTEM_SYSTEM/product/framework/com.google.android.maps.jar
+    rm -rf $SYSTEM_SYSTEM/system_ext/framework/com.google.android.maps.jar
     # MarkupGooglePrebuilt
     rm -rf $SYSTEM_SYSTEM/app/MarkupGooglePrebuilt
     rm -rf $SYSTEM_SYSTEM/product/app/MarkupGooglePrebuilt
@@ -3904,6 +4083,9 @@ target_sys() {
   # Set selinux context
   chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/$PKG_SYS"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/$PKG_SYS/$PKG_SYS.apk"
+  # Wipe temporary packages
+  rm -rf zip/sys/$ADDON_SYS
+  rm -rf $TMP_SYS/$PKG_SYS
 }
 
 target_core() {
@@ -3917,6 +4099,9 @@ target_core() {
   # Set selinux context
   chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/$PKG_CORE"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/$PKG_CORE/$PKG_CORE.apk"
+  # Wipe temporary packages
+  rm -rf zip/core/$ADDON_CORE
+  rm -rf $TMP_PRIV/$PKG_CORE
 }
 
 dialer_config() {
@@ -3928,17 +4113,17 @@ dialer_config() {
   # Install package
   pkg_TMPPerm
   # Keep API based config
-  if [ "$android_sdk" -le "$supported_sdk_v25" ]; then
+  if [ "$android_sdk" -le "25" ]; then
     mv -f $SYSTEM_ETC_PERM/com.google.android.dialer.framework.25.xml $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.29.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.30.xml
   fi
-  if [ "$android_sdk" == "$supported_sdk_v29" ]; then
+  if [ "$android_sdk" == "29" ]; then
     mv -f $SYSTEM_ETC_PERM/com.google.android.dialer.framework.29.xml $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.25.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.30.xml
   fi
-  if [ "$android_sdk" -ge "$supported_sdk_v30" ]; then
+  if [ "$android_sdk" -ge "30" ]; then
     mv -f $SYSTEM_ETC_PERM/com.google.android.dialer.framework.30.xml $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.25.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.29.xml
@@ -3962,7 +4147,7 @@ dialer_framework() {
 
 launcher_config() {
   # Set default packages and unpack
-  ZIP="zip/LauncherPermissions.tar.xz LauncherSysconfig.tar.xz"
+  ZIP="zip/LauncherPermissions.tar.xz zip/LauncherSysconfig.tar.xz"
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
   tar -xf $ZIP_FILE/LauncherPermissions.tar.xz -C $TMP_PERMISSION
@@ -3973,6 +4158,18 @@ launcher_config() {
   # Set selinux context
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.apps.nexuslauncher.xml"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG/com.google.android.apps.nexuslauncher.xml"
+}
+
+launcher_overlay() {
+  # Set default packages and unpack
+  ZIP="zip/overlay/NexusLauncherOverlay.tar.xz"
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # Unpack system files
+  tar -xf $ZIP_FILE/overlay/NexusLauncherOverlay.tar.xz -C $TMP_OVERLAY
+  # Install package
+  pkg_TMPOverlay
+  # Set selinux context
+  chcon -hR u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
 }
 
 dps_config() {
@@ -3986,6 +4183,186 @@ dps_config() {
   pkg_TMPConfig
   # Set selinux context
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.as.xml"
+}
+
+dps_sound_model() {
+  # Set default packages and unpack
+  ZIP="zip/DPSFirmware.tar.xz"
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # Unpack system files
+  tar -xf $ZIP_FILE/DPSFirmware.tar.xz -C $TMP_FIRMWARE
+  if [ "$supported_module_config" == "false" ]; then
+    # Create firmware
+    test -d $SYSTEM_AS_SYSTEM/etc/firmware || mkdir $SYSTEM_AS_SYSTEM/etc/firmware
+    chmod 0755 $SYSTEM_AS_SYSTEM/etc/firmware
+    # Set selinux context
+    chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/etc/firmware"
+    # Install firmware
+    cp -f $TMP_FIRMWARE/music_detector.descriptor $SYSTEM_AS_SYSTEM/etc/firmware/music_detector.descriptor
+    cp -f $TMP_FIRMWARE/music_detector.sound_model $SYSTEM_AS_SYSTEM/etc/firmware/music_detector.sound_model
+    chmod 0644 $SYSTEM_AS_SYSTEM/etc/firmware/music_detector.descriptor
+    chmod 0644 $SYSTEM_AS_SYSTEM/etc/firmware/music_detector.sound_model
+    # Set selinux context
+    chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/etc/firmware/music_detector.descriptor"
+    chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/etc/firmware/music_detector.descriptor"
+  fi
+  if [ "$supported_module_config" == "true" ]; then
+    # Create firmware
+    test -d $SYSTEM_SYSTEM/etc/firmware || mkdir $SYSTEM_SYSTEM/etc/firmware
+    chmod 0755 $SYSTEM_SYSTEM/etc/firmware
+    # Set selinux context
+    chcon -h u:object_r:system_file:s0 "$SYSTEM_SYSTEM/etc/firmware"
+    # Install firmware
+    cp -f $TMP_FIRMWARE/music_detector.descriptor $SYSTEM_SYSTEM/etc/firmware/music_detector.descriptor
+    cp -f $TMP_FIRMWARE/music_detector.sound_model $SYSTEM_SYSTEM/etc/firmware/music_detector.sound_model
+    chmod 0644 $SYSTEM_SYSTEM/etc/firmware/music_detector.descriptor
+    chmod 0644 $SYSTEM_SYSTEM/etc/firmware/music_detector.sound_model
+    # Set selinux context
+    chcon -h u:object_r:system_file:s0 "$SYSTEM_SYSTEM/etc/firmware/music_detector.descriptor"
+    chcon -h u:object_r:system_file:s0 "$SYSTEM_SYSTEM/etc/firmware/music_detector.descriptor"
+  fi
+}
+
+gboard_usr() {
+  # Set default packages and unpack
+  ZIP="zip/usr_share.tar.xz zip/usr_srec.tar.xz"
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # Unpack system files
+  tar -xf $ZIP_FILE/usr_share.tar.xz -C $TMP_USR_SHARE
+  tar -xf $ZIP_FILE/usr_srec.tar.xz -C $TMP_USR_SREC
+  if [ "$supported_module_config" == "false" ]; then
+    if [ "$android_sdk" -le "28" ]; then
+      # Create components
+      test -d $SYSTEM_AS_SYSTEM/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_AS_SYSTEM/usr/share/ime/google/d3_lms
+      test -d $SYSTEM_AS_SYSTEM/usr/srec/en-US || mkdir -p $SYSTEM_AS_SYSTEM/usr/srec/en-US
+      # Install package
+      for share in $TMP_USR_SHARE/*; do
+        cp -f $share $SYSTEM_AS_SYSTEM/usr/share/ime/google/d3_lms
+      done
+      for srec in $TMP_USR_SREC/*; do
+        cp -f $srec $SYSTEM_AS_SYSTEM/usr/srec/en-US
+      done
+      # Recursively set folder permission
+      find $SYSTEM_AS_SYSTEM/usr -type d | xargs chmod 0755
+    fi
+    if [ "$android_sdk" == "29" ]; then
+      # Create components
+      test -d $SYSTEM_AS_SYSTEM/product/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_AS_SYSTEM/product/usr/share/ime/google/d3_lms
+      test -d $SYSTEM_AS_SYSTEM/product/usr/srec/en-US || mkdir -p $SYSTEM_AS_SYSTEM/product/usr/srec/en-US
+      # Install package
+      for share in $TMP_USR_SHARE/*; do
+        cp -f $share $SYSTEM_AS_SYSTEM/product/usr/share/ime/google/d3_lms
+      done
+      for srec in $TMP_USR_SREC/*; do
+        cp -f $srec $SYSTEM_AS_SYSTEM/product/usr/srec/en-US
+      done
+      # Recursively set folder permission
+      find $SYSTEM_AS_SYSTEM/product/usr -type d | xargs chmod 0755
+    fi
+    if [ "$android_sdk" -ge "30" ]; then
+      # Create components
+      test -d $SYSTEM_AS_SYSTEM/system_ext/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_AS_SYSTEM/system_ext/usr/share/ime/google/d3_lms
+      test -d $SYSTEM_AS_SYSTEM/system_ext/usr/srec/en-US || mkdir -p $SYSTEM_AS_SYSTEM/system_ext/usr/srec/en-US
+      # Install package
+      for share in $TMP_USR_SHARE/*; do
+        cp -f $share $SYSTEM_AS_SYSTEM/system_ext/usr/share/ime/google/d3_lms
+      done
+      for srec in $TMP_USR_SREC/*; do
+        cp -f $srec $SYSTEM_AS_SYSTEM/system_ext/usr/srec/en-US
+      done
+      # Recursively set folder permission
+      find $SYSTEM_AS_SYSTEM/system_ext/usr -type d | xargs chmod 0755
+    fi
+  fi
+  if [ "$supported_module_config" == "true" ]; then
+    if [ "$android_sdk" -le "28" ]; then
+      # Create components
+      test -d $SYSTEM_SYSTEM/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_SYSTEM/usr/share/ime/google/d3_lms
+      test -d $SYSTEM_SYSTEM/usr/srec/en-US || mkdir -p $SYSTEM_SYSTEM/usr/srec/en-US
+      # Install package
+      for share in $TMP_USR_SHARE/*; do
+        cp -f $share $SYSTEM_SYSTEM/usr/share/ime/google/d3_lms
+      done
+      for srec in $TMP_USR_SREC/*; do
+        cp -f $srec $SYSTEM_SYSTEM/usr/srec/en-US
+      done
+      # Recursively set folder permission
+      find $SYSTEM_SYSTEM/usr -type d | xargs chmod 0755
+    fi
+    if [ "$android_sdk" == "29" ]; then
+      # Create components
+      test -d $SYSTEM_SYSTEM/product/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_SYSTEM/product/usr/share/ime/google/d3_lms
+      test -d $SYSTEM_SYSTEM/product/usr/srec/en-US || mkdir -p $SYSTEM_SYSTEM/product/usr/srec/en-US
+      # Install package
+      for share in $TMP_USR_SHARE/*; do
+        cp -f $share $SYSTEM_SYSTEM/product/usr/share/ime/google/d3_lms
+      done
+      for srec in $TMP_USR_SREC/*; do
+        cp -f $srec $SYSTEM_SYSTEM/product/usr/srec/en-US
+      done
+      # Recursively set folder permission
+      find $SYSTEM_SYSTEM/product/usr -type d | xargs chmod 0755
+    fi
+    if [ "$android_sdk" -ge "30" ]; then
+      # Create components
+      test -d $SYSTEM_SYSTEM/system_ext/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_SYSTEM/system_ext/usr/share/ime/google/d3_lms
+      test -d $SYSTEM_SYSTEM/system_ext/usr/srec/en-US || mkdir -p $SYSTEM_SYSTEM/system_ext/usr/srec/en-US
+      # Install package
+      for share in $TMP_USR_SHARE/*; do
+        cp -f $share $SYSTEM_SYSTEM/system_ext/usr/share/ime/google/d3_lms
+      done
+      for srec in $TMP_USR_SREC/*; do
+        cp -f $srec $SYSTEM_SYSTEM/system_ext/usr/srec/en-US
+      done
+      # Recursively set folder permission
+      find $SYSTEM_SYSTEM/system_ext/usr -type d | xargs chmod 0755
+    fi
+  fi
+  # Wipe temporary components
+  rm -rf zip/usr_share.tar.xz
+  rm -rf zip/usr_srec.tar.xz
+  rm -rf $TMP_USR_SHARE
+  rm -rf $TMP_USR_SREC
+}
+
+maps_config() {
+  # Set default packages and unpack
+  ZIP="zip/MapsPermissions.tar.xz"
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # Unpack system files
+  tar -xf $ZIP_FILE/MapsPermissions.tar.xz -C $TMP_PERMISSION
+  # Install package
+  pkg_TMPPerm
+  # Keep API based config
+  if [ "$android_sdk" -le "25" ]; then
+    mv -f $SYSTEM_ETC_PERM/com.google.android.maps.25.xml $SYSTEM_ETC_PERM/com.google.android.maps.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.29.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.30.xml
+  fi
+  if [ "$android_sdk" == "29" ]; then
+    mv -f $SYSTEM_ETC_PERM/com.google.android.maps.29.xml $SYSTEM_ETC_PERM/com.google.android.maps.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.25.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.30.xml
+  fi
+  if [ "$android_sdk" -ge "30" ]; then
+    mv -f $SYSTEM_ETC_PERM/com.google.android.maps.30.xml $SYSTEM_ETC_PERM/com.google.android.maps.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.25.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.29.xml
+  fi
+  # Set selinux context
+  chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.maps.xml"
+}
+
+maps_framework() {
+  # Set default packages and unpack
+  ZIP="zip/MapsFramework.tar.xz"
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # Unpack system files
+  tar -xf $ZIP_FILE/MapsFramework.tar.xz -C $TMP_FRAMEWORK
+  # Install package
+  pkg_TMPFramework
+  # Set selinux context
+  chcon -h u:object_r:system_file:s0 "$SYSTEM_FRAMEWORK/com.google.android.maps.jar"
 }
 
 # Set Google Assistant as default
@@ -4404,18 +4781,18 @@ set_addon_zip_conf() {
       fi
       if [ "$supported_module_config" == "true" ]; then
         # Remove AOSP Browser
-        mkdir $SYSTEM_SYSTEM/app/Jelly
-        mkdir $SYSTEM_SYSTEM/priv-app/Jelly
-        mkdir $SYSTEM_SYSTEM/product/app/Jelly
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Jelly
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Jelly
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
-        touch $SYSTEM_SYSTEM/app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/priv-app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/product/app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/Jelly/.replace
+        (mkdir $SYSTEM_SYSTEM/app/Jelly
+         mkdir $SYSTEM_SYSTEM/priv-app/Jelly
+         mkdir $SYSTEM_SYSTEM/product/app/Jelly
+         mkdir $SYSTEM_SYSTEM/product/priv-app/Jelly
+         mkdir $SYSTEM_SYSTEM/system_ext/app/Jelly
+         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
+         touch $SYSTEM_SYSTEM/app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/priv-app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/product/app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/product/priv-app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/system_ext/app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/system_ext/priv-app/Jelly/.replace) 2>/dev/null
       fi
       # Install
       ADDON_SYS="BromitePrebuilt.tar.xz"
@@ -4530,17 +4907,29 @@ set_addon_zip_conf() {
       fi
       if [ "$supported_module_config" == "true" ]; then
         # Remove AOSP Calendar
+        mkdir $SYSTEM_SYSTEM/app/Calendar
         mkdir $SYSTEM_SYSTEM/app/Etar
+        mkdir $SYSTEM_SYSTEM/priv-app/Calendar
         mkdir $SYSTEM_SYSTEM/priv-app/Etar
+        mkdir $SYSTEM_SYSTEM/product/app/Calendar
         mkdir $SYSTEM_SYSTEM/product/app/Etar
+        mkdir $SYSTEM_SYSTEM/product/priv-app/Calendar
         mkdir $SYSTEM_SYSTEM/product/priv-app/Etar
+        mkdir $SYSTEM_SYSTEM/system_ext/app/Calendar
         mkdir $SYSTEM_SYSTEM/system_ext/app/Etar
+        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Calendar
         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Etar
+        touch $SYSTEM_SYSTEM/app/Calendar/.replace
         touch $SYSTEM_SYSTEM/app/Etar/.replace
+        touch $SYSTEM_SYSTEM/priv-app/Calendar/.replace
         touch $SYSTEM_SYSTEM/priv-app/Etar/.replace
+        touch $SYSTEM_SYSTEM/product/app/Calendar/.replace
         touch $SYSTEM_SYSTEM/product/app/Etar/.replace
+        touch $SYSTEM_SYSTEM/product/priv-app/Calendar/.replace
         touch $SYSTEM_SYSTEM/product/priv-app/Etar/.replace
+        touch $SYSTEM_SYSTEM/system_ext/app/Calendar/.replace
         touch $SYSTEM_SYSTEM/system_ext/app/Etar/.replace
+        touch $SYSTEM_SYSTEM/system_ext/priv-app/Calendar/.replace
         touch $SYSTEM_SYSTEM/system_ext/priv-app/Etar/.replace
       fi
       # Install
@@ -4616,18 +5005,18 @@ set_addon_zip_conf() {
       fi
       if [ "$supported_module_config" == "true" ]; then
         # Remove AOSP Browser
-        mkdir $SYSTEM_SYSTEM/app/Jelly
-        mkdir $SYSTEM_SYSTEM/priv-app/Jelly
-        mkdir $SYSTEM_SYSTEM/product/app/Jelly
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Jelly
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Jelly
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
-        touch $SYSTEM_SYSTEM/app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/priv-app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/product/app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/Jelly/.replace
+        (mkdir $SYSTEM_SYSTEM/app/Jelly
+         mkdir $SYSTEM_SYSTEM/priv-app/Jelly
+         mkdir $SYSTEM_SYSTEM/product/app/Jelly
+         mkdir $SYSTEM_SYSTEM/product/priv-app/Jelly
+         mkdir $SYSTEM_SYSTEM/system_ext/app/Jelly
+         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
+         touch $SYSTEM_SYSTEM/app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/priv-app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/product/app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/product/priv-app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/system_ext/app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/system_ext/priv-app/Jelly/.replace) 2>/dev/null
       fi
       # Install
       ADDON_SYS="ChromeGooglePrebuilt.tar.xz"
@@ -4846,6 +5235,7 @@ set_addon_zip_conf() {
       PKG_CORE="DPSGooglePrebuilt"
       target_core
       dps_config
+      dps_sound_model
     else
       ui_print "! Skip installing DPS Google"
     fi
@@ -4853,7 +5243,7 @@ set_addon_zip_conf() {
       ui_print "- Installing Keyboard Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.gboard" after '# Begin addon properties' "ro.config.gboard"
-        # Remove pre-installed Gboard
+        # Remove pre-install Gboard
         rm -rf $SYSTEM/app/Gboard*
         rm -rf $SYSTEM/app/gboard*
         rm -rf $SYSTEM/app/LatinIMEGooglePrebuilt
@@ -4905,6 +5295,7 @@ set_addon_zip_conf() {
       ADDON_SYS="GboardGooglePrebuilt.tar.xz"
       PKG_SYS="GboardGooglePrebuilt"
       target_sys
+      gboard_usr
     else
       ui_print "! Skip installing Keyboard Google"
     fi
@@ -4940,39 +5331,64 @@ set_addon_zip_conf() {
         # Remove pre-install Launcher
         rm -rf $SYSTEM/priv-app/Launcher3*
         rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt
+        rm -rf $SYSTEM/priv-app/NexusQuickAccessWallet
         rm -rf $SYSTEM/priv-app/QuickAccessWallet
         rm -rf $SYSTEM/product/priv-app/Launcher3*
         rm -rf $SYSTEM/product/priv-app/NexusLauncherPrebuilt
+        rm -rf $SYSTEM/product/priv-app/NexusQuickAccessWallet
         rm -rf $SYSTEM/product/priv-app/QuickAccessWallet
         rm -rf $SYSTEM/system_ext/priv-app/Launcher3*
         rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
+        rm -rf $SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
         rm -rf $SYSTEM/system_ext/priv-app/QuickAccessWallet
       fi
       if [ "$supported_module_config" == "true" ]; then
         # Remove AOSP Launcher
-        mkdir $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Launcher3QuickStep
-        mkdir $SYSTEM_SYSTEM/priv-app/QuickAccessWallet
-        mkdir $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet
-        mkdir $SYSTEM_SYSTEM/system_ext/app/QuickAccessWallet
-        touch $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Launcher3QuickStep/.replace
-        touch $SYSTEM_SYSTEM/priv-app/QuickAccessWallet/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/QuickAccessWallet/.replace
+        (mkdir $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep
+         mkdir $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep
+         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep
+         mkdir $SYSTEM_SYSTEM/priv-app/QuickAccessWallet
+         mkdir $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet
+         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet
+         touch $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep/.replace
+         touch $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep/.replace
+         touch $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep/.replace
+         touch $SYSTEM_SYSTEM/priv-app/QuickAccessWallet/.replace
+         touch $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet/.replace
+         touch $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet/.replace) 2>/dev/null
       fi
       # Install
       ADDON_CORE="NexusLauncherPrebuilt.tar.xz"
       PKG_CORE="NexusLauncherPrebuilt"
       target_core
-      ADDON_CORE="QuickAccessWallet.tar.xz"
-      PKG_CORE="QuickAccessWallet"
+      ADDON_CORE="NexusQuickAccessWallet.tar.xz"
+      PKG_CORE="NexusQuickAccessWallet"
       target_core
+      launcher_overlay
       launcher_config
     else
       ui_print "! Skip installing Pixel Launcher"
+    fi
+    if [ "$supported_maps_config" == "true" ]; then
+      ui_print "- Installing Maps Google"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.maps" after '# Begin addon properties' "ro.config.maps"
+        # Remove pre-install Maps
+        rm -rf $SYSTEM/app/Maps*
+        rm -rf $SYSTEM/product/app/Maps*
+        rm -rf $SYSTEM/system_ext/app/Maps*
+        rm -rf $SYSTEM/etc/permissions/com.google.android.maps.xml
+        rm -rf $SYSTEM/product/etc/permissions/com.google.android.maps.xml
+        rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.maps.xml
+      fi
+      # Install
+      ADDON_SYS="MapsGooglePrebuilt.tar.xz"
+      PKG_SYS="MapsGooglePrebuilt"
+      target_sys
+      maps_config
+      maps_framework
+    else
+      ui_print "! Skip installing Maps Google"
     fi
     if [ "$supported_markup_config" == "true" ]; then
       ui_print "- Installing Markup Google"
@@ -5309,18 +5725,18 @@ set_addon_zip_sep() {
       fi
       if [ "$supported_module_config" == "true" ]; then
         # Remove AOSP Browser
-        mkdir $SYSTEM_SYSTEM/app/Jelly
-        mkdir $SYSTEM_SYSTEM/priv-app/Jelly
-        mkdir $SYSTEM_SYSTEM/product/app/Jelly
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Jelly
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Jelly
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
-        touch $SYSTEM_SYSTEM/app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/priv-app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/product/app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/Jelly/.replace
+        (mkdir $SYSTEM_SYSTEM/app/Jelly
+         mkdir $SYSTEM_SYSTEM/priv-app/Jelly
+         mkdir $SYSTEM_SYSTEM/product/app/Jelly
+         mkdir $SYSTEM_SYSTEM/product/priv-app/Jelly
+         mkdir $SYSTEM_SYSTEM/system_ext/app/Jelly
+         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
+         touch $SYSTEM_SYSTEM/app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/priv-app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/product/app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/product/priv-app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/system_ext/app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/system_ext/priv-app/Jelly/.replace) 2>/dev/null
       fi
       # Install
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
@@ -5439,6 +5855,33 @@ set_addon_zip_sep() {
         rm -rf $SYSTEM/system_ext/priv-app/calendar*
         rm -rf $SYSTEM/system_ext/priv-app/Etar
       fi
+      if [ "$supported_module_config" == "true" ]; then
+        # Remove AOSP Calendar
+        mkdir $SYSTEM_SYSTEM/app/Calendar
+        mkdir $SYSTEM_SYSTEM/app/Etar
+        mkdir $SYSTEM_SYSTEM/priv-app/Calendar
+        mkdir $SYSTEM_SYSTEM/priv-app/Etar
+        mkdir $SYSTEM_SYSTEM/product/app/Calendar
+        mkdir $SYSTEM_SYSTEM/product/app/Etar
+        mkdir $SYSTEM_SYSTEM/product/priv-app/Calendar
+        mkdir $SYSTEM_SYSTEM/product/priv-app/Etar
+        mkdir $SYSTEM_SYSTEM/system_ext/app/Calendar
+        mkdir $SYSTEM_SYSTEM/system_ext/app/Etar
+        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Calendar
+        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Etar
+        touch $SYSTEM_SYSTEM/app/Calendar/.replace
+        touch $SYSTEM_SYSTEM/app/Etar/.replace
+        touch $SYSTEM_SYSTEM/priv-app/Calendar/.replace
+        touch $SYSTEM_SYSTEM/priv-app/Etar/.replace
+        touch $SYSTEM_SYSTEM/product/app/Calendar/.replace
+        touch $SYSTEM_SYSTEM/product/app/Etar/.replace
+        touch $SYSTEM_SYSTEM/product/priv-app/Calendar/.replace
+        touch $SYSTEM_SYSTEM/product/priv-app/Etar/.replace
+        touch $SYSTEM_SYSTEM/system_ext/app/Calendar/.replace
+        touch $SYSTEM_SYSTEM/system_ext/app/Etar/.replace
+        touch $SYSTEM_SYSTEM/system_ext/priv-app/Calendar/.replace
+        touch $SYSTEM_SYSTEM/system_ext/priv-app/Etar/.replace
+      fi
       # Install
       ADDON_SYS="CalendarGooglePrebuilt.tar.xz"
       PKG_SYS="CalendarGooglePrebuilt"
@@ -5510,18 +5953,18 @@ set_addon_zip_sep() {
       fi
       if [ "$supported_module_config" == "true" ]; then
         # Remove AOSP Browser
-        mkdir $SYSTEM_SYSTEM/app/Jelly
-        mkdir $SYSTEM_SYSTEM/priv-app/Jelly
-        mkdir $SYSTEM_SYSTEM/product/app/Jelly
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Jelly
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Jelly
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
-        touch $SYSTEM_SYSTEM/app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/priv-app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/product/app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Jelly/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/Jelly/.replace
+        (mkdir $SYSTEM_SYSTEM/app/Jelly
+         mkdir $SYSTEM_SYSTEM/priv-app/Jelly
+         mkdir $SYSTEM_SYSTEM/product/app/Jelly
+         mkdir $SYSTEM_SYSTEM/product/priv-app/Jelly
+         mkdir $SYSTEM_SYSTEM/system_ext/app/Jelly
+         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
+         touch $SYSTEM_SYSTEM/app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/priv-app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/product/app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/product/priv-app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/system_ext/app/Jelly/.replace
+         touch $SYSTEM_SYSTEM/system_ext/priv-app/Jelly/.replace) 2>/dev/null
       fi
       # Install
       ADDON_SYS="ChromeGooglePrebuilt.tar.xz"
@@ -5733,6 +6176,21 @@ set_addon_zip_sep() {
         rm -rf $SYSTEM/product/etc/permissions/com.google.android.as.xml
         rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
       fi
+      if [ "$supported_module_config" == "true" ]; then
+        # Remove pre-install DPS
+        mkdir $SYSTEM_SYSTEM/app/MatchmakerPrebuilt
+        mkdir $SYSTEM_SYSTEM/priv-app/MatchmakerPrebuilt
+        mkdir $SYSTEM_SYSTEM/product/app/MatchmakerPrebuilt
+        mkdir $SYSTEM_SYSTEM/product/priv-app/MatchmakerPrebuilt
+        mkdir $SYSTEM_SYSTEM/system_ext/app/MatchmakerPrebuilt
+        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/MatchmakerPrebuilt
+        touch $SYSTEM_SYSTEM/app/MatchmakerPrebuilt/.replace
+        touch $SYSTEM_SYSTEM/priv-app/MatchmakerPrebuilt/.replace
+        touch $SYSTEM_SYSTEM/product/app/MatchmakerPrebuilt/.replace
+        touch $SYSTEM_SYSTEM/product/priv-app/MatchmakerPrebuilt/.replace
+        touch $SYSTEM_SYSTEM/system_ext/app/MatchmakerPrebuilt/.replace
+        touch $SYSTEM_SYSTEM/system_ext/priv-app/MatchmakerPrebuilt/.replace
+      fi
       # Install
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         ADDON_CORE="DPSGooglePrebuilt_arm.tar.xz"
@@ -5744,6 +6202,7 @@ set_addon_zip_sep() {
       fi
       target_core
       dps_config
+      dps_sound_model
     fi
     if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
       ui_print "- Installing Keyboard Google"
@@ -5807,6 +6266,7 @@ set_addon_zip_sep() {
         PKG_SYS="GboardGooglePrebuilt"
       fi
       target_sys
+      gboard_usr
     fi
     if [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
       ui_print "- Installing Android Auto"
@@ -5844,37 +6304,66 @@ set_addon_zip_sep() {
         # Remove pre-install Launcher
         rm -rf $SYSTEM/priv-app/Launcher3*
         rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt
+        rm -rf $SYSTEM/priv-app/NexusQuickAccessWallet
         rm -rf $SYSTEM/priv-app/QuickAccessWallet
         rm -rf $SYSTEM/product/priv-app/Launcher3*
         rm -rf $SYSTEM/product/priv-app/NexusLauncherPrebuilt
+        rm -rf $SYSTEM/product/priv-app/NexusQuickAccessWallet
         rm -rf $SYSTEM/product/priv-app/QuickAccessWallet
         rm -rf $SYSTEM/system_ext/priv-app/Launcher3*
         rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
+        rm -rf $SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
         rm -rf $SYSTEM/system_ext/priv-app/QuickAccessWallet
       fi
       if [ "$supported_module_config" == "true" ]; then
         # Remove AOSP Launcher
-        mkdir $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Launcher3QuickStep
-        mkdir $SYSTEM_SYSTEM/priv-app/QuickAccessWallet
-        mkdir $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet
-        mkdir $SYSTEM_SYSTEM/system_ext/app/QuickAccessWallet
-        touch $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Launcher3QuickStep/.replace
-        touch $SYSTEM_SYSTEM/priv-app/QuickAccessWallet/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/QuickAccessWallet/.replace
+        (mkdir $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep
+         mkdir $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep
+         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep
+         mkdir $SYSTEM_SYSTEM/priv-app/QuickAccessWallet
+         mkdir $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet
+         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet
+         touch $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep/.replace
+         touch $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep/.replace
+         touch $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep/.replace
+         touch $SYSTEM_SYSTEM/priv-app/QuickAccessWallet/.replace
+         touch $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet/.replace
+         touch $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet/.replace) 2>/dev/null
       fi
       # Install
       ADDON_CORE="NexusLauncherPrebuilt.tar.xz"
       PKG_CORE="NexusLauncherPrebuilt"
       target_core
-      ADDON_CORE="QuickAccessWallet.tar.xz"
-      PKG_CORE="QuickAccessWallet"
+      ADDON_CORE="NexusQuickAccessWallet.tar.xz"
+      PKG_CORE="NexusQuickAccessWallet"
       target_core
+      launcher_overlay
       launcher_config
+    fi
+    if [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
+      ui_print "- Installing Maps Google"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.maps" after '# Begin addon properties' "ro.config.maps"
+        # Remove pre-install Maps
+        rm -rf $SYSTEM/app/Maps*
+        rm -rf $SYSTEM/product/app/Maps*
+        rm -rf $SYSTEM/system_ext/app/Maps*
+        rm -rf $SYSTEM/etc/permissions/com.google.android.maps.xml
+        rm -rf $SYSTEM/product/etc/permissions/com.google.android.maps.xml
+        rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.maps.xml
+      fi
+      # Install
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
+        ADDON_SYS="MapsGooglePrebuilt_arm.tar.xz"
+        PKG_SYS="MapsGooglePrebuilt"
+      fi
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
+        ADDON_SYS="MapsGooglePrebuilt_arm64.tar.xz"
+        PKG_SYS="MapsGooglePrebuilt"
+      fi
+      target_sys
+      maps_config
+      maps_framework
     fi
     if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
       ui_print "- Installing Markup Google"
@@ -6398,6 +6887,7 @@ post_install_wipe() {
   rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreRvc
   rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreSvc
   rm -rf $SYSTEM_FRAMEWORK/com.google.android.dialer.support.jar
+  rm -rf $SYSTEM_FRAMEWORK/com.google.android.maps.jar
   rm -rf $SYSTEM_ETC_CONFIG/com.google.android.apps.nexuslauncher.xml
   rm -rf $SYSTEM_ETC_CONFIG/google.xml
   rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
@@ -6410,13 +6900,19 @@ post_install_wipe() {
   rm -rf $SYSTEM_ETC_PERM/com.google.android.apps.nexuslauncher.xml
   rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
   rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
+  rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.xml
   rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
   rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
   rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
   rm -rf $SYSTEM_ETC_PREF/google.xml
   rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay
-  rm -rf $SYSTEM_ADDOND/90-bitgapps.sh
+  rm -rf $SYSTEM_OVERLAY/NexusLauncherOverlay
+  rm -rf $SYSTEM_ADDOND/bitgapps.sh
+  rm -rf $SYSTEM_ADDOND/backup.sh
+  rm -rf $SYSTEM_ADDOND/restore.sh
   rm -rf $SYSTEM/etc/g.prop
+  rm -rf $SYSTEM/etc/firmware/music_detector.descriptor
+  rm -rf $SYSTEM/etc/firmware/music_detector.sound_model
   rm -rf $SYSTEM/config.prop
   # Wipe Additional packages
   rm -rf $SYSTEM_APP/BromitePrebuilt
@@ -6426,6 +6922,7 @@ post_install_wipe() {
   rm -rf $SYSTEM_APP/DeskClockGooglePrebuilt
   rm -rf $SYSTEM_APP/GboardGooglePrebuilt
   rm -rf $SYSTEM_APP/GoogleTTSPrebuilt
+  rm -rf $SYSTEM_APP/MapsGooglePrebuilt
   rm -rf $SYSTEM_APP/MarkupGooglePrebuilt
   rm -rf $SYSTEM_APP/MessagesGooglePrebuilt
   rm -rf $SYSTEM_APP/MicroGGMSCore
@@ -6440,7 +6937,7 @@ post_install_wipe() {
   rm -rf $SYSTEM_PRIV_APP/DPSGooglePrebuilt
   rm -rf $SYSTEM_PRIV_APP/GearheadGooglePrebuilt
   rm -rf $SYSTEM_PRIV_APP/NexusLauncherPrebuilt
-  rm -rf $SYSTEM_PRIV_APP/QuickAccessWallet
+  rm -rf $SYSTEM_PRIV_APP/NexusQuickAccessWallet
   rm -rf $SYSTEM_PRIV_APP/Velvet
   rm -rf $SYSTEM_PRIV_APP/WellbeingPrebuilt
   # Non Additional packages
@@ -6479,6 +6976,12 @@ post_install_wipe() {
     rm -rf $f/com.android.contacts.xml
     rm -rf $f/com.android.dialer.xml
   done
+  # Wipe Gboard components
+  for f in $SYSTEM/usr $SYSTEM/product/usr $SYSTEM/system_ext/usr
+  do
+    rm -rf $f/share/ime
+    rm -rf $f/srec
+  done
   # Remove properties from system build
   remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
   remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
@@ -6512,7 +7015,7 @@ post_backup() {
         cp -fR $f/LineageSetupWizard $ANDROID_DATA/.backup/LineageSetupWizard > /dev/null 2>&1
         cp -f $f/com.android.managedprovisioning.xml $ANDROID_DATA/.backup > /dev/null 2>&1
         cp -f $f/com.android.provision.xml $ANDROID_DATA/.backup > /dev/null 2>&1
-        # Non Additional packages
+        # Non Additional packages and config
         cp -fR $f/Exactcalculator $ANDROID_DATA/.backup/Exactcalculator > /dev/null 2>&1
         cp -fR $f/Calendar $ANDROID_DATA/.backup/Calendar > /dev/null 2>&1
         cp -fR $f/Etar $ANDROID_DATA/.backup/Etar > /dev/null 2>&1
@@ -6521,6 +7024,7 @@ post_backup() {
         cp -fR $f/Jelly $ANDROID_DATA/.backup/Jelly > /dev/null 2>&1
         cp -fR $f/Launcher3QuickStep $ANDROID_DATA/.backup/Launcher3QuickStep > /dev/null 2>&1
         cp -fR $f/QuickAccessWallet $ANDROID_DATA/.backup/QuickAccessWallet > /dev/null 2>&1
+        cp -f $f/com.android.launcher3.xml $ANDROID_DATA/.backup > /dev/null 2>&1
         # AOSP APKs and configs
         cp -fR $f/messaging $ANDROID_DATA/.backup/messaging > /dev/null 2>&1
         cp -fR $f/Contacts $ANDROID_DATA/.backup/Contacts > /dev/null 2>&1
@@ -6550,7 +7054,7 @@ post_restore() {
       cp -fR $f/LineageSetupWizard $SYSTEM/priv-app/LineageSetupWizard > /dev/null 2>&1
       cp -f $f/com.android.managedprovisioning.xml $SYSTEM/etc/permissions > /dev/null 2>&1
       cp -f $f/com.android.provision.xml $SYSTEM/etc/permissions > /dev/null 2>&1
-      # Non Additional packages
+      # Non Additional packages and config
       cp -fR $f/Exactcalculator $SYSTEM/app/Exactcalculator > /dev/null 2>&1
       cp -fR $f/Calendar $SYSTEM/app/Calendar > /dev/null 2>&1
       cp -fR $f/Etar $SYSTEM/app/Etar > /dev/null 2>&1
@@ -6559,6 +7063,7 @@ post_restore() {
       cp -fR $f/Jelly $SYSTEM/app/Jelly > /dev/null 2>&1
       cp -fR $f/Launcher3QuickStep $SYSTEM/priv-app/Launcher3QuickStep > /dev/null 2>&1
       cp -fR $f/QuickAccessWallet $SYSTEM/priv-app/QuickAccessWallet > /dev/null 2>&1
+      cp -f $f/com.android.launcher3.xml $SYSTEM/etc/permissions > /dev/null 2>&1
       # AOSP APKs and configs
       cp -fR $f/messaging $SYSTEM/app/messaging > /dev/null 2>&1
       cp -fR $f/Contacts $SYSTEM/priv-app/Contacts > /dev/null 2>&1
@@ -6593,6 +7098,7 @@ post_uninstall() {
     fi
   fi
   if [ "$ZIPTYPE" == "basic" ] && [ "$supported_module_config" == "true" ] && [ "$wipe_config" == "true" ]; then
+    print_title_wipe
     # Wipe temporary data
     rm -rf $ANDROID_DATA/app/com.android.vending*
     rm -rf $ANDROID_DATA/app/com.google.android*
@@ -6605,6 +7111,7 @@ post_uninstall() {
     # Remove properties from system build
     remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
     remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
+    on_installed
   fi
 }
 
@@ -6781,7 +7288,7 @@ spl_update_boot() {
   if [ -f "split_img/boot.img-os_patch_level" ]; then
     rm -rf split_img/boot.img-os_patch_level
     ui_print "- Patching Boot SPL"
-    echo "2021-05" >> split_img/boot.img-os_patch_level
+    echo "2021-06" >> split_img/boot.img-os_patch_level
     chmod 0644 split_img/boot.img-os_patch_level
     ./repackimg.sh > /dev/null 2>&1
     dd if="image-new.img" of="$block" > /dev/null 2>&1
@@ -6809,7 +7316,7 @@ set_cts_patch() {
     cp -f $TMP/system.prop $SYSTEM/build.prop
     chmod 0644 $SYSTEM/build.prop
     rm -rf $TMP/system.prop
-    CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/coral/coral:11/RQ2A.210505.002/7246365:user/release-keys"
+    CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/redfin/redfin:11/RQ3A.210605.005/7349499:user/release-keys"
     insert_line $SYSTEM/build.prop "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT" after 'ro.system.build.date.utc=' "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT"
   fi
   # Build fingerprint
@@ -6820,7 +7327,7 @@ set_cts_patch() {
     cp -f $TMP/system.prop $SYSTEM/build.prop
     chmod 0644 $SYSTEM/build.prop
     rm -rf $TMP/system.prop
-    CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/coral/coral:11/RQ2A.210505.002/7246365:user/release-keys"
+    CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/redfin/redfin:11/RQ3A.210605.005/7349499:user/release-keys"
     insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_FINGERPRINT" after 'ro.build.description=' "$CTS_SYSTEM_BUILD_FINGERPRINT"
   fi
   # Build security patch
@@ -6831,7 +7338,7 @@ set_cts_patch() {
     cp -f $TMP/system.prop $SYSTEM/build.prop
     chmod 0644 $SYSTEM/build.prop
     rm -rf $TMP/system.prop
-    CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-05-05";
+    CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-06-05";
     insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
   fi
   if [ "$device_vendorpartition" == "false" ]; then
@@ -6843,7 +7350,7 @@ set_cts_patch() {
       cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
       chmod 0644 $SYSTEM/vendor/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-05-05";
+      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-06-05";
       insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
     fi
     # Build fingerprint
@@ -6854,7 +7361,7 @@ set_cts_patch() {
       cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
       chmod 0644 $SYSTEM/vendor/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:11/RQ2A.210505.002/7246365:user/release-keys"
+      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/redfin/redfin:11/RQ3A.210605.005/7349499:user/release-keys"
       insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build bootimage
@@ -6865,7 +7372,7 @@ set_cts_patch() {
       cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
       chmod 0644 $SYSTEM/vendor/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:11/RQ2A.210505.002/7246365:user/release-keys"
+      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/redfin/redfin:11/RQ3A.210605.005/7349499:user/release-keys"
       insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
     fi
   fi
@@ -6879,7 +7386,7 @@ set_cts_patch() {
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-05-05";
+      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-06-05";
       insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
     fi
     # Build fingerprint
@@ -6890,7 +7397,7 @@ set_cts_patch() {
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/coral/coral:11/RQ2A.210505.002/7246365:user/release-keys"
+      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/redfin/redfin:11/RQ3A.210605.005/7349499:user/release-keys"
       insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build bootimage
@@ -6901,7 +7408,7 @@ set_cts_patch() {
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/coral/coral:11/RQ2A.210505.002/7246365:user/release-keys"
+      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/redfin/redfin:11/RQ3A.210605.005/7349499:user/release-keys"
       insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
     fi
   fi
@@ -6995,9 +7502,9 @@ boot_whitelist_permission() {
 }
 
 patch_install() {
-  if [ "$ZIPTYPE" == "patch" ]; then if [ "$TARGET_BOOTLOG_PATCH" == "true" ]; then boot_image_editor; patch_bootimg; on_installed; fi; fi
-  if [ "$ZIPTYPE" == "patch" ]; then if [ "$TARGET_SAFETYNET_PATCH" == "true" ]; then boot_image_editor; on_cts_patch; on_installed; fi; fi
-  if [ "$ZIPTYPE" == "patch" ]; then if [ "$TARGET_WHITELIST_PATCH" == "true" ]; then boot_image_editor; check_partition_status; boot_whitelist_permission; on_installed; fi; fi
+  if [ "$ZIPTYPE" == "patch" ] && [ "$BOOTMODE" == "false" ]; then if [ "$TARGET_BOOTLOG_PATCH" == "true" ]; then boot_image_editor; patch_bootimg; on_installed; fi; fi
+  if [ "$ZIPTYPE" == "patch" ] && [ "$BOOTMODE" == "false" ]; then if [ "$TARGET_SAFETYNET_PATCH" == "true" ]; then boot_image_editor; on_cts_patch; on_installed; fi; fi
+  if [ "$ZIPTYPE" == "patch" ] && [ "$BOOTMODE" == "false" ]; then if [ "$TARGET_WHITELIST_PATCH" == "true" ]; then boot_image_editor; check_partition_status; boot_whitelist_permission; on_installed; fi; fi
 }
 
 # Systemless installation
@@ -7014,6 +7521,12 @@ print_title_module() {
 
 require_new_magisk() {
   if [ "$supported_module_config" == "true" ]; then
+    for m in /data/magisk; do
+      if [ -d "$m" ]; then
+        mkdir -p /data/adb/modules && chmod -R 0755 /data/adb
+        mv -f /data/magisk /data/adb/magisk
+      fi
+    done
     [ -f /data/adb/magisk/util_functions.sh ] || on_abort "! Please install Magisk v20.4+"
     grep -w 'MAGISK_VER_CODE' /data/adb/magisk/util_functions.sh >> $TMP/MAGISK_VER_CODE
     chmod 0755 $TMP/MAGISK_VER_CODE && . $TMP/MAGISK_VER_CODE
@@ -7029,8 +7542,15 @@ check_modules_path() {
   fi
 }
 
+on_rwg_systemless() {
+  if [ "$TARGET_RWG_STATUS" == "true" ] && [ "$supported_module_config" == "true" ]; then
+    on_abort "! Detected RWG systemless. Aborting..."
+  fi
+}
+
 set_bitgapps_module() {
-  if [ "$supported_module_config" == "true" ]; then
+  if [ "$ZIPTYPE" == "basic" ] && [ "$supported_module_config" == "true" ]; then
+    rm -rf $ANDROID_DATA/adb/modules/BiTGApps
     mkdir $ANDROID_DATA/adb/modules/BiTGApps
     chmod 0755 $ANDROID_DATA/adb/modules/BiTGApps
   fi
@@ -7059,36 +7579,38 @@ override_module() {
 
 fix_module_perm() {
   if [ "$supported_module_config" == "true" ]; then
-    chmod 0755 $SYSTEM_SYSTEM/app/*
-    chmod 0644 $SYSTEM_SYSTEM/app/*/.replace
-    chmod 0755 $SYSTEM_SYSTEM/priv-app/*
-    chmod 0644 $SYSTEM_SYSTEM/priv-app/*/.replace
-    chmod 0644 $SYSTEM_SYSTEM/etc/default-permissions/*
-    chmod 0644 $SYSTEM_SYSTEM/etc/permissions/*
-    chmod 0644 $SYSTEM_SYSTEM/etc/preferred-apps/*
-    chmod 0644 $SYSTEM_SYSTEM/etc/sysconfig/*
-    chmod 0755 $SYSTEM_SYSTEM/product/app/*
-    chmod 0644 $SYSTEM_SYSTEM/product/app/*/.replace
-    chmod 0755 $SYSTEM_SYSTEM/product/priv-app/*
-    chmod 0644 $SYSTEM_SYSTEM/product/priv-app/*/.replace
-    chmod 0644 $SYSTEM_SYSTEM/product/etc/default-permissions/*
-    chmod 0644 $SYSTEM_SYSTEM/product/etc/permissions/*
-    chmod 0644 $SYSTEM_SYSTEM/product/etc/preferred-apps/*
-    chmod 0644 $SYSTEM_SYSTEM/product/etc/sysconfig/*
-    chmod 0755 $SYSTEM_SYSTEM/system_ext/app/*
-    chmod 0644 $SYSTEM_SYSTEM/system_ext/app/*/.replace
-    chmod 0755 $SYSTEM_SYSTEM/system_ext/priv-app/*
-    chmod 0644 $SYSTEM_SYSTEM/system_ext/priv-app/*/.replace
-    chmod 0644 $SYSTEM_SYSTEM/system_ext/etc/default-permissions/*
-    chmod 0644 $SYSTEM_SYSTEM/system_ext/etc/permissions/*
-    chmod 0644 $SYSTEM_SYSTEM/system_ext/etc/preferred-apps/*
-    chmod 0644 $SYSTEM_SYSTEM/system_ext/etc/sysconfig/*
+    (chmod 0755 $SYSTEM_SYSTEM/app/*
+     chmod 0644 $SYSTEM_SYSTEM/app/*/.replace
+     chmod 0755 $SYSTEM_SYSTEM/priv-app/*
+     chmod 0644 $SYSTEM_SYSTEM/priv-app/*/.replace
+     chmod 0644 $SYSTEM_SYSTEM/etc/default-permissions/*
+     chmod 0644 $SYSTEM_SYSTEM/etc/permissions/*
+     chmod 0644 $SYSTEM_SYSTEM/etc/preferred-apps/*
+     chmod 0644 $SYSTEM_SYSTEM/etc/sysconfig/*
+     chmod 0755 $SYSTEM_SYSTEM/product/app/*
+     chmod 0644 $SYSTEM_SYSTEM/product/app/*/.replace
+     chmod 0755 $SYSTEM_SYSTEM/product/priv-app/*
+     chmod 0644 $SYSTEM_SYSTEM/product/priv-app/*/.replace
+     chmod 0644 $SYSTEM_SYSTEM/product/etc/default-permissions/*
+     chmod 0644 $SYSTEM_SYSTEM/product/etc/permissions/*
+     chmod 0644 $SYSTEM_SYSTEM/product/etc/preferred-apps/*
+     chmod 0644 $SYSTEM_SYSTEM/product/etc/sysconfig/*
+     chmod 0755 $SYSTEM_SYSTEM/system_ext/app/*
+     chmod 0644 $SYSTEM_SYSTEM/system_ext/app/*/.replace
+     chmod 0755 $SYSTEM_SYSTEM/system_ext/priv-app/*
+     chmod 0644 $SYSTEM_SYSTEM/system_ext/priv-app/*/.replace
+     chmod 0644 $SYSTEM_SYSTEM/system_ext/etc/default-permissions/*
+     chmod 0644 $SYSTEM_SYSTEM/system_ext/etc/permissions/*
+     chmod 0644 $SYSTEM_SYSTEM/system_ext/etc/preferred-apps/*
+     chmod 0644 $SYSTEM_SYSTEM/system_ext/etc/sysconfig/*) 2>/dev/null
   fi
 }
 
 module_info() {
-  echo -e "id=BiTGApps\nname=BiTGApps\nversion=$REL\nversionCode=$TARGET_RELEASE_TAG\nauthor=TheHitMan7\ndescription=Systemless version of BiTGApps" >> $SYSTEM/module.prop
-  chmod 0644 $SYSTEM/module.prop
+  if [ "$ZIPTYPE" == "basic" ] && [ "$supported_module_config" == "true" ]; then
+    echo -e "id=BiTGApps\nname=BiTGApps\nversion=$REL\nversionCode=$TARGET_RELEASE_TAG\nauthor=TheHitMan7\ndescription=Systemless version of BiTGApps" >> $SYSTEM/module.prop
+    chmod 0644 $SYSTEM/module.prop
+  fi
 }
 
 # Do not add these functions inside 'pre_install' or 'post_install' function
@@ -7118,6 +7640,7 @@ pre_install() {
     on_version_check
     on_platform_check
     on_target_platform
+    on_module_check
     on_wipe_check
     set_wipe_config
   fi
@@ -7129,12 +7652,14 @@ pre_install() {
     vendor_mnt
     mount_BM
     check_rw_status
+    system_layout
     mount_status
     get_bitgapps_config
     profile
     on_version_check
     on_platform_check
     on_target_platform
+    on_module_check
     on_wipe_check
     set_wipe_config
   fi
@@ -7175,6 +7700,7 @@ pre_install() {
     vendor_mnt
     mount_BM
     check_rw_status
+    system_layout
     mount_status
     chk_inst_pkg
     on_inst_abort
@@ -7190,6 +7716,7 @@ pre_install() {
     build_platform
     check_platform
     clean_inst
+    on_module_check
     on_wipe_check
     set_wipe_config
   fi
@@ -7207,6 +7734,7 @@ pre_install() {
     profile
     on_version_check
     on_platform_check
+    on_module_check
   fi
   if [ "$ZIPTYPE" == "patch" ] && [ "$BOOTMODE" == "true" ]; then
     on_partition_check
@@ -7216,10 +7744,12 @@ pre_install() {
     vendor_mnt
     mount_BM
     check_rw_status
+    system_layout
     mount_status
     profile
     on_version_check
     on_platform_check
+    on_module_check
   fi
 }
 
@@ -7301,7 +7831,38 @@ df_system() {
   if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$SUPER_PARTITION" == "false" ]; then
     # Get the available space left on the device
     size=`df -k $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    CAPACITY="650000"
+    CAPACITY="1186000"
+    # Disk space in human readable format (k=1024)
+    ds_hr=`df -h $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+    # Print partition type
+    partition="System"
+  fi
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ] && [ "$SUPER_PARTITION" == "false" ]; then
+    # Get the available space left on the device
+    size=`df -k $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+    # Size of each package
+    $TARGET_ASSISTANT_GOOGLE && CAPACITY="170000"
+    $TARGET_BROMITE_GOOGLE && CAPACITY="210000"
+    $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
+    $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
+    $TARGET_CHROME_GOOGLE && CAPACITY="73000"
+    $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
+    $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
+    $TARGET_DIALER_GOOGLE && CAPACITY="52000"
+    $TARGET_DPS_GOOGLE && CAPACITY="70000"
+    $TARGET_GBOARD_GOOGLE && CAPACITY="70000"
+    $TARGET_GEARHEAD_GOOGLE && CAPACITY="33000"
+    $TARGET_LAUNCHER_GOOGLE && CAPACITY="10000"
+    $TARGET_MAPS_GOOGLE && CAPACITY="116000"
+    $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
+    $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"
+    $TARGET_PHOTOS_GOOGLE && CAPACITY="107000"
+    $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
+    $TARGET_TTS_GOOGLE && CAPACITY="35000"
+    $TARGET_VANCED_GOOGLE && CAPACITY="87000"
+    $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
+    # Common target
+    CAPACITY="$CAPACITY"
     # Disk space in human readable format (k=1024)
     ds_hr=`df -h $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Print partition type
@@ -7313,7 +7874,7 @@ df_product() {
   if [ "$ZIPTYPE" == "basic" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "29" ]; then
     # Get the available space left on the device
     size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    CAPACITY="650000"
+    CAPACITY="170000"
     # Disk space in human readable format (k=1024)
     ds_hr=`df -h /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Print partition type
@@ -7322,7 +7883,38 @@ df_product() {
   if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "29" ]; then
     # Get the available space left on the device
     size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    CAPACITY="650000"
+    CAPACITY="1186000"
+    # Disk space in human readable format (k=1024)
+    ds_hr=`df -h /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+    # Print partition type
+    partition="Product"
+  fi
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "29" ]; then
+    # Get the available space left on the device
+    size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+    # Size of each package
+    $TARGET_ASSISTANT_GOOGLE && CAPACITY="170000"
+    $TARGET_BROMITE_GOOGLE && CAPACITY="210000"
+    $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
+    $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
+    $TARGET_CHROME_GOOGLE && CAPACITY="73000"
+    $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
+    $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
+    $TARGET_DIALER_GOOGLE && CAPACITY="52000"
+    $TARGET_DPS_GOOGLE && CAPACITY="70000"
+    $TARGET_GBOARD_GOOGLE && CAPACITY="70000"
+    $TARGET_GEARHEAD_GOOGLE && CAPACITY="33000"
+    $TARGET_LAUNCHER_GOOGLE && CAPACITY="10000"
+    $TARGET_MAPS_GOOGLE && CAPACITY="116000"
+    $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
+    $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"
+    $TARGET_PHOTOS_GOOGLE && CAPACITY="107000"
+    $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
+    $TARGET_TTS_GOOGLE && CAPACITY="35000"
+    $TARGET_VANCED_GOOGLE && CAPACITY="87000"
+    $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
+    # Common target
+    CAPACITY="$CAPACITY"
     # Disk space in human readable format (k=1024)
     ds_hr=`df -h /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Print partition type
@@ -7343,7 +7935,38 @@ df_systemExt() {
   if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; then
     # Get the available space left on the device
     size=`df -k /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    CAPACITY="650000"
+    CAPACITY="1186000"
+    # Disk space in human readable format (k=1024)
+    ds_hr=`df -h /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+    # Print partition type
+    partition="SystemExt"
+  fi
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; then
+    # Get the available space left on the device
+    size=`df -k /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+    # Size of each package
+    $TARGET_ASSISTANT_GOOGLE && CAPACITY="170000"
+    $TARGET_BROMITE_GOOGLE && CAPACITY="210000"
+    $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
+    $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
+    $TARGET_CHROME_GOOGLE && CAPACITY="73000"
+    $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
+    $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
+    $TARGET_DIALER_GOOGLE && CAPACITY="52000"
+    $TARGET_DPS_GOOGLE && CAPACITY="70000"
+    $TARGET_GBOARD_GOOGLE && CAPACITY="70000"
+    $TARGET_GEARHEAD_GOOGLE && CAPACITY="33000"
+    $TARGET_LAUNCHER_GOOGLE && CAPACITY="10000"
+    $TARGET_MAPS_GOOGLE && CAPACITY="116000"
+    $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
+    $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"
+    $TARGET_PHOTOS_GOOGLE && CAPACITY="107000"
+    $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
+    $TARGET_TTS_GOOGLE && CAPACITY="35000"
+    $TARGET_VANCED_GOOGLE && CAPACITY="87000"
+    $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
+    # Common target
+    CAPACITY="$CAPACITY"
     # Disk space in human readable format (k=1024)
     ds_hr=`df -h /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Print partition type
@@ -7351,10 +7974,10 @@ df_systemExt() {
   fi
 }
 
-# Check if the available space is greater than 170MB(170000KB) or 650MB(650000KB)
+# Check available space is greater than 170MB(170000KB) or 1.186GB(1186000KB)
 diskfree() {
-  # Do not execute this function, when ADDON target is set to 'sep'
-  if [ "$ZIPTYPE" == "basic" ] || { [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ]; }; then
+  # Do not execute this function, when ZIPTYPE target is set to 'patch'
+  if [ "$ZIPTYPE" == "basic" ] || [ "$ZIPTYPE" == "addon" ]; then
     if [[ "$size" -gt "$CAPACITY" ]]; then
       TARGET_ANDROID_PARTITION="true"
     fi
@@ -7381,6 +8004,9 @@ chk_disk() {
 # Do not merge 'pre_install' functions here
 post_install() {
   if [ "$ZIPTYPE" == "addon" ] && [ "$wipe_config" == "false" ]; then
+    on_rwg_check
+    on_unsupported_rwg
+    skip_on_unsupported
     build_defaults
     mk_component
     ext_pathmap
@@ -7389,6 +8015,7 @@ post_install() {
     print_title_module
     require_new_magisk
     check_modules_path
+    on_rwg_systemless
     set_bitgapps_module
     set_module_path
     create_module_pathmap
@@ -7405,6 +8032,8 @@ post_install() {
   fi
   if [ "$ZIPTYPE" == "basic" ] && [ "$wipe_config" == "false" ]; then
     on_rwg_check
+    on_unsupported_rwg
+    skip_on_unsupported
     post_backup
     build_defaults
     mk_component
@@ -7414,6 +8043,7 @@ post_install() {
     print_title_module
     require_new_magisk
     check_modules_path
+    on_rwg_systemless
     set_bitgapps_module
     set_module_path
     create_module_pathmap
@@ -7421,7 +8051,6 @@ post_install() {
     product_module_pathmap
     system_module_pathmap
     override_module
-    fix_module_perm
     rwg_aosp_install
     set_aosp_default
     lim_aosp_install
@@ -7452,6 +8081,7 @@ post_install() {
     whitelist_patch
     sdk_fix
     selinux_fix
+    fix_module_perm
     module_info
     on_installed
   fi

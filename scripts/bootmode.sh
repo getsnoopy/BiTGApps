@@ -43,11 +43,12 @@ if [ ! -d "/data/adb/magisk" ]; then
   exit 1
 fi
 
-# Set standalone mode and busybox in local environment
+# Set standalone mode and busybox in the global environment
 if [ -f "/data/adb/magisk/busybox" ]; then
-  ASH_STANDALONE=1
-  BB="/data/adb/magisk/busybox"
-else
+  export ASH_STANDALONE=1
+  export BB="/data/adb/magisk/busybox"
+fi
+if [ ! -f "/data/adb/magisk/busybox" ]; then
   echo "! Busybox not found. Aborting..."
   exit 1
 fi
@@ -70,32 +71,45 @@ fi
 echo $divider
 $BB echo -e "\e[00;00m ========= BiTGApps Installer ========= \e[00;37;40m"
 $BB echo -e "\e[00;44m 1. Construct Install Environment       \e[00;37;40m"
-$BB echo -e "\e[00;00m 2. Install BiTGApps Package            \e[00;37;40m"
-$BB echo -e "\e[00;00m 3. Exit                                \e[00;37;40m"
+$BB echo -e "\e[00;00m 2. Wipe data partition                 \e[00;37;40m"
+$BB echo -e "\e[00;00m 3. Install BiTGApps Package            \e[00;37;40m"
+$BB echo -e "\e[00;41m 4. Reboot                              \e[00;37;40m"
+$BB echo -e "\e[00;00m 5. Exit                                \e[00;37;40m"
 echo $divider
 
-echo -n "Please select an option [1-3]: "
+echo -n "Please select an option [1-5]: "
 read option
 
 if [ "$option" == "1" ]; then
   clear
+  # Mount partitions
+  mount -o remount,rw,errors=continue / > /dev/null 2>&1
+  mount -o remount,rw,errors=continue /dev/root > /dev/null 2>&1
+  mount -o remount,rw,errors=continue /dev/block/dm-0 > /dev/null 2>&1
+  mount -o remount,rw,errors=continue /system > /dev/null 2>&1
+  mount -o remount,rw,errors=continue /vendor > /dev/null 2>&1
+  mount -o remount,rw,errors=continue /product > /dev/null 2>&1
+  mount -o remount,rw,errors=continue /system_ext > /dev/null 2>&1
   # Set default
   export TMP="/tmp"
-  # Mount partitions
-  mount -o rw,remount / > /dev/null 2>&1
-  mount -o rw,remount /dev/root > /dev/null 2>&1
-  mount -o rw,remount /dev/block/dm-0 > /dev/null 2>&1
-  mount -o rw,remount /system > /dev/null 2>&1
-  mount -o rw,remount /vendor > /dev/null 2>&1
-  mount -o rw,remount /product > /dev/null 2>&1
-  mount -o rw,remount /system_ext > /dev/null 2>&1
   # Create temporary directory
   test -d $TMP || mkdir $TMP
-  # Set installation layout
-  export SYSTEM="/system"
+  # Create shell symlink
+  test -d /sbin || mkdir /sbin
+  ln -sfnv /system/bin/sh /sbin/sh > /dev/null 2>&1
   # Run script again
-  . bootmode.sh
+  . /data/BiTGApps/bootmode.sh
 elif [ "$option" == "2" ]; then
+  clear
+  echo $divider
+  $BB echo -e "\e[00;41m Wipe data without wiping internal storage \e[00;37;40m"
+  echo $divider
+  ($BB find ./data -mindepth 1 -maxdepth 1 -type d -not -name 'media' -exec rm -rf '{}' \;)
+  sleep 1
+  clear
+  # Run script again
+  . /data/BiTGApps/bootmode.sh
+elif [ "$option" == "3" ]; then
   clear
   ZIPFILE="/data/media/0/BiTGApps"
   $BB echo -e "\e[00;41m Select BiTGApps Package \e[00;37;40m"
@@ -112,10 +126,18 @@ elif [ "$option" == "2" ]; then
   unzip -o "${file[$input]}" -d $TMP >/dev/null
   sleep 1
   clear
-  exec $BB sh $TMP/installer.sh "$@"
+  if [ -f "$TMP/installer.sh" ]; then $BB sh $TMP/installer.sh "$@"; fi
+  # Wipe sbin to prevent conflicts with magisk
+  rm -rf /sbin
+  rm -rf /tmp
   # Run script again
-  . bootmode.sh
-elif [ "$option" == "3" ]; then
+  . /data/BiTGApps/bootmode.sh
+elif [ "$option" == "4" ]; then
+  clear
+  $BB echo -e "\e[00;41m Rebooting Now \e[00;37;40m"
+  sleep 1
+  reboot
+elif [ "$option" == "5" ]; then
   clear
   exit 1
 else
@@ -126,5 +148,5 @@ else
   sleep 1
   clear
   # Run script again
-  . bootmode.sh
+  . /data/BiTGApps/bootmode.sh
 fi
