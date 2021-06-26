@@ -1221,7 +1221,7 @@ get_bitgapps_config() {
     ui_print "- Install config detected"
   fi
   if [ ! -f "$BITGAPPS_CONFIG" ]; then
-    ui_print "! Install config not found"
+    on_abort "! Install config not found"
   fi
 }
 
