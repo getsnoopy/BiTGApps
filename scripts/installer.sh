@@ -1221,7 +1221,7 @@ get_bitgapps_config() {
     ui_print "- Install config detected"
   fi
   if [ ! -f "$BITGAPPS_CONFIG" ]; then
-    on_abort "! Install config not found"
+    ui_print "! Install config not found"
   fi
 }
 
@@ -1254,7 +1254,13 @@ on_release_tag() {
 }
 
 # Systemless Config Property
-on_module_check() { supported_module_config="$(get_prop "ro.config.systemless")"; }
+on_module_check() {
+  if [ ! -f "$BITGAPPS_CONFIG" ]; then
+    supported_module_config="false"
+  else
+    supported_module_config="$(get_prop "ro.config.systemless")"
+  fi
+}
 
 # SetupWizard Config Property
 on_setup_check() { supported_setup_config="$(get_prop "ro.config.setupwizard")"; }
