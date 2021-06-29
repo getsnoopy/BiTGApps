@@ -5219,32 +5219,36 @@ set_addon_zip_conf() {
       ui_print "! Skip installing Dialer Google"
     fi
     if [ "$supported_dps_config" == "true" ]; then
-      ui_print "- Installing DPS Google"
-      if [ "$supported_module_config" == "false" ]; then
-        insert_line $SYSTEM/config.prop "ro.config.dps" after '# Begin addon properties' "ro.config.dps"
-        # Remove pre-install DPS
-        rm -rf $SYSTEM/app/DPSGooglePrebuilt
-        rm -rf $SYSTEM/app/Matchmaker*
-        rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt
-        rm -rf $SYSTEM/priv-app/Matchmaker*
-        rm -rf $SYSTEM/product/app/DPSGooglePrebuilt
-        rm -rf $SYSTEM/product/app/Matchmaker*
-        rm -rf $SYSTEM/product/priv-app/DPSGooglePrebuilt
-        rm -rf $SYSTEM/product/priv-app/Matchmaker*
-        rm -rf $SYSTEM/system_ext/app/DPSGooglePrebuilt
-        rm -rf $SYSTEM/system_ext/app/Matchmaker*
-        rm -rf $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
-        rm -rf $SYSTEM/system_ext/priv-app/Matchmaker*
-        rm -rf $SYSTEM/etc/permissions/com.google.android.as.xml
-        rm -rf $SYSTEM/product/etc/permissions/com.google.android.as.xml
-        rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
+      if [ "$android_sdk" == "30" ]; then
+        ui_print "- Installing DPS Google"
+        if [ "$supported_module_config" == "false" ]; then
+          insert_line $SYSTEM/config.prop "ro.config.dps" after '# Begin addon properties' "ro.config.dps"
+          # Remove pre-install DPS
+          rm -rf $SYSTEM/app/DPSGooglePrebuilt
+          rm -rf $SYSTEM/app/Matchmaker*
+          rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt
+          rm -rf $SYSTEM/priv-app/Matchmaker*
+          rm -rf $SYSTEM/product/app/DPSGooglePrebuilt
+          rm -rf $SYSTEM/product/app/Matchmaker*
+          rm -rf $SYSTEM/product/priv-app/DPSGooglePrebuilt
+          rm -rf $SYSTEM/product/priv-app/Matchmaker*
+          rm -rf $SYSTEM/system_ext/app/DPSGooglePrebuilt
+          rm -rf $SYSTEM/system_ext/app/Matchmaker*
+          rm -rf $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
+          rm -rf $SYSTEM/system_ext/priv-app/Matchmaker*
+          rm -rf $SYSTEM/etc/permissions/com.google.android.as.xml
+          rm -rf $SYSTEM/product/etc/permissions/com.google.android.as.xml
+          rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
+        fi
+        # Install
+        ADDON_CORE="DPSGooglePrebuilt.tar.xz"
+        PKG_CORE="DPSGooglePrebuilt"
+        target_core
+        dps_config
+        dps_sound_model
+      else
+        ui_print "! Cannot install DPS Google"
       fi
-      # Install
-      ADDON_CORE="DPSGooglePrebuilt.tar.xz"
-      PKG_CORE="DPSGooglePrebuilt"
-      target_core
-      dps_config
-      dps_sound_model
     else
       ui_print "! Skip installing DPS Google"
     fi
@@ -5334,47 +5338,51 @@ set_addon_zip_conf() {
       ui_print "! Skip installing Android Auto"
     fi
     if [ "$supported_launcher_config" == "true" ]; then
-      ui_print "- Installing Pixel Launcher"
-      if [ "$supported_module_config" == "false" ]; then
-        insert_line $SYSTEM/config.prop "ro.config.launcher" after '# Begin addon properties' "ro.config.launcher"
-        # Remove pre-install Launcher
-        rm -rf $SYSTEM/priv-app/Launcher3*
-        rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt
-        rm -rf $SYSTEM/priv-app/NexusQuickAccessWallet
-        rm -rf $SYSTEM/priv-app/QuickAccessWallet
-        rm -rf $SYSTEM/product/priv-app/Launcher3*
-        rm -rf $SYSTEM/product/priv-app/NexusLauncherPrebuilt
-        rm -rf $SYSTEM/product/priv-app/NexusQuickAccessWallet
-        rm -rf $SYSTEM/product/priv-app/QuickAccessWallet
-        rm -rf $SYSTEM/system_ext/priv-app/Launcher3*
-        rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
-        rm -rf $SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
-        rm -rf $SYSTEM/system_ext/priv-app/QuickAccessWallet
+      if [ "$android_sdk" == "30" ]; then
+        ui_print "- Installing Pixel Launcher"
+        if [ "$supported_module_config" == "false" ]; then
+          insert_line $SYSTEM/config.prop "ro.config.launcher" after '# Begin addon properties' "ro.config.launcher"
+          # Remove pre-install Launcher
+          rm -rf $SYSTEM/priv-app/Launcher3*
+          rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt
+          rm -rf $SYSTEM/priv-app/NexusQuickAccessWallet
+          rm -rf $SYSTEM/priv-app/QuickAccessWallet
+          rm -rf $SYSTEM/product/priv-app/Launcher3*
+          rm -rf $SYSTEM/product/priv-app/NexusLauncherPrebuilt
+          rm -rf $SYSTEM/product/priv-app/NexusQuickAccessWallet
+          rm -rf $SYSTEM/product/priv-app/QuickAccessWallet
+          rm -rf $SYSTEM/system_ext/priv-app/Launcher3*
+          rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
+          rm -rf $SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
+          rm -rf $SYSTEM/system_ext/priv-app/QuickAccessWallet
+        fi
+        if [ "$supported_module_config" == "true" ]; then
+          # Remove AOSP Launcher
+          (mkdir $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep
+           mkdir $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep
+           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep
+           mkdir $SYSTEM_SYSTEM/priv-app/QuickAccessWallet
+           mkdir $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet
+           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet
+           touch $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep/.replace
+           touch $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep/.replace
+           touch $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep/.replace
+           touch $SYSTEM_SYSTEM/priv-app/QuickAccessWallet/.replace
+           touch $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet/.replace
+           touch $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet/.replace) 2>/dev/null
+        fi
+        # Install
+        ADDON_CORE="NexusLauncherPrebuilt.tar.xz"
+        PKG_CORE="NexusLauncherPrebuilt"
+        target_core
+        ADDON_CORE="NexusQuickAccessWallet.tar.xz"
+        PKG_CORE="NexusQuickAccessWallet"
+        target_core
+        launcher_overlay
+        launcher_config
+      else
+        ui_print "! Cannot install Pixel Launcher"
       fi
-      if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Launcher
-        (mkdir $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep
-         mkdir $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep
-         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep
-         mkdir $SYSTEM_SYSTEM/priv-app/QuickAccessWallet
-         mkdir $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet
-         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet
-         touch $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep/.replace
-         touch $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep/.replace
-         touch $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep/.replace
-         touch $SYSTEM_SYSTEM/priv-app/QuickAccessWallet/.replace
-         touch $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet/.replace
-         touch $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet/.replace) 2>/dev/null
-      fi
-      # Install
-      ADDON_CORE="NexusLauncherPrebuilt.tar.xz"
-      PKG_CORE="NexusLauncherPrebuilt"
-      target_core
-      ADDON_CORE="NexusQuickAccessWallet.tar.xz"
-      PKG_CORE="NexusQuickAccessWallet"
-      target_core
-      launcher_overlay
-      launcher_config
     else
       ui_print "! Skip installing Pixel Launcher"
     fi
@@ -6165,53 +6173,57 @@ set_addon_zip_sep() {
       set_google_dialer_default
     fi
     if [ "$TARGET_DPS_GOOGLE" == "true" ]; then
-      ui_print "- Installing DPS Google"
-      if [ "$supported_module_config" == "false" ]; then
-        insert_line $SYSTEM/config.prop "ro.config.dps" after '# Begin addon properties' "ro.config.dps"
-        # Remove pre-install DPS
-        rm -rf $SYSTEM/app/DPSGooglePrebuilt
-        rm -rf $SYSTEM/app/Matchmaker*
-        rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt
-        rm -rf $SYSTEM/priv-app/Matchmaker*
-        rm -rf $SYSTEM/product/app/DPSGooglePrebuilt
-        rm -rf $SYSTEM/product/app/Matchmaker*
-        rm -rf $SYSTEM/product/priv-app/DPSGooglePrebuilt
-        rm -rf $SYSTEM/product/priv-app/Matchmaker*
-        rm -rf $SYSTEM/system_ext/app/DPSGooglePrebuilt
-        rm -rf $SYSTEM/system_ext/app/Matchmaker*
-        rm -rf $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
-        rm -rf $SYSTEM/system_ext/priv-app/Matchmaker*
-        rm -rf $SYSTEM/etc/permissions/com.google.android.as.xml
-        rm -rf $SYSTEM/product/etc/permissions/com.google.android.as.xml
-        rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
+      if [ "$android_sdk" == "30" ]; then
+        ui_print "- Installing DPS Google"
+        if [ "$supported_module_config" == "false" ]; then
+          insert_line $SYSTEM/config.prop "ro.config.dps" after '# Begin addon properties' "ro.config.dps"
+          # Remove pre-install DPS
+          rm -rf $SYSTEM/app/DPSGooglePrebuilt
+          rm -rf $SYSTEM/app/Matchmaker*
+          rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt
+          rm -rf $SYSTEM/priv-app/Matchmaker*
+          rm -rf $SYSTEM/product/app/DPSGooglePrebuilt
+          rm -rf $SYSTEM/product/app/Matchmaker*
+          rm -rf $SYSTEM/product/priv-app/DPSGooglePrebuilt
+          rm -rf $SYSTEM/product/priv-app/Matchmaker*
+          rm -rf $SYSTEM/system_ext/app/DPSGooglePrebuilt
+          rm -rf $SYSTEM/system_ext/app/Matchmaker*
+          rm -rf $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
+          rm -rf $SYSTEM/system_ext/priv-app/Matchmaker*
+          rm -rf $SYSTEM/etc/permissions/com.google.android.as.xml
+          rm -rf $SYSTEM/product/etc/permissions/com.google.android.as.xml
+          rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
+        fi
+        if [ "$supported_module_config" == "true" ]; then
+          # Remove pre-install DPS
+          mkdir $SYSTEM_SYSTEM/app/MatchmakerPrebuilt
+          mkdir $SYSTEM_SYSTEM/priv-app/MatchmakerPrebuilt
+          mkdir $SYSTEM_SYSTEM/product/app/MatchmakerPrebuilt
+          mkdir $SYSTEM_SYSTEM/product/priv-app/MatchmakerPrebuilt
+          mkdir $SYSTEM_SYSTEM/system_ext/app/MatchmakerPrebuilt
+          mkdir $SYSTEM_SYSTEM/system_ext/priv-app/MatchmakerPrebuilt
+          touch $SYSTEM_SYSTEM/app/MatchmakerPrebuilt/.replace
+          touch $SYSTEM_SYSTEM/priv-app/MatchmakerPrebuilt/.replace
+          touch $SYSTEM_SYSTEM/product/app/MatchmakerPrebuilt/.replace
+          touch $SYSTEM_SYSTEM/product/priv-app/MatchmakerPrebuilt/.replace
+          touch $SYSTEM_SYSTEM/system_ext/app/MatchmakerPrebuilt/.replace
+          touch $SYSTEM_SYSTEM/system_ext/priv-app/MatchmakerPrebuilt/.replace
+        fi
+        # Install
+        if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
+          ADDON_CORE="DPSGooglePrebuilt_arm.tar.xz"
+          PKG_CORE="DPSGooglePrebuilt"
+        fi
+        if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
+          ADDON_CORE="DPSGooglePrebuilt_arm64.tar.xz"
+          PKG_CORE="DPSGooglePrebuilt"
+        fi
+        target_core
+        dps_config
+        dps_sound_model
+      else
+        ui_print "! Cannot install DPS Google"
       fi
-      if [ "$supported_module_config" == "true" ]; then
-        # Remove pre-install DPS
-        mkdir $SYSTEM_SYSTEM/app/MatchmakerPrebuilt
-        mkdir $SYSTEM_SYSTEM/priv-app/MatchmakerPrebuilt
-        mkdir $SYSTEM_SYSTEM/product/app/MatchmakerPrebuilt
-        mkdir $SYSTEM_SYSTEM/product/priv-app/MatchmakerPrebuilt
-        mkdir $SYSTEM_SYSTEM/system_ext/app/MatchmakerPrebuilt
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/MatchmakerPrebuilt
-        touch $SYSTEM_SYSTEM/app/MatchmakerPrebuilt/.replace
-        touch $SYSTEM_SYSTEM/priv-app/MatchmakerPrebuilt/.replace
-        touch $SYSTEM_SYSTEM/product/app/MatchmakerPrebuilt/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/MatchmakerPrebuilt/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/MatchmakerPrebuilt/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/MatchmakerPrebuilt/.replace
-      fi
-      # Install
-      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
-        ADDON_CORE="DPSGooglePrebuilt_arm.tar.xz"
-        PKG_CORE="DPSGooglePrebuilt"
-      fi
-      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-        ADDON_CORE="DPSGooglePrebuilt_arm64.tar.xz"
-        PKG_CORE="DPSGooglePrebuilt"
-      fi
-      target_core
-      dps_config
-      dps_sound_model
     fi
     if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
       ui_print "- Installing Keyboard Google"
@@ -6307,47 +6319,51 @@ set_addon_zip_sep() {
       target_core
     fi
     if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
-      ui_print "- Installing Pixel Launcher"
-      if [ "$supported_module_config" == "false" ]; then
-        insert_line $SYSTEM/config.prop "ro.config.launcher" after '# Begin addon properties' "ro.config.launcher"
-        # Remove pre-install Launcher
-        rm -rf $SYSTEM/priv-app/Launcher3*
-        rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt
-        rm -rf $SYSTEM/priv-app/NexusQuickAccessWallet
-        rm -rf $SYSTEM/priv-app/QuickAccessWallet
-        rm -rf $SYSTEM/product/priv-app/Launcher3*
-        rm -rf $SYSTEM/product/priv-app/NexusLauncherPrebuilt
-        rm -rf $SYSTEM/product/priv-app/NexusQuickAccessWallet
-        rm -rf $SYSTEM/product/priv-app/QuickAccessWallet
-        rm -rf $SYSTEM/system_ext/priv-app/Launcher3*
-        rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
-        rm -rf $SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
-        rm -rf $SYSTEM/system_ext/priv-app/QuickAccessWallet
+      if [ "$android_sdk" == "30" ]; then
+        ui_print "- Installing Pixel Launcher"
+        if [ "$supported_module_config" == "false" ]; then
+          insert_line $SYSTEM/config.prop "ro.config.launcher" after '# Begin addon properties' "ro.config.launcher"
+          # Remove pre-install Launcher
+          rm -rf $SYSTEM/priv-app/Launcher3*
+          rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt
+          rm -rf $SYSTEM/priv-app/NexusQuickAccessWallet
+          rm -rf $SYSTEM/priv-app/QuickAccessWallet
+          rm -rf $SYSTEM/product/priv-app/Launcher3*
+          rm -rf $SYSTEM/product/priv-app/NexusLauncherPrebuilt
+          rm -rf $SYSTEM/product/priv-app/NexusQuickAccessWallet
+          rm -rf $SYSTEM/product/priv-app/QuickAccessWallet
+          rm -rf $SYSTEM/system_ext/priv-app/Launcher3*
+          rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
+          rm -rf $SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
+          rm -rf $SYSTEM/system_ext/priv-app/QuickAccessWallet
+        fi
+        if [ "$supported_module_config" == "true" ]; then
+          # Remove AOSP Launcher
+          (mkdir $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep
+           mkdir $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep
+           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep
+           mkdir $SYSTEM_SYSTEM/priv-app/QuickAccessWallet
+           mkdir $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet
+           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet
+           touch $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep/.replace
+           touch $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep/.replace
+           touch $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep/.replace
+           touch $SYSTEM_SYSTEM/priv-app/QuickAccessWallet/.replace
+           touch $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet/.replace
+           touch $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet/.replace) 2>/dev/null
+        fi
+        # Install
+        ADDON_CORE="NexusLauncherPrebuilt.tar.xz"
+        PKG_CORE="NexusLauncherPrebuilt"
+        target_core
+        ADDON_CORE="NexusQuickAccessWallet.tar.xz"
+        PKG_CORE="NexusQuickAccessWallet"
+        target_core
+        launcher_overlay
+        launcher_config
+      else
+        ui_print "! Cannot install Pixel Launcher"
       fi
-      if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Launcher
-        (mkdir $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep
-         mkdir $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep
-         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep
-         mkdir $SYSTEM_SYSTEM/priv-app/QuickAccessWallet
-         mkdir $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet
-         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet
-         touch $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep/.replace
-         touch $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep/.replace
-         touch $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep/.replace
-         touch $SYSTEM_SYSTEM/priv-app/QuickAccessWallet/.replace
-         touch $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet/.replace
-         touch $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet/.replace) 2>/dev/null
-      fi
-      # Install
-      ADDON_CORE="NexusLauncherPrebuilt.tar.xz"
-      PKG_CORE="NexusLauncherPrebuilt"
-      target_core
-      ADDON_CORE="NexusQuickAccessWallet.tar.xz"
-      PKG_CORE="NexusQuickAccessWallet"
-      target_core
-      launcher_overlay
-      launcher_config
     fi
     if [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
       ui_print "- Installing Maps Google"
