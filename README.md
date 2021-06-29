@@ -32,24 +32,14 @@ Here are feature highlights:
 
 ## Release Tag
 
-![](https://img.shields.io/badge/BiTGApps-%20R28-blue.svg?style=flat-square)
-![](https://img.shields.io/badge/Addon-%20R16-blue.svg?style=flat-square)
-![](https://img.shields.io/badge/Patch-%20R7-blue.svg?style=flat-square)
+![](https://img.shields.io/badge/BiTGApps-%20R28-green.svg?style=flat-square)
+![](https://img.shields.io/badge/Addon-%20R16-red.svg?style=flat-square)
+![](https://img.shields.io/badge/Patch-%20R7-teal.svg?style=flat-square)
 ![](https://img.shields.io/badge/APK-%20v1.3-blue.svg?style=flat-square)
 
 ## Downloads
 
-[![](https://img.shields.io/badge/BiTGApps-%20ARM-green.svg?style=flat-square)](https://bitgapps.ga/arm)
-<br>
-[![](https://img.shields.io/badge/BiTGApps-%20ARM64-green.svg?style=flat-square)](https://bitgapps.ga/arm64)
-<br>
-[![](https://img.shields.io/badge/BiTGApps-%20Addon-green.svg?style=flat-square)](https://bitgapps.ga/addon)
-<br>
-[![](https://img.shields.io/badge/BiTGApps-%20Patch-green.svg?style=flat-square)](https://bitgapps.ga/patch)
-<br>
-[![](https://img.shields.io/badge/BiTGApps-%20Config-red.svg?style=flat-square)](https://bitgapps.ga/config)
-<br>
-[![](https://img.shields.io/badge/BiTGApps-%20APK-red.svg?style=flat-square)](https://bitgapps.ga/APK)
+* [Click Here](https://github.com/BiTGApps/BiTGApps/wiki/Download-Portals)
 
 ## Useful Links
 
