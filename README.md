@@ -32,9 +32,9 @@ Here are feature highlights:
 
 ## Release Tag
 
-![](https://img.shields.io/badge/BiTGApps-%20R27-blue.svg?style=flat-square)
-![](https://img.shields.io/badge/Addon-%20R15-blue.svg?style=flat-square)
-![](https://img.shields.io/badge/Patch-%20R6-blue.svg?style=flat-square)
+![](https://img.shields.io/badge/BiTGApps-%20R28-blue.svg?style=flat-square)
+![](https://img.shields.io/badge/Addon-%20R16-blue.svg?style=flat-square)
+![](https://img.shields.io/badge/Patch-%20R7-blue.svg?style=flat-square)
 ![](https://img.shields.io/badge/APK-%20v1.3-blue.svg?style=flat-square)
 
 ## Downloads
