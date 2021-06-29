@@ -1707,6 +1707,9 @@ system_pathmap() {
     chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
     chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
     chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
+    # Shared library
+    SYSTEM_APP_SHARED="$SYSTEM/app"
+    SYSTEM_PRIV_APP_SHARED="$SYSTEM/priv-app"
   fi
 }
 
@@ -2756,9 +2759,9 @@ pre_installed_v28() {
     rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
     rm -rf $SYSTEM_ETC_PREF/google.xml
     # Default ExtShared
-    rm -rf $SYSTEM_APP/ExtShared
+    rm -rf $SYSTEM_APP_SHARED/ExtShared
     # Default ExtServices
-    rm -rf $SYSTEM_PRIV_APP/ExtServices
+    rm -rf $SYSTEM_PRIV_APP_SHARED/ExtServices
   fi
 }
 
@@ -2786,9 +2789,9 @@ pre_installed_v27() {
     rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
     rm -rf $SYSTEM_ETC_PREF/google.xml
     # Default ExtShared
-    rm -rf $SYSTEM_APP/ExtShared
+    rm -rf $SYSTEM_APP_SHARED/ExtShared
     # Default ExtServices
-    rm -rf $SYSTEM_PRIV_APP/ExtServices
+    rm -rf $SYSTEM_PRIV_APP_SHARED/ExtServices
   fi
 }
 
@@ -2816,9 +2819,9 @@ pre_installed_v26() {
     rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
     rm -rf $SYSTEM_ETC_PREF/google.xml
     # Default ExtShared
-    rm -rf $SYSTEM_APP/ExtShared
+    rm -rf $SYSTEM_APP_SHARED/ExtShared
     # Default ExtServices
-    rm -rf $SYSTEM_PRIV_APP/ExtServices
+    rm -rf $SYSTEM_PRIV_APP_SHARED/ExtServices
   fi
 }
 
@@ -2847,9 +2850,9 @@ pre_installed_v25() {
     rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
     rm -rf $SYSTEM_ETC_PREF/google.xml
     # Default ExtShared
-    rm -rf $SYSTEM_APP/ExtShared
+    rm -rf $SYSTEM_APP_SHARED/ExtShared
     # Default ExtServices
-    rm -rf $SYSTEM_PRIV_APP/ExtServices
+    rm -rf $SYSTEM_PRIV_APP_SHARED/ExtServices
   fi
 }
 
