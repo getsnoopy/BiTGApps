@@ -1253,6 +1253,17 @@ on_release_tag() {
   unsupported_release="$TARGET_GAPPS_RELEASE"
 }
 
+# Match config version prior to current release
+config_version() {
+  supported_config_version="$(get_prop "ro.config.version")"
+  if [ -f "$BITGAPPS_CONFIG" ] && [ ! -n "$(cat $BITGAPPS_CONFIG | grep ro.config.version)" ]; then
+    on_abort "! Invalid config found. Aborting..."
+  fi
+  if [ -f "$BITGAPPS_CONFIG" ] && [ ! "$supported_config_version" == "$TARGET_GAPPS_RELEASE" ]; then
+    on_abort "! Invalid config version. Aborting..."
+  fi
+}
+
 # Systemless Config Property
 on_module_check() {
   if [ ! -f "$BITGAPPS_CONFIG" ]; then
@@ -7665,6 +7676,7 @@ pre_install() {
     on_version_check
     on_platform_check
     on_target_platform
+    config_version
     on_module_check
     on_wipe_check
     set_wipe_config
@@ -7684,6 +7696,7 @@ pre_install() {
     on_version_check
     on_platform_check
     on_target_platform
+    config_version
     on_module_check
     on_wipe_check
     set_wipe_config
@@ -7713,6 +7726,7 @@ pre_install() {
     build_platform
     check_platform
     clean_inst
+    config_version
     on_module_check
     on_wipe_check
     set_wipe_config
@@ -7741,6 +7755,7 @@ pre_install() {
     build_platform
     check_platform
     clean_inst
+    config_version
     on_module_check
     on_wipe_check
     set_wipe_config
@@ -7759,6 +7774,7 @@ pre_install() {
     profile
     on_version_check
     on_platform_check
+    config_version
     on_module_check
   fi
   if [ "$ZIPTYPE" == "patch" ] && [ "$BOOTMODE" == "true" ]; then
@@ -7774,6 +7790,7 @@ pre_install() {
     profile
     on_version_check
     on_platform_check
+    config_version
     on_module_check
   fi
 }

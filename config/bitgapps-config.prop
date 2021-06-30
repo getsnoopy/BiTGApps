@@ -21,6 +21,9 @@
 # GNU General Public License for more details.
 ##############################################################
 
+# Do not modify version property; Auto generated
+ro.config.version=
+
 # Property for installing BiTGApps systemless
 ro.config.systemless=false
 
