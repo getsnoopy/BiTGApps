@@ -3076,7 +3076,7 @@ sdk_v31_install() {
       tar -xf $ZIP_FILE/core/ConfigUpdater.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/core/GoogleServicesFramework.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/core/Phonesky.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/PrebuiltGmsCoreRvc.tar.xz -C $TMP_PRIV
+      tar -xf $ZIP_FILE/core/PrebuiltGmsCoreSvc.tar.xz -C $TMP_PRIV
       tar -xf $ZIP_FILE/Sysconfig.tar.xz -C $TMP_SYSCONFIG
       tar -xf $ZIP_FILE/Default.tar.xz -C $TMP_DEFAULT
       tar -xf $ZIP_FILE/Permissions.tar.xz -C $TMP_PERMISSION
@@ -7620,6 +7620,29 @@ override_module() {
   fi
 }
 
+fix_gms_hide() {
+  if [ "$supported_module_config" == "true" ]; then
+    if [ "$android_sdk" == "31" ]; then
+      mv -f $SYSTEM_SYSTEM/system_ext/priv-app/PrebuiltGmsCoreSvc $SYSTEM_AS_SYSTEM/system_ext/priv-app/PrebuiltGmsCoreSvc 
+    fi
+    if [ "$android_sdk" == "30" ]; then
+      mv -f $SYSTEM_SYSTEM/system_ext/priv-app/PrebuiltGmsCoreRvc $SYSTEM_AS_SYSTEM/system_ext/priv-app/PrebuiltGmsCoreRvc 
+    fi
+    if [ "$android_sdk" == "29" ]; then
+      mv -f $SYSTEM_SYSTEM/product/priv-app/PrebuiltGmsCoreQt $SYSTEM_AS_SYSTEM/product/priv-app/PrebuiltGmsCoreQt 
+    fi
+    if [ "$android_sdk" == "28" ]; then
+      mv -f $SYSTEM_SYSTEM/priv-app/PrebuiltGmsCorePi $SYSTEM_AS_SYSTEM/priv-app/PrebuiltGmsCorePi 
+    fi
+    if [ "$android_sdk" == "27" ] ||  [ "$android_sdk" == "26" ]; then
+      mv -f $SYSTEM_SYSTEM/priv-app/PrebuiltGmsCorePix $SYSTEM_AS_SYSTEM/priv-app/PrebuiltGmsCorePix 
+    fi
+    if [ "$android_sdk" == "25" ]; then
+      mv -f $SYSTEM_SYSTEM/priv-app/PrebuiltGmsCore $SYSTEM_AS_SYSTEM/priv-app/PrebuiltGmsCore 
+    fi
+  fi
+}
+
 fix_module_perm() {
   if [ "$supported_module_config" == "true" ]; then
     (chmod 0755 $SYSTEM_SYSTEM/app/*
@@ -8130,6 +8153,7 @@ post_install() {
     whitelist_patch
     sdk_fix
     selinux_fix
+    fix_gms_hide
     fix_module_perm
     module_info
     on_installed
