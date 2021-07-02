@@ -1279,6 +1279,9 @@ on_setup_check() { supported_setup_config="$(get_prop "ro.config.setupwizard")";
 # Addon Install Property
 on_addon_config() { supported_addon_config="$(get_prop "ro.config.addon")"; }
 
+# Addon Stack Property
+on_addon_stack() { supported_addon_stack="$(get_prop "ro.config.stack")"; }
+
 # Addon Config Properties
 on_addon_check() {
   supported_assistant_config="$(get_prop "ro.config.assistant")"
@@ -7707,6 +7710,8 @@ pre_install() {
     on_platform_check
     on_target_platform
     config_version
+    on_addon_stack
+    on_addon_check
     on_module_check
     on_wipe_check
     set_wipe_config
@@ -7727,6 +7732,8 @@ pre_install() {
     on_platform_check
     on_target_platform
     config_version
+    on_addon_stack
+    on_addon_check
     on_module_check
     on_wipe_check
     set_wipe_config
@@ -7903,7 +7910,34 @@ df_system() {
   if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$SUPER_PARTITION" == "false" ]; then
     # Get the available space left on the device
     size=`df -k $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    CAPACITY="1186000"
+    # Default capacity
+    $supported_addon_stack && CAPACITY="1186000"
+    # Selected capacity
+    if [ "$supported_addon_stack" == "false" ]; then
+      # Size of each package
+      $supported_assistant_config && ASSISTANT="170000" || ASSISTANT="0"
+      $supported_bromite_config && BROMITE="210000" || BROMITE="0"
+      $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
+      $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
+      $supported_chrome_config && CHROME="73000" || CHROME="0"
+      $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
+      $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
+      $supported_dialer_config && DIALER="52000" || DIALER="0"
+      $supported_dps_config && DPS="70000" || DPS="0"
+      $supported_gboard_config && GBOARD="70000" || GBOARD="0"
+      $supported_gearhead_config && GEARHEAD="33000" || GEARHEAD="0"
+      $supported_launcher_config && LAUNCHER="10000" || LAUNCHER="0"
+      $supported_maps_config && MAPS="116000" || MAPS="0"
+      $supported_markup_config && MARKUP="10000" || MARKUP="0"
+      $supported_messages_config && MESSAGES="100000" || MESSAGES="0"
+      $supported_photos_config && PHOTOS="107000" || PHOTOS="0"
+      $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
+      $supported_tts_config && TTS="35000" || TTS="0"
+      $supported_vanced_config && VANCED="87000" || VANCED="0"
+      $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
+      # Set capacity by targetting selected packages
+      CAPACITY=`expr $ASSISTANT + $BROMITE + $CALCULATOR + $CALENDAR + $CHROME + $CONTACTS + $DESKCLOCK + $DIALER + $DPS + $GBOARD + $GEARHEAD + $LAUNCHER + $MAPS + $MARKUP + $MESSAGES + $PHOTOS + $SOUNDPICKER + $TTS + $VANCED + $WELLBEING`
+    fi
     # Disk space in human readable format (k=1024)
     ds_hr=`df -h $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Print partition type
@@ -7955,7 +7989,34 @@ df_product() {
   if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "29" ]; then
     # Get the available space left on the device
     size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    CAPACITY="1186000"
+    # Default capacity
+    $supported_addon_stack && CAPACITY="1186000"
+    # Selected capacity
+    if [ "$supported_addon_stack" == "false" ]; then
+      # Size of each package
+      $supported_assistant_config && ASSISTANT="170000" || ASSISTANT="0"
+      $supported_bromite_config && BROMITE="210000" || BROMITE="0"
+      $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
+      $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
+      $supported_chrome_config && CHROME="73000" || CHROME="0"
+      $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
+      $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
+      $supported_dialer_config && DIALER="52000" || DIALER="0"
+      $supported_dps_config && DPS="70000" || DPS="0"
+      $supported_gboard_config && GBOARD="70000" || GBOARD="0"
+      $supported_gearhead_config && GEARHEAD="33000" || GEARHEAD="0"
+      $supported_launcher_config && LAUNCHER="10000" || LAUNCHER="0"
+      $supported_maps_config && MAPS="116000" || MAPS="0"
+      $supported_markup_config && MARKUP="10000" || MARKUP="0"
+      $supported_messages_config && MESSAGES="100000" || MESSAGES="0"
+      $supported_photos_config && PHOTOS="107000" || PHOTOS="0"
+      $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
+      $supported_tts_config && TTS="35000" || TTS="0"
+      $supported_vanced_config && VANCED="87000" || VANCED="0"
+      $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
+      # Set capacity by targetting selected packages
+      CAPACITY=`expr $ASSISTANT + $BROMITE + $CALCULATOR + $CALENDAR + $CHROME + $CONTACTS + $DESKCLOCK + $DIALER + $DPS + $GBOARD + $GEARHEAD + $LAUNCHER + $MAPS + $MARKUP + $MESSAGES + $PHOTOS + $SOUNDPICKER + $TTS + $VANCED + $WELLBEING`
+    fi
     # Disk space in human readable format (k=1024)
     ds_hr=`df -h /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Print partition type
@@ -8007,7 +8068,34 @@ df_systemExt() {
   if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; then
     # Get the available space left on the device
     size=`df -k /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    CAPACITY="1186000"
+    # Default capacity
+    $supported_addon_stack && CAPACITY="1186000"
+    # Selected capacity
+    if [ "$supported_addon_stack" == "false" ]; then
+      # Size of each package
+      $supported_assistant_config && ASSISTANT="170000" || ASSISTANT="0"
+      $supported_bromite_config && BROMITE="210000" || BROMITE="0"
+      $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
+      $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
+      $supported_chrome_config && CHROME="73000" || CHROME="0"
+      $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
+      $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
+      $supported_dialer_config && DIALER="52000" || DIALER="0"
+      $supported_dps_config && DPS="70000" || DPS="0"
+      $supported_gboard_config && GBOARD="70000" || GBOARD="0"
+      $supported_gearhead_config && GEARHEAD="33000" || GEARHEAD="0"
+      $supported_launcher_config && LAUNCHER="10000" || LAUNCHER="0"
+      $supported_maps_config && MAPS="116000" || MAPS="0"
+      $supported_markup_config && MARKUP="10000" || MARKUP="0"
+      $supported_messages_config && MESSAGES="100000" || MESSAGES="0"
+      $supported_photos_config && PHOTOS="107000" || PHOTOS="0"
+      $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
+      $supported_tts_config && TTS="35000" || TTS="0"
+      $supported_vanced_config && VANCED="87000" || VANCED="0"
+      $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
+      # Set capacity by targetting selected packages
+      CAPACITY=`expr $ASSISTANT + $BROMITE + $CALCULATOR + $CALENDAR + $CHROME + $CONTACTS + $DESKCLOCK + $DIALER + $DPS + $GBOARD + $GEARHEAD + $LAUNCHER + $MAPS + $MARKUP + $MESSAGES + $PHOTOS + $SOUNDPICKER + $TTS + $VANCED + $WELLBEING`
+    fi
     # Disk space in human readable format (k=1024)
     ds_hr=`df -h /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Print partition type

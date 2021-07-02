@@ -33,6 +33,9 @@ ro.config.setupwizard=false
 # Property for enabling Addons installation
 ro.config.addon=false
 
+# Property for enabling Addons space check
+ro.config.stack=false
+
 # Property for installing Addons
 ro.config.assistant=false
 ro.config.bromite=false
