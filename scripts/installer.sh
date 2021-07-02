@@ -7559,8 +7559,15 @@ require_new_magisk() {
   if [ "$supported_module_config" == "true" ]; then
     for m in /data/magisk; do
       if [ -d "$m" ]; then
-        mkdir -p /data/adb/modules && chmod -R 0755 /data/adb
+        mkdir -p /data/adb/modules
+        chmod -R 0755 /data/adb
         mv -f /data/magisk /data/adb/magisk
+      fi
+    done
+    for m in /data/adb/magisk; do
+      if [ -d "$m" ]; then
+        test -d /data/adb/modules || mkdir /data/adb/modules
+        chmod 0755 /data/adb/modules
       fi
     done
     [ -f /data/adb/magisk/util_functions.sh ] || on_abort "! Please install Magisk v20.4+"
