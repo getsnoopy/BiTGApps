@@ -7626,22 +7626,22 @@ override_module() {
 fix_gms_hide() {
   if [ "$supported_module_config" == "true" ]; then
     if [ "$android_sdk" == "31" ]; then
-      mv -f $SYSTEM_SYSTEM/system_ext/priv-app/PrebuiltGmsCoreSvc $SYSTEM_AS_SYSTEM/system_ext/priv-app/PrebuiltGmsCoreSvc 
+      mv -f $SYSTEM_SYSTEM/system_ext/priv-app/PrebuiltGmsCoreSvc $SYSTEM_AS_SYSTEM/system_ext/priv-app
     fi
     if [ "$android_sdk" == "30" ]; then
-      mv -f $SYSTEM_SYSTEM/system_ext/priv-app/PrebuiltGmsCoreRvc $SYSTEM_AS_SYSTEM/system_ext/priv-app/PrebuiltGmsCoreRvc 
+      mv -f $SYSTEM_SYSTEM/system_ext/priv-app/PrebuiltGmsCoreRvc $SYSTEM_AS_SYSTEM/system_ext/priv-app
     fi
     if [ "$android_sdk" == "29" ]; then
-      mv -f $SYSTEM_SYSTEM/product/priv-app/PrebuiltGmsCoreQt $SYSTEM_AS_SYSTEM/product/priv-app/PrebuiltGmsCoreQt 
+      mv -f $SYSTEM_SYSTEM/product/priv-app/PrebuiltGmsCoreQt $SYSTEM_AS_SYSTEM/product/priv-app
     fi
     if [ "$android_sdk" == "28" ]; then
-      mv -f $SYSTEM_SYSTEM/priv-app/PrebuiltGmsCorePi $SYSTEM_AS_SYSTEM/priv-app/PrebuiltGmsCorePi 
+      mv -f $SYSTEM_SYSTEM/priv-app/PrebuiltGmsCorePi $SYSTEM_AS_SYSTEM/priv-app
     fi
     if [ "$android_sdk" == "27" ] ||  [ "$android_sdk" == "26" ]; then
-      mv -f $SYSTEM_SYSTEM/priv-app/PrebuiltGmsCorePix $SYSTEM_AS_SYSTEM/priv-app/PrebuiltGmsCorePix 
+      mv -f $SYSTEM_SYSTEM/priv-app/PrebuiltGmsCorePix $SYSTEM_AS_SYSTEM/priv-app
     fi
     if [ "$android_sdk" == "25" ]; then
-      mv -f $SYSTEM_SYSTEM/priv-app/PrebuiltGmsCore $SYSTEM_AS_SYSTEM/priv-app/PrebuiltGmsCore 
+      mv -f $SYSTEM_SYSTEM/priv-app/PrebuiltGmsCore $SYSTEM_AS_SYSTEM/priv-app
     fi
   fi
 }
