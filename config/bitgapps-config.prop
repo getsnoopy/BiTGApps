@@ -58,5 +58,8 @@ ro.config.tts=false
 ro.config.vanced=false
 ro.config.wellbeing=false
 
+# Property for wiping Addons components
+ro.addon.wipe=false
+
 # Property for wiping BiTGApps components
 ro.config.wipe=false

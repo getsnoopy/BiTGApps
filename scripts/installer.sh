@@ -1279,6 +1279,9 @@ on_setup_check() { supported_setup_config="$(get_prop "ro.config.setupwizard")";
 # Addon Install Property
 on_addon_config() { supported_addon_config="$(get_prop "ro.config.addon")"; }
 
+# Addon Wipe Property
+on_addon_wipe() { supported_addon_wipe="$(get_prop "ro.addon.wipe")"; }
+
 # Addon Stack Property
 on_addon_stack() { supported_addon_stack="$(get_prop "ro.config.stack")"; }
 
@@ -4094,6 +4097,469 @@ pre_installed_pkg() {
   fi
 }
 
+check_backup() {
+  if [ "$supported_module_config" == "false" ] && [ ! -f "$ANDROID_DATA/.backup/.backup" ]; then
+    on_abort "! Backup not found. Aborting..."
+  fi
+}
+
+pre_restore_pkg() {
+  # System Uninstall
+  if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$supported_module_config" == "false" ]; then
+    if [ "$supported_assistant_config" == "true" ] || [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Assistant Google"
+      rm -rf $SYSTEM/priv-app/Velvet
+      rm -rf $SYSTEM/product/priv-app/Velvet
+      rm -rf $SYSTEM/system_ext/priv-app/Velvet
+    fi
+    if [ "$supported_bromite_config" == "true" ] || [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Bromite Browser"
+      rm -rf $SYSTEM/app/BromitePrebuilt
+      rm -rf $SYSTEM/app/WebViewBromite
+      rm -rf $SYSTEM/product/app/BromitePrebuilt
+      rm -rf $SYSTEM/product/app/WebViewBromite
+      rm -rf $SYSTEM/system_ext/app/BromitePrebuilt
+      rm -rf $SYSTEM/system_ext/app/WebViewBromite
+    fi
+    if [ "$supported_calculator_config" == "true" ] || [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Calculator Google"
+      rm -rf $SYSTEM/app/CalculatorGooglePrebuilt
+      rm -rf $SYSTEM/product/app/CalculatorGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/app/CalculatorGooglePrebuilt
+    fi
+    if [ "$supported_calendar_config" == "true" ] || [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Calendar Google"
+      rm -rf $SYSTEM/app/CalendarGooglePrebuilt
+      rm -rf $SYSTEM/product/app/CalendarGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/app/CalendarGooglePrebuilt
+    fi
+    if [ "$supported_chrome_config" == "true" ] || [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Chrome Google"
+      rm -rf $SYSTEM/app/ChromeGooglePrebuilt
+      rm -rf $SYSTEM/app/TrichromeLibrary
+      rm -rf $SYSTEM/product/app/ChromeGooglePrebuilt
+      rm -rf $SYSTEM/product/app/TrichromeLibrary
+      rm -rf $SYSTEM/system_ext/app/ChromeGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/app/TrichromeLibrary
+    fi
+    if [ "$supported_contacts_config" == "true" ] || [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Contacts Google"
+      rm -rf $SYSTEM/priv-app/ContactsGooglePrebuilt
+      rm -rf $SYSTEM/product/priv-app/ContactsGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/priv-app/ContactsGooglePrebuilt
+    fi
+    if [ "$supported_deskclock_config" == "true" ] || [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Deskclock Google"
+      rm -rf $SYSTEM/app/DeskClockGooglePrebuilt
+      rm -rf $SYSTEM/product/app/DeskClockGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/app/DeskClockGooglePrebuilt
+    fi
+    if [ "$supported_dialer_config" == "true" ] || [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Dialer Google"
+      rm -rf $SYSTEM/priv-app/DialerGooglePrebuilt
+      rm -rf $SYSTEM/product/priv-app/DialerGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/priv-app/DialerGooglePrebuilt
+      rm -rf $SYSTEM/etc/permissions/com.google.android.dialer.framework.xml
+      rm -rf $SYSTEM/product/etc/permissions/com.google.android.dialer.framework.xml
+      rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.dialer.framework.xml
+      rm -rf $SYSTEM/etc/permissions/com.google.android.dialer.support.xml
+      rm -rf $SYSTEM/product/etc/permissions/com.google.android.dialer.support.xml
+      rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.dialer.support.xml
+      rm -rf $SYSTEM/framework/com.google.android.dialer.support.jar
+      rm -rf $SYSTEM/product/framework/com.google.android.dialer.support.jar
+      rm -rf $SYSTEM/system_ext/framework/com.google.android.dialer.support.jar
+    fi
+    if [ "$supported_dps_config" == "true" ] || [ "$TARGET_DPS_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall DPS Google"
+      rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt
+      rm -rf $SYSTEM/product/priv-app/DPSGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
+      rm -rf $SYSTEM/etc/permissions/com.google.android.as.xml
+      rm -rf $SYSTEM/product/etc/permissions/com.google.android.as.xml
+      rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
+    fi
+    if [ "$supported_gboard_config" == "true" ] || [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Keyboard Google"
+      rm -rf $SYSTEM/app/GboardGooglePrebuilt
+      rm -rf $SYSTEM/product/app/GboardGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/app/GboardGooglePrebuilt
+    fi
+    if [ "$supported_gearhead_config" == "true" ] || [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Android Auto"
+      rm -rf $SYSTEM/priv-app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM/product/priv-app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/priv-app/GearheadGooglePrebuilt
+    fi
+    if [ "$supported_launcher_config" == "true" ] || [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Pixel Launcher"
+      rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt.apk
+      rm -rf $SYSTEM/product/priv-app/NexusLauncherPrebuilt.apk
+      rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt.apk
+      rm -rf $SYSTEM/priv-app/QuickAccessWallet.apk
+      rm -rf $SYSTEM/product/priv-app/QuickAccessWallet.apk
+      rm -rf $SYSTEM/system_ext/priv-app/QuickAccessWallet.apk
+      rm -rf $SYSTEM/etc/permissions/nexuslauncher.xml
+      rm -rf $SYSTEM/product/etc/permissions/nexuslauncher.xml
+      rm -rf $SYSTEM/system_ext/etc/permissions/nexuslauncher.xml
+      rm -rf $SYSTEM/etc/sysconfig/nexuslauncher.xml
+      rm -rf $SYSTEM/product/etc/sysconfig/nexuslauncher.xml
+      rm -rf $SYSTEM/system_ext/etc/sysconfig/nexuslauncher.xml
+    fi
+    if [ "$supported_maps_config" == "true" ] || [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Maps Google"
+      rm -rf $SYSTEM/app/MapsGooglePrebuilt
+      rm -rf $SYSTEM/product/app/MapsGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/app/MapsGooglePrebuilt
+      rm -rf $SYSTEM/etc/permissions/com.google.android.maps.xml
+      rm -rf $SYSTEM/product/etc/permissions/com.google.android.maps.xml
+      rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.maps.xml
+      rm -rf $SYSTEM/framework/com.google.android.maps.jar
+      rm -rf $SYSTEM/product/framework/com.google.android.maps.jar
+      rm -rf $SYSTEM/system_ext/framework/com.google.android.maps.jar
+    fi
+    if [ "$supported_markup_config" == "true" ] || [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Markup Google"
+      rm -rf $SYSTEM/app/MarkupGooglePrebuilt
+      rm -rf $SYSTEM/product/app/MarkupGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/app/MarkupGooglePrebuilt
+    fi
+    if [ "$supported_messages_config" == "true" ] || [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Messages Google"
+      rm -rf $SYSTEM/app/MessagesGooglePrebuilt
+      rm -rf $SYSTEM/product/app/MessagesGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/app/MessagesGooglePrebuilt
+      rm -rf $SYSTEM/priv-app/CarrierServices
+      rm -rf $SYSTEM/product/priv-app/CarrierServices
+      rm -rf $SYSTEM/system_ext/priv-app/CarrierServices
+    fi
+    if [ "$supported_photos_config" == "true" ] || [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Photos Google"
+      rm -rf $SYSTEM/app/PhotosGooglePrebuilt
+      rm -rf $SYSTEM/product/app/PhotosGooglePrebuilt
+      rm -rf $SYSTEM/system_ext/app/PhotosGooglePrebuilt
+    fi
+    if [ "$supported_soundpicker_config" == "true" ] || [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall SoundPicker Google"
+      rm -rf $SYSTEM/app/SoundPickerPrebuilt
+      rm -rf $SYSTEM/product/app/SoundPickerPrebuilt
+      rm -rf $SYSTEM/system_ext/app/SoundPickerPrebuilt
+    fi
+    if [ "$supported_tts_config" == "true" ] || [ "$TARGET_TTS_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall TTS Google"
+      rm -rf $SYSTEM/app/GoogleTTSPrebuilt
+      rm -rf $SYSTEM/product/app/GoogleTTSPrebuilt
+      rm -rf $SYSTEM/system_ext/app/GoogleTTSPrebuilt
+    fi
+    if [ "$supported_vanced_config" == "true" ] || [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall YouTube Vanced"
+      rm -rf $SYSTEM/app/YouTube
+      rm -rf $SYSTEM/product/app/YouTube
+      rm -rf $SYSTEM/system_ext/app/YouTube
+      ui_print "- Uninstall Vanced MicroG"
+      rm -rf $SYSTEM/app/MicroGGMSCore
+      rm -rf $SYSTEM/product/app/MicroGGMSCore
+      rm -rf $SYSTEM/system_ext/app/MicroGGMSCore
+    fi
+    if [ "$supported_wellbeing_config" == "true" ] || [ "$TARGET_WELLBEING_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Wellbeing Google"
+      rm -rf $SYSTEM/priv-app/WellbeingPrebuilt
+      rm -rf $SYSTEM/product/priv-app/WellbeingPrebuilt
+      rm -rf $SYSTEM/system_ext/priv-app/WellbeingPrebuilt
+    fi
+  fi
+  # Systemless Uninstall
+  if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$supported_module_config" == "true" ]; then
+    if [ "$supported_assistant_config" == "true" ] || [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Assistant Google"
+      rm -rf $SYSTEM_SYSTEM/priv-app/Velvet
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/Velvet
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Velvet
+    fi
+    if [ "$supported_bromite_config" == "true" ] || [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Bromite Browser"
+      rm -rf $SYSTEM_SYSTEM/app/BromitePrebuilt
+      rm -rf $SYSTEM_SYSTEM/app/WebViewBromite
+      rm -rf $SYSTEM_SYSTEM/product/app/BromitePrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/app/WebViewBromite
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/BromitePrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/WebViewBromite
+    fi
+    if [ "$supported_calculator_config" == "true" ] || [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Calculator Google"
+      rm -rf $SYSTEM_SYSTEM/app/CalculatorGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/app/CalculatorGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/CalculatorGooglePrebuilt
+    fi
+    if [ "$supported_calendar_config" == "true" ] || [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Calendar Google"
+      rm -rf $SYSTEM_SYSTEM/app/CalendarGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/app/CalendarGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/CalendarGooglePrebuilt
+    fi
+    if [ "$supported_chrome_config" == "true" ] || [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Chrome Google"
+      rm -rf $SYSTEM_SYSTEM/app/ChromeGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/app/TrichromeLibrary
+      rm -rf $SYSTEM_SYSTEM/product/app/ChromeGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/app/TrichromeLibrary
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/ChromeGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/TrichromeLibrary
+    fi
+    if [ "$supported_contacts_config" == "true" ] || [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Contacts Google"
+      rm -rf $SYSTEM_SYSTEM/priv-app/ContactsGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/ContactsGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/ContactsGooglePrebuilt
+    fi
+    if [ "$supported_deskclock_config" == "true" ] || [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Deskclock Google"
+      rm -rf $SYSTEM_SYSTEM/app/DeskClockGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/app/DeskClockGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/DeskClockGooglePrebuilt
+    fi
+    if [ "$supported_dialer_config" == "true" ] || [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Dialer Google"
+      rm -rf $SYSTEM_SYSTEM/priv-app/DialerGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/DialerGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/DialerGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.dialer.framework.xml
+      rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.dialer.framework.xml
+      rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.dialer.framework.xml
+      rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.dialer.support.xml
+      rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.dialer.support.xml
+      rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.dialer.support.xml
+      rm -rf $SYSTEM_SYSTEM/framework/com.google.android.dialer.support.jar
+      rm -rf $SYSTEM_SYSTEM/product/framework/com.google.android.dialer.support.jar
+      rm -rf $SYSTEM_SYSTEM/system_ext/framework/com.google.android.dialer.support.jar
+    fi
+    if [ "$supported_dps_config" == "true" ] || [ "$TARGET_DPS_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall DPS Google"
+      rm -rf $SYSTEM_SYSTEM/priv-app/DPSGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/DPSGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.as.xml
+      rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.as.xml
+      rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
+    fi
+    if [ "$supported_gboard_config" == "true" ] || [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Keyboard Google"
+      rm -rf $SYSTEM_SYSTEM/app/GboardGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/app/GboardGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/GboardGooglePrebuilt
+    fi
+    if [ "$supported_gearhead_config" == "true" ] || [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Android Auto"
+      rm -rf $SYSTEM_SYSTEM/priv-app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/GearheadGooglePrebuilt
+    fi
+    if [ "$supported_launcher_config" == "true" ] || [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Pixel Launcher"
+      rm -rf $SYSTEM_SYSTEM/priv-app/NexusLauncherPrebuilt.apk
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/NexusLauncherPrebuilt.apk
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt.apk
+      rm -rf $SYSTEM_SYSTEM/priv-app/QuickAccessWallet.apk
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet.apk
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet.apk
+      rm -rf $SYSTEM_SYSTEM/etc/permissions/nexuslauncher.xml
+      rm -rf $SYSTEM_SYSTEM/product/etc/permissions/nexuslauncher.xml
+      rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/nexuslauncher.xml
+      rm -rf $SYSTEM_SYSTEM/etc/sysconfig/nexuslauncher.xml
+      rm -rf $SYSTEM_SYSTEM/product/etc/sysconfig/nexuslauncher.xml
+      rm -rf $SYSTEM_SYSTEM/system_ext/etc/sysconfig/nexuslauncher.xml
+    fi
+    if [ "$supported_maps_config" == "true" ] || [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Maps Google"
+      rm -rf $SYSTEM_SYSTEM/app/MapsGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/app/MapsGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/MapsGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.maps.xml
+      rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.maps.xml
+      rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.maps.xml
+      rm -rf $SYSTEM_SYSTEM/framework/com.google.android.maps.jar
+      rm -rf $SYSTEM_SYSTEM/product/framework/com.google.android.maps.jar
+      rm -rf $SYSTEM_SYSTEM/system_ext/framework/com.google.android.maps.jar
+    fi
+    if [ "$supported_markup_config" == "true" ] || [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Markup Google"
+      rm -rf $SYSTEM_SYSTEM/app/MarkupGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/app/MarkupGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/MarkupGooglePrebuilt
+    fi
+    if [ "$supported_messages_config" == "true" ] || [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Messages Google"
+      rm -rf $SYSTEM_SYSTEM/app/MessagesGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/app/MessagesGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/MessagesGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/priv-app/CarrierServices
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/CarrierServices
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/CarrierServices
+    fi
+    if [ "$supported_photos_config" == "true" ] || [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Photos Google"
+      rm -rf $SYSTEM_SYSTEM/app/PhotosGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/app/PhotosGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/PhotosGooglePrebuilt
+    fi
+    if [ "$supported_soundpicker_config" == "true" ] || [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall SoundPicker Google"
+      rm -rf $SYSTEM_SYSTEM/app/SoundPickerPrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/app/SoundPickerPrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/SoundPickerPrebuilt
+    fi
+    if [ "$supported_tts_config" == "true" ] || [ "$TARGET_TTS_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall TTS Google"
+      rm -rf $SYSTEM_SYSTEM/app/GoogleTTSPrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/app/GoogleTTSPrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/GoogleTTSPrebuilt
+    fi
+    if [ "$supported_vanced_config" == "true" ] || [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall YouTube Vanced"
+      rm -rf $SYSTEM_SYSTEM/app/YouTube
+      rm -rf $SYSTEM_SYSTEM/product/app/YouTube
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/YouTube
+      ui_print "- Uninstall Vanced MicroG"
+      rm -rf $SYSTEM_SYSTEM/app/MicroGGMSCore
+      rm -rf $SYSTEM_SYSTEM/product/app/MicroGGMSCore
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/MicroGGMSCore
+    fi
+    if [ "$supported_wellbeing_config" == "true" ] || [ "$TARGET_WELLBEING_GOOGLE" == "true" ]; then
+      ui_print "- Uninstall Wellbeing Google"
+      rm -rf $SYSTEM_SYSTEM/priv-app/WellbeingPrebuilt
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/WellbeingPrebuilt
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/WellbeingPrebuilt
+    fi
+  fi
+}
+
+post_restore_pkg() {
+  if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$supported_module_config" == "false" ]; then
+    for f in "$ANDROID_DATA/.backup"; do
+      if [ "$supported_contacts_config" == "true" ] || [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
+        cp -fR $f/Contacts $SYSTEM/priv-app/Contacts > /dev/null 2>&1
+        cp -f $f/com.android.contacts.xml $SYSTEM/etc/permissions > /dev/null 2>&1
+      fi
+      if [ "$supported_dialer_config" == "true" ] || [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
+        cp -fR $f/Dialer $SYSTEM/priv-app/Dialer > /dev/null 2>&1
+        cp -f $f/com.android.dialer.xml $SYSTEM/etc/permissions > /dev/null 2>&1
+      fi
+      if [ "$supported_gboard_config" == "true" ] || [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
+        cp -fR $f/LatinIME $SYSTEM/app/LatinIME > /dev/null 2>&1
+      fi
+      if [ "$supported_launcher_config" == "true" ] || [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
+        cp -fR $f/Launcher3QuickStep $SYSTEM/priv-app/Launcher3QuickStep > /dev/null 2>&1
+        cp -fR $f/QuickAccessWallet $SYSTEM/priv-app/QuickAccessWallet > /dev/null 2>&1
+        cp -f $f/com.android.launcher3.xml $SYSTEM/etc/permissions > /dev/null 2>&1
+      fi
+      if [ "$supported_messages_config" == "true" ] || [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
+        cp -fR $f/messaging $SYSTEM/app/messaging > /dev/null 2>&1
+      fi
+      if [ "$supported_photos_config" == "true" ] || [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
+        cp -fR $f/Gallery2 $SYSTEM/app/Gallery2 > /dev/null 2>&1
+      fi
+    done
+  fi
+  if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$supported_module_config" == "true" ]; then
+    if [ "$supported_bromite_config" == "true" ] || [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
+      rm -rf $SYSTEM_SYSTEM/app/Jelly
+      rm -rf $SYSTEM_SYSTEM/priv-app/Jelly
+      rm -rf $SYSTEM_SYSTEM/product/app/Jelly
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/Jelly
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/Jelly
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
+    fi
+    if [ "$supported_calculator_config" == "true" ] || [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
+      rm -rf $SYSTEM_SYSTEM/app/ExactCalculator
+      rm -rf $SYSTEM_SYSTEM/priv-app/ExactCalculator
+      rm -rf $SYSTEM_SYSTEM/product/app/ExactCalculator
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/ExactCalculator
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/ExactCalculator
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/ExactCalculator
+    fi
+    if [ "$supported_calendar_config" == "true" ] || [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
+      rm -rf $SYSTEM_SYSTEM/app/Calendar
+      rm -rf $SYSTEM_SYSTEM/app/Etar
+      rm -rf $SYSTEM_SYSTEM/priv-app/Calendar
+      rm -rf $SYSTEM_SYSTEM/priv-app/Etar
+      rm -rf $SYSTEM_SYSTEM/product/app/Calendar
+      rm -rf $SYSTEM_SYSTEM/product/app/Etar
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/Calendar
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/Etar
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/Calendar
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/Etar
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Calendar
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Etar
+    fi
+    if [ "$supported_chrome_config" == "true" ] || [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
+      rm -rf $SYSTEM_SYSTEM/app/Jelly
+      rm -rf $SYSTEM_SYSTEM/priv-app/Jelly
+      rm -rf $SYSTEM_SYSTEM/product/app/Jelly
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/Jelly
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/Jelly
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
+    fi
+    if [ "$supported_contacts_config" == "true" ] || [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
+      rm -rf $SYSTEM_SYSTEM/app/Contacts
+      rm -rf $SYSTEM_SYSTEM/priv-app/Contacts
+      rm -rf $SYSTEM_SYSTEM/product/app/Contacts
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/Contacts
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/Contacts
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Contacts
+    fi
+    if [ "$supported_deskclock_config" == "true" ] || [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ]; then
+      rm -rf $SYSTEM_SYSTEM/app/DeskClock
+      rm -rf $SYSTEM_SYSTEM/priv-app/DeskClock
+      rm -rf $SYSTEM_SYSTEM/product/app/DeskClock
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/DeskClock
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/DeskClock
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/DeskClock
+    fi
+    if [ "$supported_dialer_config" == "true" ] || [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
+      rm -rf $SYSTEM_SYSTEM/app/Dialer
+      rm -rf $SYSTEM_SYSTEM/priv-app/Dialer
+      rm -rf $SYSTEM_SYSTEM/product/app/Dialer
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/Dialer
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/Dialer
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Dialer
+      rm -rf $SYSTEM_SYSTEM/etc/permissions/com.android.dialer.xml
+      rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.android.dialer.xml
+      rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.android.dialer.xml
+    fi
+    if [ "$supported_gboard_config" == "true" ] || [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
+      rm -rf $SYSTEM_SYSTEM/app/LatinIME
+      rm -rf $SYSTEM_SYSTEM/priv-app/LatinIME
+      rm -rf $SYSTEM_SYSTEM/product/app/LatinIME
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/LatinIME
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/LatinIME
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/LatinIME
+    fi
+    if [ "$supported_launcher_config" == "true" ] || [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
+      rm -rf $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep
+      rm -rf $SYSTEM_SYSTEM/priv-app/QuickAccessWallet
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet
+    fi
+    if [ "$supported_messages_config" == "true" ] || [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
+      rm -rf $SYSTEM_SYSTEM/app/messaging
+      rm -rf $SYSTEM_SYSTEM/priv-app/messaging
+      rm -rf $SYSTEM_SYSTEM/product/app/messaging
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/messaging
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/messaging
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/messaging
+    fi
+    if [ "$supported_photos_config" == "true" ] || [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
+      rm -rf $SYSTEM_SYSTEM/app/Gallery2
+      rm -rf $SYSTEM_SYSTEM/priv-app/Gallery2
+      rm -rf $SYSTEM_SYSTEM/product/app/Gallery2
+      rm -rf $SYSTEM_SYSTEM/product/priv-app/Gallery2
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/Gallery2
+      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Gallery2
+    fi
+  fi
+}
+
 # Set addon install target
 target_sys() {
   # Set default packages and unpack
@@ -6651,10 +7117,12 @@ set_addon_zip_sep() {
 # Set addon package installation
 set_addon_install() {
   if [ "$ADDON" == "conf" ]; then
-    if [ "$addon_config" == "true" ]; then pre_installed_pkg; set_addon_zip_conf; fi
+    if [ "$addon_config" == "true" ] && [ "$supported_addon_wipe" == "false" ]; then pre_installed_pkg; set_addon_zip_conf; fi
+    if [ "$addon_config" == "true" ] && [ "$supported_addon_wipe" == "true" ]; then check_backup; pre_restore_pkg; post_restore_pkg; fi
     if [ "$addon_config" == "false" ]; then on_abort "! Skip installing additional packages"; fi
   fi
-  if [ "$ADDON" == "sep" ]; then set_addon_zip_sep; fi
+  if [ "$ADDON" == "sep" ] && [ "$supported_addon_wipe" == "false" ]; then set_addon_zip_sep; fi
+  if [ "$ADDON" == "sep" ] && [ "$supported_addon_wipe" == "true" ]; then check_backup; pre_restore_pkg; post_restore_pkg; fi
 }
 
 # Set addon package installation
@@ -6663,6 +7131,7 @@ addon_ota_prop() { [ "$supported_module_config" == "false" ] && insert_line $SYS
 # Install config dependent packages
 on_addon_install() {
   print_title_addon
+  on_addon_wipe
   set_addon_install
   addon_ota_prop
 }
@@ -6986,6 +7455,7 @@ post_install_wipe() {
   rm -rf $SYSTEM_APP/DeskClock
   rm -rf $SYSTEM_APP/Gallery2
   rm -rf $SYSTEM_APP/Jelly
+  rm -rf $SYSTEM_APP/LatinIME
   # SetupWizard components and library
   rm -rf $SYSTEM_PRIV_APP/AndroidMigratePrebuilt
   rm -rf $SYSTEM_PRIV_APP/GoogleBackupTransport
@@ -7061,6 +7531,7 @@ post_backup() {
         cp -fR $f/DeskClock $ANDROID_DATA/.backup/DeskClock > /dev/null 2>&1
         cp -fR $f/Gallery2 $ANDROID_DATA/.backup/Gallery2 > /dev/null 2>&1
         cp -fR $f/Jelly $ANDROID_DATA/.backup/Jelly > /dev/null 2>&1
+        cp -fR $f/LatinIME $ANDROID_DATA/.backup/LatinIME > /dev/null 2>&1
         cp -fR $f/Launcher3QuickStep $ANDROID_DATA/.backup/Launcher3QuickStep > /dev/null 2>&1
         cp -fR $f/QuickAccessWallet $ANDROID_DATA/.backup/QuickAccessWallet > /dev/null 2>&1
         cp -f $f/com.android.launcher3.xml $ANDROID_DATA/.backup > /dev/null 2>&1
@@ -7100,6 +7571,7 @@ post_restore() {
       cp -fR $f/DeskClock $SYSTEM/app/DeskClock > /dev/null 2>&1
       cp -fR $f/Gallery2 $SYSTEM/app/Gallery2 > /dev/null 2>&1
       cp -fR $f/Jelly $SYSTEM/app/Jelly > /dev/null 2>&1
+      cp -fR $f/LatinIME $SYSTEM/app/LatinIME > /dev/null 2>&1
       cp -fR $f/Launcher3QuickStep $SYSTEM/priv-app/Launcher3QuickStep > /dev/null 2>&1
       cp -fR $f/QuickAccessWallet $SYSTEM/priv-app/QuickAccessWallet > /dev/null 2>&1
       cp -f $f/com.android.launcher3.xml $SYSTEM/etc/permissions > /dev/null 2>&1
