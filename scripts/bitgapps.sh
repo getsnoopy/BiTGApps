@@ -26,6 +26,9 @@ if [ -z $backuptool_ab ]; then TMP="/tmp"; else TMP="/postinstall/tmp"; fi
 # Set busybox
 BBDIR="/tmp"
 
+# Always use busybox backup from /data
+BBBAK="/data/busybox"
+
 # Run scripts in the busybox environment
 case "$1" in
   backup)
@@ -34,6 +37,8 @@ case "$1" in
     export RUN_STAGE_BACKUP="true"
     if [ -e "$BBDIR/busybox-arm" ]; then
       exec $BBDIR/busybox-arm sh "$TMP/addon.d/backup.sh" "$@"
+    elif [ -e "$BBBAK/busybox-arm" ]; then
+      exec $BBBAK/busybox-arm sh "$TMP/addon.d/backup.sh" "$@"
     else
       source "$TMP/addon.d/backup.sh" "$@"
     fi
@@ -44,6 +49,8 @@ case "$1" in
     export RUN_STAGE_RESTORE="true"
     if [ -e "$BBDIR/busybox-arm" ]; then
       exec $BBDIR/busybox-arm sh "$TMP/addon.d/restore.sh" "$@"
+    elif [ -e "$BBBAK/busybox-arm" ]; then
+      exec $BBBAK/busybox-arm sh "$TMP/addon.d/restore.sh" "$@"
     else
       source "$TMP/addon.d/restore.sh" "$@"
     fi

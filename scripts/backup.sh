@@ -53,7 +53,7 @@ trampoline() {
 }
 
 check_busybox() {
-  if [ "$1" == "backup" ] && [ "$BB" == "0" ]; then
+  if [ "$1" == "backup" ] && [ ! -f "$BB" ]; then
     ui_print "*************************"
     ui_print " BiTGApps addon.d failed "
     ui_print "*************************"
@@ -760,14 +760,12 @@ copy_ota_script() {
   done
 }
 
-# Static functions
-trampoline
-check_busybox
-
 # Runtime functions
 case "$1" in
   backup)
     if [ "$RUN_STAGE_BACKUP" == "true" ]; then
+      trampoline
+      check_busybox "$@"
       ui_print "BackupTools: Starting BiTGApps backup"
       set_bb
       unmount_all
