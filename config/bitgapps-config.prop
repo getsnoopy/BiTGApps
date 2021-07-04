@@ -4,6 +4,7 @@
 # Description     : Install BiTGApps systemless
 #                   Install SetupWizard components
 #                   Install Additional GApps packages
+#                   Uninstall Additional GApps packages
 #                   Uninstall BiTGApps components
 #
 # Copyright       : Copyright (C) 2018-2021 TheHitMan7
@@ -33,9 +34,6 @@ ro.config.setupwizard=false
 # Property for enabling Addons installation
 ro.config.addon=false
 
-# Property for enabling Addons space check
-ro.config.stack=false
-
 # Property for installing Addons
 ro.config.assistant=false
 ro.config.bromite=false
@@ -58,8 +56,33 @@ ro.config.tts=false
 ro.config.vanced=false
 ro.config.wellbeing=false
 
-# Property for wiping Addons components
+# Property for enabling Addons usage
+ro.config.stack=false
+
+# Property for enabling Addons Uninstall
 ro.addon.wipe=false
+
+# Property for uninstalling Addons
+ro.assistant.wipe=false
+ro.bromite.wipe=false
+ro.calculator.wipe=false
+ro.calendar.wipe=false
+ro.chrome.wipe=false
+ro.contacts.wipe=false
+ro.deskclock.wipe=false
+ro.dialer.wipe=false
+ro.dps.wipe=false
+ro.gboard.wipe=false
+ro.gearhead.wipe=false
+ro.launcher.wipe=false
+ro.maps.wipe=false
+ro.markup.wipe=false
+ro.messages.wipe=false
+ro.photos.wipe=false
+ro.soundpicker.wipe=false
+ro.tts.wipe=false
+ro.vanced.wipe=false
+ro.wellbeing.wipe=false
 
 # Property for wiping BiTGApps components
 ro.config.wipe=false

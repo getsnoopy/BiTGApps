@@ -647,7 +647,8 @@ backupdirSYSAddon() {
     $SYSTEM/framework/com.google.android.maps.jar"
 
   SYS_OVERLAY_ADDON="
-    $SYSTEM/overlay/NexusLauncherOverlay"
+    $SYSTEM/overlay/NexusLauncherOverlay
+    $SYSTEM/overlay/DPSOverlay"
 
   SYS_USR_ADDON="
     $SYSTEM/usr/share/ime/google/d3_lms

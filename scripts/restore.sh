@@ -1637,7 +1637,8 @@ restoredirTMPAddon() {
     $TMP/addon/framework/com.google.android.maps.jar"
 
   TMP_OVERLAY_ADDON="
-    $TMP/addon/overlay/NexusLauncherOverlay"
+    $TMP/addon/overlay/NexusLauncherOverlay
+    $TMP/addon/overlay/DPSOverlay"
 
   TMP_SHARE_ADDON="
     $TMP/addon/usr/d3_lms"

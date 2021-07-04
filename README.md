@@ -23,6 +23,7 @@ Here are feature highlights:
 * Our own OTA survival script
 * Install BiTGApps package directly from booted system
 * Install BiTGApps package systemlessly as magisk module
+* Uninstall Addons and its AOSP counter part added back in system
 * You can uninstall BiTGApps without doing clean installation
 
 ## Packages
@@ -66,7 +67,7 @@ License terms used by the BiTGApps installer and pre-built packages
    * BiTGApps installer scripts are provided in such a way that it can be freely used to make personal build. But does not allow its public release.
    * You are required to give us full credits for any work you may be using from us.
    * We kindly ask you to use common sense and don't profit entirely off the work of others. Renaming pre-built packages, strip author from installer and upload it anywhere as your own, be this with or without monetization.
-   * The pre-built packages of BiTGApps are made available under the terms that they can be freely used for personal use only, and are not allowed to be mirrored to the public other than BiTGApps.org
+   * The pre-built packages of BiTGApps are made available under the terms that they can be freely used for personal use only, and are not allowed to be mirrored to the public other than these sources [[1]](https://bitgapps.github.io),[[2]](https://bitgapps.com),[[3]](https://bitgapps.org).
 
 ## Author
 
