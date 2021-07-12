@@ -8649,7 +8649,7 @@ df_system() {
     # Get the available space left on the device
     size=`df -k $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Default capacity
-    $supported_addon_stack && CAPACITY="1186000"
+    $supported_addon_stack && CAPACITY="1207000"
     # Selected capacity
     if [ "$supported_addon_stack" == "false" ]; then
       # Size of each package
@@ -8728,7 +8728,7 @@ df_product() {
     # Get the available space left on the device
     size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Default capacity
-    $supported_addon_stack && CAPACITY="1186000"
+    $supported_addon_stack && CAPACITY="1207000"
     # Selected capacity
     if [ "$supported_addon_stack" == "false" ]; then
       # Size of each package
@@ -8807,7 +8807,7 @@ df_systemExt() {
     # Get the available space left on the device
     size=`df -k /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Default capacity
-    $supported_addon_stack && CAPACITY="1186000"
+    $supported_addon_stack && CAPACITY="1207000"
     # Selected capacity
     if [ "$supported_addon_stack" == "false" ]; then
       # Size of each package
@@ -8872,7 +8872,7 @@ df_systemExt() {
   fi
 }
 
-# Check available space is greater than 170MB(170000KB) or 1.186GB(1186000KB)
+# Check available space is greater than 170MB(170000KB) or 1.207GB(1207000KB)
 diskfree() {
   # Do not execute this function, when ZIPTYPE target is set to 'patch'
   if [ "$ZIPTYPE" == "basic" ] || [ "$ZIPTYPE" == "addon" ]; then
