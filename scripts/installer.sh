@@ -4244,7 +4244,7 @@ pre_restore_pkg() {
       rm -rf $SYSTEM/product/etc/permissions/com.google.android.as.xml
       rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
       rm -rf $SYSTEM/etc/firmware/music_detector.descriptor
-      rm -rf $SYSTEM/etc/firmware/music_detector.descriptor
+      rm -rf $SYSTEM/etc/firmware/music_detector.sound_model
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.dps"
     fi
@@ -4437,7 +4437,7 @@ pre_restore_pkg() {
       rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.as.xml
       rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
       rm -rf $SYSTEM_SYSTEM/etc/firmware/music_detector.descriptor
-      rm -rf $SYSTEM_SYSTEM/etc/firmware/music_detector.descriptor
+      rm -rf $SYSTEM_SYSTEM/etc/firmware/music_detector.sound_model
     fi
     if [ "$supported_gboard_wipe" == "true" ] || [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Keyboard Google"
@@ -4531,36 +4531,40 @@ pre_restore_pkg() {
   fi
 }
 
+# Wipe package before, incase restore function is used more than once,
+# to prevent copying of package inside already restored package.
+# This is due to the recursive function used to copy whole package,
+# instead of APK file.
 post_restore_pkg() {
   if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$supported_module_config" == "false" ]; then
     for f in "$ANDROID_DATA/.backup"; do
       if [ "$supported_contacts_wipe" == "true" ] || [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
-        cp -fR $f/Contacts $SYSTEM/priv-app/Contacts > /dev/null 2>&1
+        rm -rf rm -rf $SYSTEM/priv-app/Contacts && cp -fR $f/Contacts $SYSTEM/priv-app/Contacts > /dev/null 2>&1
         cp -f $f/com.android.contacts.xml $SYSTEM/etc/permissions > /dev/null 2>&1
       fi
       if [ "$supported_dialer_wipe" == "true" ] || [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
-        cp -fR $f/Dialer $SYSTEM/priv-app/Dialer > /dev/null 2>&1
+        rm -rf rm -rf $SYSTEM/priv-app/Dialer && cp -fR $f/Dialer $SYSTEM/priv-app/Dialer > /dev/null 2>&1
         cp -f $f/com.android.dialer.xml $SYSTEM/etc/permissions > /dev/null 2>&1
       fi
       if [ "$supported_gboard_wipe" == "true" ] || [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
-        cp -fR $f/LatinIME $SYSTEM/app/LatinIME > /dev/null 2>&1
+        rm -rf rm -rf $SYSTEM/app/LatinIME && cp -fR $f/LatinIME $SYSTEM/app/LatinIME > /dev/null 2>&1
       fi
       if [ "$supported_launcher_wipe" == "true" ] || [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
-        cp -fR $f/Launcher3 $SYSTEM/priv-app/Launcher3 > /dev/null 2>&1
-        cp -fR $f/Launcher3QuickStep $SYSTEM/priv-app/Launcher3QuickStep > /dev/null 2>&1
-        cp -fR $f/NexusLauncherRelease $SYSTEM/priv-app/NexusLauncherRelease > /dev/null 2>&1
-        cp -fR $f/QuickStep $SYSTEM/priv-app/QuickStep > /dev/null 2>&1
-        cp -fR $f/QuickStepLauncher $SYSTEM/priv-app/QuickStepLauncher > /dev/null 2>&1
-        cp -fR $f/TrebuchetQuickStep $SYSTEM/priv-app/TrebuchetQuickStep > /dev/null 2>&1
-        cp -fR $f/QuickAccessWallet $SYSTEM/priv-app/QuickAccessWallet > /dev/null 2>&1
+        rm -rf rm -rf $SYSTEM/priv-app/Launcher3 && cp -fR $f/Launcher3 $SYSTEM/priv-app/Launcher3 > /dev/null 2>&1
+        rm -rf rm -rf $SYSTEM/priv-app/Launcher3QuickStep && cp -fR $f/Launcher3QuickStep $SYSTEM/priv-app/Launcher3QuickStep > /dev/null 2>&1
+        rm -rf rm -rf $SYSTEM/priv-app/NexusLauncherRelease && cp -fR $f/NexusLauncherRelease $SYSTEM/priv-app/NexusLauncherRelease > /dev/null 2>&1
+        rm -rf rm -rf $SYSTEM/priv-app/QuickStep && cp -fR $f/QuickStep $SYSTEM/priv-app/QuickStep > /dev/null 2>&1
+        rm -rf rm -rf $SYSTEM/priv-app/QuickStepLauncher && cp -fR $f/QuickStepLauncher $SYSTEM/priv-app/QuickStepLauncher > /dev/null 2>&1
+        rm -rf rm -rf $SYSTEM/priv-app/TrebuchetQuickStep && cp -fR $f/TrebuchetQuickStep $SYSTEM/priv-app/TrebuchetQuickStep > /dev/null 2>&1
+        rm -rf rm -rf $SYSTEM/priv-app/QuickAccessWallet && cp -fR $f/QuickAccessWallet $SYSTEM/priv-app/QuickAccessWallet > /dev/null 2>&1
         cp -f $f/com.android.launcher3.xml $SYSTEM/etc/permissions > /dev/null 2>&1
         cp -f $f/privapp_whitelist_com.android.launcher3-ext.xml $SYSTEM/etc/permissions > /dev/null 2>&1
       fi
       if [ "$supported_messages_wipe" == "true" ] || [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
-        cp -fR $f/messaging $SYSTEM/app/messaging > /dev/null 2>&1
+        rm -rf rm -rf $SYSTEM/app/messaging && cp -fR $f/messaging $SYSTEM/app/messaging > /dev/null 2>&1
       fi
       if [ "$supported_photos_wipe" == "true" ] || [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
-        cp -fR $f/Gallery2 $SYSTEM/app/Gallery2 > /dev/null 2>&1
+        rm -rf rm -rf $SYSTEM/app/Gallery2 && cp -fR $f/Gallery2 $SYSTEM/app/Gallery2 > /dev/null 2>&1
       fi
     done
   fi
