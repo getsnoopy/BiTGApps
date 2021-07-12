@@ -1253,13 +1253,27 @@ on_release_tag() {
   unsupported_release="$TARGET_GAPPS_RELEASE"
 }
 
+# Set Config Version Property
+on_config_version() {
+  supported_gapps_version="$(get_prop "ro.gapps.version")"
+  supported_addon_version="$(get_prop "ro.addon.version")"
+  supported_patch_version="$(get_prop "ro.patch.version")"
+}
+
 # Match config version prior to current release
 config_version() {
-  supported_config_version="$(get_prop "ro.config.version")"
-  if [ -f "$BITGAPPS_CONFIG" ] && [ ! -n "$(cat $BITGAPPS_CONFIG | grep ro.config.version)" ]; then
+  if [ -f "$BITGAPPS_CONFIG" ] && { [ ! -n "$(cat $BITGAPPS_CONFIG | grep ro.gapps.version)" ] &&
+                                    [ ! -n "$(cat $BITGAPPS_CONFIG | grep ro.addon.version)" ] &&
+                                    [ ! -n "$(cat $BITGAPPS_CONFIG | grep ro.patch.version)" ]; }; then
     on_abort "! Invalid config found. Aborting..."
   fi
-  if [ -f "$BITGAPPS_CONFIG" ] && [ ! "$supported_config_version" == "$TARGET_GAPPS_RELEASE" ]; then
+  if [ -f "$BITGAPPS_CONFIG" ] && [ "$ZIPTYPE" == "basic" ] && [ ! "$supported_gapps_version" == "$TARGET_GAPPS_CONFIG" ]; then
+    on_abort "! Invalid config version. Aborting..."
+  fi
+  if [ -f "$BITGAPPS_CONFIG" ] && [ "$ZIPTYPE" == "addon" ] && [ ! "$supported_addon_version" == "$TARGET_ADDON_CONFIG" ]; then
+    on_abort "! Invalid config version. Aborting..."
+  fi
+  if [ -f "$BITGAPPS_CONFIG" ] && [ "$ZIPTYPE" == "patch" ] && [ ! "$supported_patch_version" == "$TARGET_PATCH_CONFIG" ]; then
     on_abort "! Invalid config version. Aborting..."
   fi
 }
@@ -8447,6 +8461,7 @@ pre_install() {
     on_version_check
     on_platform_check
     on_target_platform
+    on_config_version
     config_version
     on_addon_stack
     on_addon_check
@@ -8469,6 +8484,7 @@ pre_install() {
     on_version_check
     on_platform_check
     on_target_platform
+    on_config_version
     config_version
     on_addon_stack
     on_addon_check
@@ -8501,6 +8517,7 @@ pre_install() {
     build_platform
     check_platform
     clean_inst
+    on_config_version
     config_version
     on_module_check
     on_wipe_check
@@ -8530,6 +8547,7 @@ pre_install() {
     build_platform
     check_platform
     clean_inst
+    on_config_version
     config_version
     on_module_check
     on_wipe_check
@@ -8549,6 +8567,7 @@ pre_install() {
     profile
     on_version_check
     on_platform_check
+    on_config_version
     config_version
     on_module_check
   fi
@@ -8565,6 +8584,7 @@ pre_install() {
     profile
     on_version_check
     on_platform_check
+    on_config_version
     config_version
     on_module_check
   fi

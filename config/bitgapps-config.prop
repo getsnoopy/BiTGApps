@@ -23,7 +23,9 @@
 ##############################################################
 
 # Do not modify version property; Auto generated
-ro.config.version=
+ro.gapps.version=
+ro.addon.version=
+ro.patch.version=
 
 # Property for installing BiTGApps systemless
 ro.config.systemless=false
