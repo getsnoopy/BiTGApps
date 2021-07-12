@@ -8318,13 +8318,21 @@ patch_install() {
 
 # Systemless installation
 print_title_module() {
-  if [ "$supported_module_config" == "true" ]; then
+  if [ "$supported_module_config" == "true" ] && [ "$addon_wipe" == "false" ]; then
     ui_print "- Systemless config detected"
     ui_print "- Switch systemless install"
   fi
-  if [ "$supported_module_config" == "false" ]; then
+  if [ "$supported_module_config" == "false" ] && [ "$addon_wipe" == "false" ]; then
     ui_print "! Systemless config not found"
     ui_print "! Skip systemless install"
+  fi
+  if [ "$supported_module_config" == "true" ] && [ "$addon_wipe" == "true" ]; then
+    ui_print "- Systemless config detected"
+    ui_print "- Switch systemless uninstall"
+  fi
+  if [ "$supported_module_config" == "false" ] && [ "$addon_wipe" == "true" ]; then
+    ui_print "! Systemless config not found"
+    ui_print "! Skip systemless uninstall"
   fi
 }
 
