@@ -8214,6 +8214,7 @@ usf_v26() {
   if [ "$android_sdk" == "28" ]; then ZIP="zip/Keystore28.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore28.tar.xz -C $TMP_KEYSTORE; fi
   if [ "$android_sdk" == "29" ]; then ZIP="zip/Keystore29.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore29.tar.xz -C $TMP_KEYSTORE; fi
   if [ "$android_sdk" == "30" ]; then ZIP="zip/Keystore30.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore30.tar.xz -C $TMP_KEYSTORE; fi
+  if [ "$android_sdk" == "31" ]; then ZIP="zip/Keystore31.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore31.tar.xz -C $TMP_KEYSTORE; fi
   # Do not install, if Android SDK 25 detected
   if [ ! "$android_sdk" == "25" ]; then
     # Up-to Android SDK 29, patched keystore executable required
@@ -8232,6 +8233,19 @@ usf_v26() {
     cp -f $TMP_KEYSTORE/keystore $SYSTEM/bin/keystore
     chmod 0755 $SYSTEM/bin/keystore
     chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
+    # Install patched libkeystore
+    rm -rf $SYSTEM/lib64/libkeystore-attestation-application-id.so
+    cp -f $TMP_KEYSTORE/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
+    chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so
+    chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
+  fi
+  # For Android SDK 31, patched keystore executable and library required
+  if [ "$android_sdk" == "31" ]; then
+    # Install patched keystore
+    rm -rf $SYSTEM/bin/keystore2
+    cp -f $TMP_KEYSTORE/keystore2 $SYSTEM/bin/keystore2
+    chmod 0755 $SYSTEM/bin/keystore2
+    chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore2"
     # Install patched libkeystore
     rm -rf $SYSTEM/lib64/libkeystore-attestation-application-id.so
     cp -f $TMP_KEYSTORE/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
