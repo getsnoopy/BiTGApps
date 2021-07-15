@@ -9117,7 +9117,7 @@ df_systemExt() {
 }
 
 df_systemExt_fallback() {
-  if [ "$ZIPTYPE" == "basic" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "30" ]; then
+  if [ "$ZIPTYPE" == "basic" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; then
     # Get the available space left on the device
     size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     CAPACITY="150000"
@@ -9126,7 +9126,7 @@ df_systemExt_fallback() {
     # Print partition type
     partition="Product"
   fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "30" ]; then
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; then
     # Get the available space left on the device
     size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Default capacity
@@ -9189,7 +9189,7 @@ df_systemExt_fallback() {
     # Print partition type
     partition="Product"
   fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "30" ]; then
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; then
     # Get the available space left on the device
     size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Size of each package, according to Android platform
@@ -9263,13 +9263,17 @@ diskfree() {
       ui_print "! No space left in device. Aborting..."
       on_abort "! Current space: $ds_hr"
     fi
+    # Set additional target for free space check
+    if [ "$partition" == "SystemExt" ]; then
+      TARGET_FALLBACK_CHECK="true"
+    fi
   fi
 }
 
 # Check available space is greater than 150MB(150000KB) or 1.11GB(1110000KB)/1.25GB(1250000KB)
 diskfreefallback() {
   # Do not execute this function, when ZIPTYPE target is set to 'patch'
-  if [ "$ZIPTYPE" == "basic" ] || [ "$ZIPTYPE" == "addon" ]; then
+  if { [ "$ZIPTYPE" == "basic" ] || [ "$ZIPTYPE" == "addon" ]; } && [ "$TARGET_FALLBACK_CHECK" == "true" ]; then
     if [[ "$size" -gt "$CAPACITY" ]]; then
       TARGET_ANDROID_PARTITION="true"
     fi
