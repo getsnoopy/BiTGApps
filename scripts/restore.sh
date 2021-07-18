@@ -416,7 +416,12 @@ mount_all() {
       is_mounted $ANDROID_ROOT || NEED_BLOCK_MOUNT="true"
       if [ "$NEED_BLOCK_MOUNT" == "true" ]; then
         # Export system block
-        . /data/SYSTEM_BLOCK
+        [ -f "/data/SYSTEM_BLOCK" ] && . /data/SYSTEM_BLOCK
+        # Was data wiped or not decrypted ?
+        if [ ! -f "/data/SYSTEM_BLOCK" ]; then
+          ui_print "BackupTools: Failed to restore BiTGApps backup"
+          exit 1
+        fi
         # Mount using block device
         mount $BLK $ANDROID_ROOT
       fi
