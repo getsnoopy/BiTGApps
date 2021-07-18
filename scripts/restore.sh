@@ -549,6 +549,19 @@ set_pathmap() {
   fi
 }
 
+# Set fallback installation layout
+set_fallback_pathmap() {
+  if [ -f "/data/FALLBACK_PARTITION" ]; then
+    SYSTEM="$S/product"
+    ensure_dir
+  fi
+  # Was data wiped or not decrypted ?
+  if [ ! -f "/data/FALLBACK_PARTITION" ]; then
+    ui_print "BackupTools: Failed to restore BiTGApps backup"
+    exit 1
+  fi
+}
+
 # Confirm that restore is done
 conf_addon_restore() { if [ -f $S/config.prop ]; then ui_print "BackupTools: BiTGApps backup restored"; else ui_print "BackupTools: Failed to restore BiTGApps backup"; fi; }
 
@@ -2192,6 +2205,7 @@ case "$1" in
       system_layout
       on_version_check
       set_pathmap
+      set_fallback_pathmap
       on_rwg_status_check
       lim_aosp_install
       restoredirTMP

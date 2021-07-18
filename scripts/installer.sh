@@ -9263,7 +9263,7 @@ diskfree() {
       ui_print "! No space left in device. Aborting..."
       on_abort "! Current space: $ds_hr"
     fi
-    # Set additional target for free space check
+    # Set additional target for free space check, if partition is SystemExt
     if [ "$partition" == "SystemExt" ]; then
       TARGET_FALLBACK_CHECK="true"
     fi
@@ -9283,6 +9283,8 @@ diskfreefallback() {
       # Set target for overriding pathmap
       BOARD_USES_PRODUCT_PARTITION="true"
       BOARD_USES_SYSTEMEXT_PARTITION="true"
+      # Set OTA script target for overriding pathmap
+      echo "product" >> $ANDROID_DATA/FALLBACK_PARTITION
     else
       ui_print "! No space left in device. Aborting..."
       on_abort "! Current space: $ds_hr"
