@@ -8740,12 +8740,12 @@ df_system() {
     # Get the available space left on the device
     size=`df -k $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Default capacity
-    if [ "$supported_addon_stack" == "true" ]; then
+    if [ "$supported_addon_stack" == "false" ]; then
       [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1110000"
       [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1250000"
     fi
     # Selected capacity
-    if [ "$supported_addon_stack" == "false" ]; then
+    if [ "$supported_addon_stack" == "true" ]; then
       # Size of each package, according to Android platform
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         $supported_assistant_config && ASSISTANT="142000" || ASSISTANT="0"
@@ -8870,12 +8870,12 @@ df_product() {
     # Get the available space left on the device
     size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Default capacity
-    if [ "$supported_addon_stack" == "true" ]; then
+    if [ "$supported_addon_stack" == "false" ]; then
       [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1110000"
       [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1250000"
     fi
     # Selected capacity
-    if [ "$supported_addon_stack" == "false" ]; then
+    if [ "$supported_addon_stack" == "true" ]; then
       # Size of each package, according to Android platform
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         $supported_assistant_config && ASSISTANT="142000" || ASSISTANT="0"
@@ -9000,12 +9000,12 @@ df_systemExt() {
     # Get the available space left on the device
     size=`df -k /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Default capacity
-    if [ "$supported_addon_stack" == "true" ]; then
+    if [ "$supported_addon_stack" == "false" ]; then
       [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1110000"
       [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1250000"
     fi
     # Selected capacity
-    if [ "$supported_addon_stack" == "false" ]; then
+    if [ "$supported_addon_stack" == "true" ]; then
       # Size of each package, according to Android platform
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         $supported_assistant_config && ASSISTANT="142000" || ASSISTANT="0"
@@ -9130,12 +9130,12 @@ df_systemExt_fallback() {
     # Get the available space left on the device
     size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Default capacity
-    if [ "$supported_addon_stack" == "true" ]; then
+    if [ "$supported_addon_stack" == "false" ]; then
       [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1110000"
       [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1250000"
     fi
     # Selected capacity
-    if [ "$supported_addon_stack" == "false" ]; then
+    if [ "$supported_addon_stack" == "true" ]; then
       # Size of each package, according to Android platform
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         $supported_assistant_config && ASSISTANT="142000" || ASSISTANT="0"
