@@ -7948,6 +7948,11 @@ post_uninstall() {
     rm -rf $ANDROID_DATA/data/com.google.android*
     # Wipe module
     rm -rf $ANDROID_DATA/adb/modules/BiTGApps
+    # Wipe GooglePlayServices from system
+    for gms in $SYSTEM/priv-app $SYSTEM/product/priv-app $SYSTEM/system_ext/priv-app
+    do
+      rm -rf $gms/PrebuiltGmsCore*
+    done
     # Remove properties from system build
     remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
     remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
