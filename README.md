@@ -36,7 +36,6 @@ Here are feature highlights:
 ![](https://img.shields.io/badge/BiTGApps-%20R29-green.svg?style=flat-square)
 ![](https://img.shields.io/badge/Addon-%20R17-red.svg?style=flat-square)
 ![](https://img.shields.io/badge/Patch-%20R8-teal.svg?style=flat-square)
-![](https://img.shields.io/badge/APK-%20v1.3.1-blue.svg?style=flat-square)
 
 ## Downloads
 
