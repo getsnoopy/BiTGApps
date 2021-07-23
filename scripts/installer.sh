@@ -64,10 +64,6 @@ env_vars() {
   # Set platform instruction from utility script
   ARMEABI="$ARMEABI"
   AARCH64="$AARCH64"
-  # Patch
-  TARGET_BOOTLOG_PATCH="$TARGET_BOOTLOG_PATCH"
-  TARGET_SAFETYNET_PATCH="$TARGET_SAFETYNET_PATCH"
-  TARGET_WHITELIST_PATCH="$TARGET_WHITELIST_PATCH"
   # Set addon for installation
   if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ]; then
     TARGET_ASSISTANT_GOOGLE="$TARGET_ASSISTANT_GOOGLE"
@@ -205,15 +201,6 @@ remove_line() {
     local line=$(grep -n "$2" $1 | head -n1 | cut -d: -f1)
     sed -i "${line}d" $1
   fi
-}
-
-# patch_cmdline <cmdline entry name> <replacement string>
-patch_cmdline() {
-  local cmdfile cmdtmp
-  cmdfile="split_img/boot.img-cmdline"
-  cmdtmp=$(cat $cmdfile)
-  echo "$cmdtmp $2" > $cmdfile
-  sed -i -e 's;  *; ;g' -e 's;[ \t]*$;;' $cmdfile
 }
 
 # Set package defaults
@@ -614,7 +601,7 @@ check_rw_status() {
     fi
     if [ "$device_vendorpartition" == "true" ]; then
       vendor_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/vendor?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
-      if [ ! "$vendor_as_rw" == "rw" ]; then on_abort "! Read-only /vendor partition. Aborting..."; fi
+      if [ ! "$vendor_as_rw" == "rw" ]; then ui_print "! Read-only vendor partition"; fi
     fi
     if [ -n "$(cat $fstab | grep /product)" ]; then
       product_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/product?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
@@ -636,7 +623,7 @@ check_rw_status() {
     fi
     if [ "$device_vendorpartition" == "true" ]; then
       vendor_as_rw=`$l/grep -w /vendor /proc/mounts | $l/grep -ow rw | head -n 1`
-      if [ ! "$vendor_as_rw" == "rw" ]; then on_abort "! Read-only /vendor partition. Aborting..."; fi
+      if [ ! "$vendor_as_rw" == "rw" ]; then ui_print "! Read-only vendor partition"; fi
     fi
     if [ "$($l/grep -w -o /product /proc/mounts)" ]; then
       product_as_rw=`$l/grep -w /product /proc/mounts | $l/grep -ow rw | head -n 1`
@@ -1254,26 +1241,14 @@ on_release_tag() {
 }
 
 # Set Config Version Property
-on_config_version() {
-  supported_gapps_version="$(get_prop "ro.gapps.version")"
-  supported_addon_version="$(get_prop "ro.addon.version")"
-  supported_patch_version="$(get_prop "ro.patch.version")"
-}
+on_config_version() { supported_config_version="$(get_prop "ro.config.version")"; }
 
 # Match config version prior to current release
 config_version() {
-  if [ -f "$BITGAPPS_CONFIG" ] && { [ ! -n "$(cat $BITGAPPS_CONFIG | grep ro.gapps.version)" ] &&
-                                    [ ! -n "$(cat $BITGAPPS_CONFIG | grep ro.addon.version)" ] &&
-                                    [ ! -n "$(cat $BITGAPPS_CONFIG | grep ro.patch.version)" ]; }; then
+  if [ -f "$BITGAPPS_CONFIG" ] && [ ! -n "$(cat $BITGAPPS_CONFIG | grep ro.config.version)" ]; then
     on_abort "! Invalid config found. Aborting..."
   fi
-  if [ -f "$BITGAPPS_CONFIG" ] && [ "$ZIPTYPE" == "basic" ] && [ ! "$supported_gapps_version" == "$TARGET_GAPPS_CONFIG" ]; then
-    on_abort "! Invalid config version. Aborting..."
-  fi
-  if [ -f "$BITGAPPS_CONFIG" ] && [ "$ZIPTYPE" == "addon" ] && [ ! "$supported_addon_version" == "$TARGET_ADDON_CONFIG" ]; then
-    on_abort "! Invalid config version. Aborting..."
-  fi
-  if [ -f "$BITGAPPS_CONFIG" ] && [ "$ZIPTYPE" == "patch" ] && [ ! "$supported_patch_version" == "$TARGET_PATCH_CONFIG" ]; then
+  if [ -f "$BITGAPPS_CONFIG" ] && [ ! "$supported_config_version" == "$TARGET_CONFIG_VERSION" ]; then
     on_abort "! Invalid config version. Aborting..."
   fi
 }
@@ -1286,6 +1261,9 @@ on_module_check() {
     supported_module_config="$(get_prop "ro.config.systemless")"
   fi
 }
+
+# Safetynet Patch Config Property
+on_safetynet_check() { supported_safetynet_config="$(get_prop "ro.config.safetynet")"; }
 
 # SetupWizard Config Property
 on_setup_check() { supported_setup_config="$(get_prop "ro.config.setupwizard")"; }
@@ -1352,7 +1330,7 @@ on_wipe_check() { supported_wipe_config="$(get_prop "ro.config.wipe")"; }
 
 # Set SDK and Version check property
 on_version_check() {
-  if [ "$ZIPTYPE" == "addon" ] || [ "$ZIPTYPE" == "patch" ]; then
+  if [ "$ZIPTYPE" == "addon" ]; then
     android_sdk="$(get_prop "ro.build.version.sdk")"
   fi
   if [ "$ZIPTYPE" == "basic" ]; then
@@ -7960,17 +7938,11 @@ post_uninstall() {
   fi
 }
 
+# Boot Image Patcher
 boot_image_editor() {
-  if [ "$device_architecture" == "armeabi-v7a" ]; then
-    ZIP="zip/AIK_arm.tar.xz"
-    [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
-    tar -xf $ZIP_FILE/AIK_arm.tar.xz -C $TMP_AIK
-  fi
-  if [ "$device_architecture" == "arm64-v8a" ]; then
-    ZIP="zip/AIK_arm64.tar.xz"
-    [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
-    tar -xf $ZIP_FILE/AIK_arm64.tar.xz -C $TMP_AIK
-  fi
+  ZIP="zip/AIK.tar.xz"
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  tar -xf $ZIP_FILE/AIK.tar.xz -C $TMP_AIK
   chmod -R 0755 $TMP_AIK
 }
 
@@ -7978,146 +7950,7 @@ boot_image_editor() {
 patch_bootimg() {
   # Extract logcat script
   [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "init.logcat.rc" -d "$TMP"
-  if [ ! "$SYSTEM_ROOT" == "true" ] && [ ! "$device_abpartition" == "true" ] && [ ! "$SUPER_PARTITION" == "true" ]; then
-    cd $TMP_AIK
-    # Lets see what fstab tells me
-    if [ "$BOOTMODE" == "false" ]; then
-      block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
-      dd if="$block" of="boot.img" > /dev/null 2>&1
-    fi
-    # Extract using block device
-    if [ "$BOOTMODE" == "true" ]; then
-      block=`find /dev/block \( -type b -o -type c -o -type l \) -iname boot | head -n 1`
-      dd if="$block" of="boot.img" > /dev/null 2>&1
-    fi
-    ./unpackimg.sh boot.img > /dev/null 2>&1
-    if [ -f "split_img/boot.img-cmdline" ] && [ -f "ramdisk/init.rc" ]; then
-      ui_print "- Apply bootlog patch"
-      if [ ! -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
-        sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' ramdisk/init.rc
-        cp -f $TMP/init.logcat.rc ramdisk/init.logcat.rc
-        chmod 0750 ramdisk/init.logcat.rc
-        chcon -h u:object_r:rootfs:s0 "ramdisk/init.logcat.rc"
-      fi
-      if [ -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
-        rm -rf ramdisk/init.logcat.rc
-        cp -f $TMP/init.logcat.rc ramdisk/init.logcat.rc
-        chmod 0750 ramdisk/init.logcat.rc
-        chcon -h u:object_r:rootfs:s0 "ramdisk/init.logcat.rc"
-      fi
-      # Change selinux state to permissive, without this bootlog script failed to execute
-      [ -n "$(cat split_img/boot.img-cmdline | grep 'androidboot.selinux=permissive')" ] && patch_cmdline androidboot.selinux 'androidboot.selinux=permissive'
-      ./repackimg.sh > /dev/null 2>&1
-      dd if="image-new.img" of="$block" > /dev/null 2>&1
-      rm -rf boot.img
-      rm -rf image-new.img
-      ./cleanup.sh > /dev/null 2>&1
-      cd ../../..
-    else
-      rm -rf boot.img
-      cd ../../..
-      ui_print "! Error unpacking boot image"
-    fi
-  fi
-  if [ "$SYSTEM_ROOT" == "true" ] || [ "$device_abpartition" == "true" ] || [ "$SUPER_PARTITION" == "true" ]; then
-    cd $TMP_AIK
-    # Lets see what fstab tells me
-    if [ "$BOOTMODE" == "false" ]; then
-      block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
-      dd if="$block" of="boot.img" > /dev/null 2>&1
-    fi
-    # Extract using block device
-    if [ "$BOOTMODE" == "true" ]; then
-      block=`find /dev/block \( -type b -o -type c -o -type l \) -iname boot | head -n 1`
-      dd if="$block" of="boot.img" > /dev/null 2>&1
-    fi
-    ./unpackimg.sh boot.img > /dev/null 2>&1
-    cd ../../..
-    if [ -f "$TMP_AIK/split_img/boot.img-cmdline" ] && [ -f "/system_root/init.rc" ]; then
-      ui_print "- Apply bootlog patch"
-      cd $TMP_AIK
-      # Change selinux state to permissive, without this bootlog script failed to execute
-      [ -n "$(cat split_img/boot.img-cmdline | grep 'androidboot.selinux=permissive')" ] && patch_cmdline androidboot.selinux 'androidboot.selinux=permissive'
-      ./repackimg.sh > /dev/null 2>&1
-      dd if="image-new.img" of="$block" > /dev/null 2>&1
-      rm -rf boot.img
-      rm -rf image-new.img
-      ./cleanup.sh > /dev/null 2>&1
-      cd ../../..
-      if [ -n "$(cat /system_root/init.rc | grep ro.zygote)" ]; then
-        if [ ! -n "$(cat /system_root/init.rc | grep init.logcat.rc)" ]; then
-          sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' /system_root/init.rc
-          cp -f $TMP/init.logcat.rc /system_root/init.logcat.rc
-          chmod 0750 /system_root/init.logcat.rc
-          chcon -h u:object_r:rootfs:s0 "/system_root/init.logcat.rc"
-        fi
-        if [ -n "$(cat /system_root/init.rc | grep init.logcat.rc)" ]; then
-          rm -rf /system_root/init.logcat.rc
-          cp -f $TMP/init.logcat.rc /system_root/init.logcat.rc
-          chmod 0750 /system_root/init.logcat.rc
-          chcon -h u:object_r:rootfs:s0 "/system_root/init.logcat.rc"
-        fi
-      fi
-    else
-      cd $TMP_AIK
-      ./cleanup.sh > /dev/null 2>&1
-      rm -rf boot.img
-      cd ../../..
-      ui_print "! Error unpacking boot image"
-    fi
-  fi
-  if [ "$SYSTEM_ROOT" == "true" ] || [ "$device_abpartition" == "true" ] || [ "$SUPER_PARTITION" == "true" ]; then
-    cd $TMP_AIK
-    # Lets see what fstab tells me
-    if [ "$BOOTMODE" == "false" ]; then
-      block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
-      dd if="$block" of="boot.img" > /dev/null 2>&1
-    fi
-    # Extract using block device
-    if [ "$BOOTMODE" == "true" ]; then
-      block=`find /dev/block \( -type b -o -type c -o -type l \) -iname boot | head -n 1`
-      dd if="$block" of="boot.img" > /dev/null 2>&1
-    fi
-    ./unpackimg.sh boot.img > /dev/null 2>&1
-    cd ../../..
-    if [ -f "$TMP_AIK/split_img/boot.img-cmdline" ] && [ -f "/system_root/system/etc/init/hw/init.rc" ]; then
-      ui_print "- Apply bootlog patch"
-      cd $TMP_AIK
-      # Change selinux state to permissive, without this bootlog script failed to execute
-      [ -n "$(cat split_img/boot.img-cmdline | grep 'androidboot.selinux=permissive')" ] && patch_cmdline androidboot.selinux 'androidboot.selinux=permissive'
-      ./repackimg.sh > /dev/null 2>&1
-      dd if="image-new.img" of="$block" > /dev/null 2>&1
-      rm -rf boot.img
-      rm -rf image-new.img
-      ./cleanup.sh > /dev/null 2>&1
-      cd ../../..
-      INIT="/system_root/system/etc/init/hw/init.rc"
-      if [ -n "$(cat $INIT | grep ro.zygote)" ]; then
-        if [ ! -n "$(cat $INIT | grep init.logcat.rc)" ]; then
-          sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' $INIT
-          cp -f $TMP/init.logcat.rc /system_root/system/etc/init/hw/init.logcat.rc
-          chmod 0644 /system_root/system/etc/init/hw/init.logcat.rc
-          chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.logcat.rc"
-        fi
-        if [ -n "$(cat $INIT | grep init.logcat.rc)" ]; then
-          rm -rf /system_root/system/etc/init/hw/init.logcat.rc
-          cp -f $TMP/init.logcat.rc /system_root/system/etc/init/hw/init.logcat.rc
-          chmod 0644 /system_root/system/etc/init/hw/init.logcat.rc
-          chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.logcat.rc"
-        fi
-      fi
-    else
-      cd $TMP_AIK
-      ./cleanup.sh > /dev/null 2>&1
-      rm -rf boot.img
-      cd ../../..
-      ui_print "! Error unpacking boot image"
-    fi
-  fi
-}
-
-# Update boot image security patch level
-spl_update_boot() {
+  # Switch path to AIK
   cd $TMP_AIK
   # Lets see what fstab tells me
   if [ "$BOOTMODE" == "false" ]; then
@@ -8129,21 +7962,108 @@ spl_update_boot() {
     block=`find /dev/block \( -type b -o -type c -o -type l \) -iname boot | head -n 1`
     dd if="$block" of="boot.img" > /dev/null 2>&1
   fi
-  ./unpackimg.sh boot.img > /dev/null 2>&1
-  if [ -f "split_img/boot.img-os_patch_level" ]; then
-    rm -rf split_img/boot.img-os_patch_level
-    ui_print "- Patching Boot SPL"
-    echo "2021-07" >> split_img/boot.img-os_patch_level
-    chmod 0644 split_img/boot.img-os_patch_level
-    ./repackimg.sh > /dev/null 2>&1
-    dd if="image-new.img" of="$block" > /dev/null 2>&1
+  ./magiskboot unpack -h boot.img > /dev/null 2>&1
+  if [ -f "header" ]; then
+    # Change selinux state to permissive, without this bootlog script failed to execute
+    sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
+  fi
+  if [ -f "ramdisk.cpio" ]; then
+    mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk
+  fi
+  if [ -f "ramdisk/init.rc" ]; then
+    if [ ! -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
+      sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' ramdisk/init.rc
+      cp -f $TMP/init.logcat.rc ramdisk/init.logcat.rc
+      chmod 0750 ramdisk/init.logcat.rc
+      chcon -h u:object_r:rootfs:s0 "ramdisk/init.logcat.rc"
+    fi
+    if [ -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
+      rm -rf ramdisk/init.logcat.rc
+      cp -f $TMP/init.logcat.rc ramdisk/init.logcat.rc
+      chmod 0750 ramdisk/init.logcat.rc
+      chcon -h u:object_r:rootfs:s0 "ramdisk/init.logcat.rc"
+    fi
+    rm -rf ramdisk.cpio && cd $TMP_AIK/ramdisk
+    find $TMP_AIK/ramdisk | $TMP_AIK/cpio -ov > $TMP_AIK/ramdisk.cpio
+    # Checkout ramdisk path
+    cd ../
+    ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    dd if="mboot.img" of="$block" > /dev/null 2>&1
+    # Wipe boot dump
     rm -rf boot.img
-    rm -rf image-new.img
-    ./cleanup.sh > /dev/null 2>&1
+    rm -rf mboot.img
+    rm -rf ramdisk
+    ./magiskboot cleanup > /dev/null 2>&1
+    cd ../../..
+  fi
+  if [ ! -f "ramdisk/init.rc" ]; then
+    ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    dd if="mboot.img" of="$block" > /dev/null 2>&1
+    # Wipe boot dump
+    rm -rf boot.img
+    rm -rf mboot.img
+    ./magiskboot cleanup > /dev/null 2>&1
+    cd ../../..
+  fi
+  # Wipe ramdisk dump
+  rm -rf $TMP_AIK/ramdisk
+  # Patch root file system component
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/init.rc" ] && [ -n "$(cat /system_root/init.rc | grep ro.zygote)" ]; }; then
+    if [ ! -n "$(cat /system_root/init.rc | grep init.logcat.rc)" ]; then
+      sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' /system_root/init.rc
+      cp -f $TMP/init.logcat.rc /system_root/init.logcat.rc
+      chmod 0750 /system_root/init.logcat.rc
+      chcon -h u:object_r:rootfs:s0 "/system_root/init.logcat.rc"
+    fi
+    if [ -n "$(cat /system_root/init.rc | grep init.logcat.rc)" ]; then
+      rm -rf /system_root/init.logcat.rc
+      cp -f $TMP/init.logcat.rc /system_root/init.logcat.rc
+      chmod 0750 /system_root/init.logcat.rc
+      chcon -h u:object_r:rootfs:s0 "/system_root/init.logcat.rc"
+    fi
+  fi
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+    if [ ! -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
+      sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' /system_root/system/etc/init/hw/init.rc
+      cp -f $TMP/init.logcat.rc /system_root/system/etc/init/hw/init.logcat.rc
+      chmod 0644 /system_root/system/etc/init/hw/init.logcat.rc
+      chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.logcat.rc"
+    fi
+    if [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
+      rm -rf /system_root/system/etc/init/hw/init.logcat.rc
+      cp -f $TMP/init.logcat.rc /system_root/system/etc/init/hw/init.logcat.rc
+      chmod 0644 /system_root/system/etc/init/hw/init.logcat.rc
+      chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.logcat.rc"
+    fi
+  fi
+}
+
+# Update boot image security patch level
+spl_update_boot() {
+  # Switch path to AIK
+  cd $TMP_AIK
+  # Lets see what fstab tells me
+  if [ "$BOOTMODE" == "false" ]; then
+    block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
+    dd if="$block" of="boot.img" > /dev/null 2>&1
+  fi
+  # Extract using block device
+  if [ "$BOOTMODE" == "true" ]; then
+    block=`find /dev/block \( -type b -o -type c -o -type l \) -iname boot | head -n 1`
+    dd if="$block" of="boot.img" > /dev/null 2>&1
+  fi
+  ./magiskboot unpack -h boot.img > /dev/null 2>&1
+  if [ -f "header" ]; then
+    sed -i '/os_patch_level/c\os_patch_level=2021-07' header
+    ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    dd if="mboot.img" of="$block" > /dev/null 2>&1
+    rm -rf boot.img
+    rm -rf mboot.img
+    ./magiskboot cleanup > /dev/null 2>&1
     cd ../../..
     export TARGET_SPLIT_IMAGE="true"
   else
-    ./cleanup.sh > /dev/null 2>&1
+    ./magiskboot cleanup > /dev/null 2>&1
     rm -rf boot.img
     cd ../../..
     export TARGET_SPLIT_IMAGE="false"
@@ -8152,7 +8072,6 @@ spl_update_boot() {
 
 # Apply safetynet patch on system/vendor build
 set_cts_patch() {
-  ui_print "- Updating system properties"
   # Ext Build fingerprint
   if [ -n "$(cat $SYSTEM/build.prop | grep ro.system.build.fingerprint)" ]; then
     CTS_DEFAULT_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint="
@@ -8221,7 +8140,6 @@ set_cts_patch() {
       insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
     fi
   fi
-  ui_print "- Updating vendor properties"
   if [ "$device_vendorpartition" == "true" ]; then
     # Build security patch
     if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.security_patch)" ]; then
@@ -8310,24 +8228,18 @@ usf_v26() {
 
 # Apply CTS patch
 on_cts_patch() {
-  spl_update_boot
-  if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
-    set_cts_patch
-    usf_v26
-    ui_print "- CTS patch installed"
-  else
-    on_abort "! Error installing CTS patch"
+  if [ "$supported_safetynet_config" == "true" ]; then
+    spl_update_boot
+    if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
+      set_cts_patch
+      usf_v26
+    fi
   fi
-}
-
-check_partition_status() {
-  if [ "$SYSTEM_ROOT" == "true" ]; then on_abort "! Unsupported partition layout. Aborting..."; fi
-  if [ "$device_abpartition" == "true" ]; then on_abort "! Unsupported partition layout. Aborting..."; fi
-  if [ "$SUPER_PARTITION" == "true" ]; then on_abort "! Unsupported partition layout. Aborting..."; fi
 }
 
 # Remove Privileged App Whitelist property from boot image
 boot_whitelist_permission() {
+  # Switch path to AIK
   cd $TMP_AIK
   # Lets see what fstab tells me
   if [ "$BOOTMODE" == "false" ]; then
@@ -8339,31 +8251,31 @@ boot_whitelist_permission() {
     block=`find /dev/block \( -type b -o -type c -o -type l \) -iname boot | head -n 1`
     dd if="$block" of="boot.img" > /dev/null 2>&1
   fi
-  ./unpackimg.sh boot.img > /dev/null 2>&1
+  ./magiskboot unpack -h boot.img > /dev/null 2>&1
+  if [ -f "ramdisk.cpio" ]; then
+    mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk
+  fi
   if [ -f "ramdisk/default.prop" ] && [ -n "$(cat ramdisk/default.prop | grep control_privapp_permissions)" ]; then
-    ui_print "- Purge whitelist property"
-    grep -v "$PROPFLAG" ramdisk/default.prop > ramdisk/prop.default
-    rm -rf ramdisk/default.prop
-    mv ramdisk/prop.default ramdisk/default.prop
-    chmod 0600 ramdisk/default.prop
-    ./repackimg.sh > /dev/null 2>&1
-    dd if="image-new.img" of="$block" > /dev/null 2>&1
+    sed -i '/ro.control_privapp_permissions=enforce/c\ro.control_privapp_permissions=disable' default.prop
+    rm -rf ramdisk.cpio && cd $TMP_AIK/ramdisk
+    find $TMP_AIK/ramdisk | $TMP_AIK/cpio -ov > $TMP_AIK/ramdisk.cpio
+    # Checkout ramdisk path
+    cd ../
+    ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    dd if="mboot.img" of="$block" > /dev/null 2>&1
+    # Wipe boot dump
     rm -rf boot.img
-    rm -rf image-new.img
-    ./cleanup.sh > /dev/null 2>&1
+    rm -rf mboot.img
+    rm -rf ramdisk
+    ./magiskboot cleanup > /dev/null 2>&1
     cd ../../..
   else
-    ui_print "! No whitelist property found"
-    ./cleanup.sh > /dev/null 2>&1
+    ./magiskboot cleanup > /dev/null 2>&1
     rm -rf boot.img
     cd ../../..
   fi
-}
-
-patch_install() {
-  if [ "$ZIPTYPE" == "patch" ] && [ "$BOOTMODE" == "false" ]; then if [ "$TARGET_BOOTLOG_PATCH" == "true" ]; then boot_image_editor; patch_bootimg; on_installed; fi; fi
-  if [ "$ZIPTYPE" == "patch" ] && [ "$BOOTMODE" == "false" ]; then if [ "$TARGET_SAFETYNET_PATCH" == "true" ]; then boot_image_editor; on_cts_patch; on_installed; fi; fi
-  if [ "$ZIPTYPE" == "patch" ] && [ "$BOOTMODE" == "false" ]; then if [ "$TARGET_WHITELIST_PATCH" == "true" ]; then boot_image_editor; check_partition_status; boot_whitelist_permission; on_installed; fi; fi
+  # Wipe ramdisk dump
+  rm -rf $TMP_AIK/ramdisk
 }
 
 # Systemless installation
@@ -8598,6 +8510,7 @@ pre_install() {
     on_module_check
     on_wipe_check
     set_wipe_config
+    on_safetynet_check
   fi
   if [ "$ZIPTYPE" == "basic" ] && [ "$BOOTMODE" == "true" ]; then
     on_partition_check
@@ -8628,41 +8541,7 @@ pre_install() {
     on_module_check
     on_wipe_check
     set_wipe_config
-  fi
-  if [ "$ZIPTYPE" == "patch" ] && [ "$BOOTMODE" == "false" ]; then
-    on_partition_check
-    on_fstab_check
-    ab_partition
-    system_as_root
-    super_partition
-    vendor_mnt
-    mount_all
-    check_rw_status
-    system_layout
-    mount_status
-    profile
-    on_version_check
-    on_platform_check
-    on_config_version
-    config_version
-    on_module_check
-  fi
-  if [ "$ZIPTYPE" == "patch" ] && [ "$BOOTMODE" == "true" ]; then
-    on_partition_check
-    ab_partition
-    system_as_root
-    super_partition
-    vendor_mnt
-    mount_BM
-    check_rw_status
-    system_layout
-    mount_status
-    profile
-    on_version_check
-    on_platform_check
-    on_config_version
-    config_version
-    on_module_check
+    on_safetynet_check
   fi
 }
 
@@ -9298,7 +9177,7 @@ diskfreefallback() {
 }
 
 chk_disk() {
-  if [ ! "$ZIPTYPE" == "patch" ] && [ "$wipe_config" == "false" ]; then
+  if [ "$wipe_config" == "false" ]; then
     chk_product
     chk_system_Ext
     df_system
@@ -9400,9 +9279,12 @@ post_install() {
     fix_gms_hide
     fix_module_perm
     module_info
+    boot_image_editor
+    patch_bootimg
+    on_cts_patch
+    boot_whitelist_permission
     on_installed
   fi
-  if [ "$ZIPTYPE" == "patch" ]; then build_defaults; mk_component; fi
 }
 
 # Begin installation
@@ -9411,7 +9293,6 @@ pre_install
 chk_disk
 post_install
 post_uninstall
-patch_install
 # end installation
 
 # end method

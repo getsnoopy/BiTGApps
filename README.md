@@ -10,21 +10,23 @@ Here are feature highlights:
 
 * Minimal build size
 * Package size less than 90MB
-* Battery Optimization for GMS Core and its component
+* Enable Battery Optimization for all GApps
+* Optimize Google Play Services for battery
 * Optimize APK files with Zipalign tool
 * Optimize application database with Sqlite tool
-* Safetynet Patch for passing CTS profile
 * Bootlog Patch for generating bootloop logs
+* Safetynet Patch for passing CTS profile
+* Whitelist Patch for disabling Privileged Permissions property
 * Disable Privileged Permissions Allowlisting functionality
-* Enable Battery Optimization for all GApps
-* It can be installed in Custom OS shipped with GApps
+* Installation over Custom OS shipped with GApps
 * Addon packages for supporting additional GApps packages
 * Disable Google SetupWizard installation
-* Our own OTA survival script
+* Optimized OTA survival script implementation
 * Install BiTGApps package directly from booted system
 * Install BiTGApps package systemlessly as magisk module
-* Uninstall Addons and its AOSP counter part added back in system
-* You can uninstall BiTGApps without doing clean installation
+* Ability to uninstall Additional GApps packages
+* Ability to restore AOSP counter part of Additional GApps packages
+* Ability to uninstall BiTGApps without doing clean installation
 
 ## Packages
 

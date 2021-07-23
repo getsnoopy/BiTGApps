@@ -3,6 +3,7 @@
 #
 # Description     : Install BiTGApps systemless
 #                   Install SetupWizard components
+#                   Install Safetynet patch
 #                   Install Additional GApps packages
 #                   Uninstall Additional GApps packages
 #                   Uninstall BiTGApps components
@@ -23,15 +24,16 @@
 ##############################################################
 
 # Do not modify version property; Auto generated
-ro.gapps.version=
-ro.addon.version=
-ro.patch.version=
+ro.config.version=
 
 # Property for installing BiTGApps systemless
 ro.config.systemless=false
 
 # Property for installing SetupWizard components
 ro.config.setupwizard=false
+
+# Property for installing Safetynet patch
+ro.config.safetynet=false
 
 # Property for enabling Addons installation
 ro.config.addon=false
