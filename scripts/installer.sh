@@ -459,23 +459,52 @@ mount_all() {
       ui_print "- Mounting /system"
       mount -o ro -t auto /dev/block/mapper/system$slot $ANDROID_ROOT > /dev/null 2>&1
       mount -o rw,remount -t auto /dev/block/mapper/system$slot $ANDROID_ROOT
+      is_mounted $ANDROID_ROOT || SYSTEM_DM_MOUNT="true"
+      if [ "$SYSTEM_DM_MOUNT" == "true" ]; then
+        if [ "$($l/grep -w -o /system_root $fstab)" ]; then
+          SYSTEM_MAPPER=`$l/grep -v '#' $fstab | $l/grep -E '/system_root' | $l/grep -oE '/dev/block/dm-[0-9]' | head -n 1`
+        fi
+        if [ "$($l/grep -w -o /system $fstab)" ]; then
+          SYSTEM_MAPPER=`$l/grep -v '#' $fstab | $l/grep -E '/system' | $l/grep -oE '/dev/block/dm-[0-9]' | head -n 1`
+        fi
+        mount -o ro -t auto $SYSTEM_MAPPER $ANDROID_ROOT > /dev/null 2>&1
+        mount -o rw,remount -t auto $SYSTEM_MAPPER $ANDROID_ROOT
+      fi
       is_mounted $ANDROID_ROOT || on_abort "! Cannot mount $ANDROID_ROOT. Aborting..."
       if [ "$device_vendorpartition" == "true" ]; then
         ui_print "- Mounting /vendor"
         mount -o ro -t auto /dev/block/mapper/vendor$slot $VENDOR > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/vendor$slot $VENDOR
+        is_mounted $VENDOR || VENDOR_DM_MOUNT="true"
+        if [ "$VENDOR_DM_MOUNT" == "true" ]; then
+          VENDOR_MAPPER=`$l/grep -v '#' $fstab | $l/grep -E '/vendor' | $l/grep -oE '/dev/block/dm-[0-9]' | head -n 1`
+          mount -o ro -t auto $VENDOR_MAPPER $VENDOR > /dev/null 2>&1
+          mount -o rw,remount -t auto $VENDOR_MAPPER $VENDOR
+        fi
         is_mounted $VENDOR || on_abort "! Cannot mount $VENDOR. Aborting..."
       fi
       if [ -n "$(cat $fstab | grep /product)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/product$slot /product
+        is_mounted /product || PRODUCT_DM_MOUNT="true"
+        if [ "$PRODUCT_DM_MOUNT" == "true" ]; then
+          PRODUCT_MAPPER=`$l/grep -v '#' $fstab | $l/grep -E '/product' | $l/grep -oE '/dev/block/dm-[0-9]' | head -n 1`
+          mount -o ro -t auto $PRODUCT_MAPPER /product > /dev/null 2>&1
+          mount -o rw,remount -t auto $PRODUCT_MAPPER /product
+        fi
         is_mounted /product || on_abort "! Cannot mount /product. Aborting..."
       fi
       if [ -n "$(cat $fstab | grep /system_ext)" ]; then
         ui_print "- Mounting /system_ext"
         mount -o ro -t auto /dev/block/mapper/system_ext$slot /system_ext > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/system_ext$slot /system_ext
+        is_mounted /system_ext || SYSTEMEXT_DM_MOUNT="true"
+        if [ "$SYSTEMEXT_DM_MOUNT" == "true" ]; then
+          SYSTEMEXT_MAPPER=`$l/grep -v '#' $fstab | $l/grep -E '/system_ext' | $l/grep -oE '/dev/block/dm-[0-9]' | head -n 1`
+          mount -o ro -t auto $SYSTEMEXT_MAPPER /system_ext > /dev/null 2>&1
+          mount -o rw,remount -t auto $SYSTEMEXT_MAPPER /system_ext
+        fi
         is_mounted /system_ext || on_abort "! Cannot mount /system_ext. Aborting..."
       fi
     fi

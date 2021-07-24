@@ -340,17 +340,46 @@ mount_all() {
       done
       mount -o ro -t auto /dev/block/mapper/system$slot $ANDROID_ROOT > /dev/null 2>&1
       mount -o rw,remount -t auto /dev/block/mapper/system$slot $ANDROID_ROOT
+      is_mounted $ANDROID_ROOT || SYSTEM_DM_MOUNT="true"
+      if [ "$SYSTEM_DM_MOUNT" == "true" ]; then
+        if [ "$($BB grep -w -o /system_root $fstab)" ]; then
+          SYSTEM_MAPPER=`$BB grep -v '#' $fstab | $BB grep -E '/system_root' | $BB grep -oE '/dev/block/dm-[0-9]' | head -n 1`
+        fi
+        if [ "$($BB grep -w -o /system $fstab)" ]; then
+          SYSTEM_MAPPER=`$BB grep -v '#' $fstab | $BB grep -E '/system' | $BB grep -oE '/dev/block/dm-[0-9]' | head -n 1`
+        fi
+        mount -o ro -t auto $SYSTEM_MAPPER $ANDROID_ROOT > /dev/null 2>&1
+        mount -o rw,remount -t auto $SYSTEM_MAPPER $ANDROID_ROOT
+      fi
       if [ "$device_vendorpartition" == "true" ]; then
         mount -o ro -t auto /dev/block/mapper/vendor$slot $VENDOR > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/vendor$slot $VENDOR
+        is_mounted $VENDOR || VENDOR_DM_MOUNT="true"
+        if [ "$VENDOR_DM_MOUNT" == "true" ]; then
+          VENDOR_MAPPER=`$BB grep -v '#' $fstab | $BB grep -E '/vendor' | $BB grep -oE '/dev/block/dm-[0-9]' | head -n 1`
+          mount -o ro -t auto $VENDOR_MAPPER $VENDOR > /dev/null 2>&1
+          mount -o rw,remount -t auto $VENDOR_MAPPER $VENDOR
+        fi
       fi
       if [ -n "$(cat $fstab | grep /product)" ]; then
         mount -o ro -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/product$slot /product
+        is_mounted /product || PRODUCT_DM_MOUNT="true"
+        if [ "$PRODUCT_DM_MOUNT" == "true" ]; then
+          PRODUCT_MAPPER=`$BB grep -v '#' $fstab | $BB grep -E '/product' | $BB grep -oE '/dev/block/dm-[0-9]' | head -n 1`
+          mount -o ro -t auto $PRODUCT_MAPPER /product > /dev/null 2>&1
+          mount -o rw,remount -t auto $PRODUCT_MAPPER /product
+        fi
       fi
       if [ -n "$(cat $fstab | grep /system_ext)" ]; then
         mount -o ro -t auto /dev/block/mapper/system_ext$slot /system_ext > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/system_ext$slot /system_ext
+        is_mounted /system_ext || SYSTEMEXT_DM_MOUNT="true"
+        if [ "$SYSTEMEXT_DM_MOUNT" == "true" ]; then
+          SYSTEMEXT_MAPPER=`$BB grep -v '#' $fstab | $BB grep -E '/system_ext' | $BB grep -oE '/dev/block/dm-[0-9]' | head -n 1`
+          mount -o ro -t auto $SYSTEMEXT_MAPPER /system_ext > /dev/null 2>&1
+          mount -o rw,remount -t auto $SYSTEMEXT_MAPPER /system_ext
+        fi
       fi
     fi
     if [ "$device_abpartition" == "false" ]; then
@@ -433,7 +462,7 @@ system_layout() {
   if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($BB grep -w -o /system $fstab)" ]; then
     export S="/system/system"
   fi
-  if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($l/grep -w -o /system_root /proc/mounts)" ]; then
+  if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($BB grep -w -o /system_root /proc/mounts)" ]; then
     export S="/system_root/system"
   fi
 }
