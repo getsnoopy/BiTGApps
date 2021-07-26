@@ -29,6 +29,33 @@ BBDIR="/tmp"
 # Always use busybox backup from /data
 BBBAK="/data/busybox"
 
+# Mount backup partitions
+mount /cache > /dev/null 2>&1
+mount /persist > /dev/null 2>&1
+mount /metadata > /dev/null 2>&1
+
+# Copy busybox backup
+if [ -e "/cache/busybox/busybox-arm" ]; then
+  cp -f /cache/busybox/busybox-arm $BBDIR/busybox-arm
+fi
+if [ -e "/persist/busybox/busybox-arm" ]; then
+  cp -f /persist/busybox/busybox-arm $BBDIR/busybox-arm
+fi
+if [ -e "/metadata/busybox/busybox-arm" ]; then
+  cp -f /metadata/busybox/busybox-arm $BBDIR/busybox-arm
+fi
+
+# Set runtime permission
+[ -e "$BBDIR/busybox-arm" ] && chmod +x $BBDIR/busybox-arm
+
+# Unmount backup partitions
+umount /cache > /dev/null 2>&1
+umount -l /cache > /dev/null 2>&1
+umount /persist > /dev/null 2>&1
+umount -l /persist > /dev/null 2>&1
+umount /metadata > /dev/null 2>&1
+umount -l /metadata > /dev/null 2>&1
+
 # Run scripts in the busybox environment
 case "$1" in
   backup)

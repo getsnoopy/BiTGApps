@@ -149,6 +149,29 @@ set_bb() {
   fi
 }
 
+# Create busybox backup in multiple locations to overcome encryption issue
+mk_busybox_backup() {
+  # Backup busybox in cache partition for OTA script
+  if [ -n "$(cat $fstab | grep /cache)" ]; then
+    rm -rf /cache/busybox
+    mkdir /cache/busybox
+    cp -f $TMP/busybox-arm /cache/busybox/busybox-arm
+    chmod -R 0755 /cache/busybox
+  fi
+  # Backup busybox in persist partition for OTA script
+  rm -rf /persist/busybox
+  mkdir /persist/busybox
+  cp -f $TMP/busybox-arm /persist/busybox/busybox-arm
+  chmod -R 0755 /persist/busybox
+  # Backup busybox in metadata partition for OTA script
+  if [ -n "$(cat $fstab | grep /metadata)" ]; then
+    rm -rf /metadata/busybox
+    mkdir /metadata/busybox
+    cp -f $TMP/busybox-arm /metadata/busybox/busybox-arm
+    chmod -R 0755 /metadata/busybox
+  fi
+}
+
 # Unset predefined environmental variable
 recovery_actions() {
   if [ "$BOOTMODE" == "false" ]; then
@@ -413,7 +436,14 @@ mount_all() {
     mount -o ro -t auto /cache > /dev/null 2>&1
     mount -o rw,remount -t auto /cache
   fi
+  # Persist Partition
   mount -o ro -t auto /persist > /dev/null 2>&1
+  mount -o rw,remount -t auto /persist
+  # Metadata Partition
+  if [ -n "$(cat $fstab | grep /metadata)" ]; then
+    mount -o ro -t auto /metadata > /dev/null 2>&1
+    mount -o rw,remount -t auto /metadata
+  fi
   $SYSTEM_ROOT && ui_print "- Device is system-as-root"
   $SUPER_PARTITION && ui_print "- Super partition detected"
   # Check A/B slot
@@ -1150,30 +1180,31 @@ unmount_all() {
   if [ "$BOOTMODE" == "false" ]; then
     ui_print "- Unmounting partitions"
     umount_apex
-    if [ "$device_abpartition" == "true" ]; then
-      if [ -d /system_root ]; then
-        mount -o ro /system_root
-      else
-        mount -o ro /system
-      fi
+    if [ "$($l/grep -w -o /system $fstab)" ]; then
+      umount /system
+      umount -l /system
     fi
-    if [ "$device_abpartition" == "false" ]; then
-      if [ -d /system_root ]; then
-        umount /system_root
-      else
-        umount /system
-      fi
+    if [ "$($l/grep -w -o /system_root $fstab)" ]; then
+      umount /system_root
+      umount -l /system_root
     fi
     if [ "$device_vendorpartition" == "true" ]; then
-      if [ "$device_abpartition" == "true" ]; then
-        mount -o ro $VENDOR
-      else
-        umount $VENDOR
-      fi
+      umount /vendor
+      umount -l /vendor
     fi
+    # SystemExt
     umount /system_ext > /dev/null 2>&1
+    umount -l /system_ext > /dev/null 2>&1
+    # Product
     umount /product > /dev/null 2>&1
+    umount -l /product > /dev/null 2>&1
+    # Persist
     umount /persist > /dev/null 2>&1
+    umount -l /persist > /dev/null 2>&1
+    # Metadata
+    umount /metadata > /dev/null 2>&1
+    umount -l /metadata > /dev/null 2>&1
+    # RNG Device
     umount /dev/random > /dev/null 2>&1
     # Restore predefined environmental variable
     [ -z $OLD_ANDROID_ROOT ] || export ANDROID_ROOT=$OLD_ANDROID_ROOT
@@ -9454,6 +9485,7 @@ post_install() {
     fix_gms_hide
     fix_module_perm
     module_info
+    mk_busybox_backup
     boot_image_editor
     patch_bootimg
     on_cts_patch
