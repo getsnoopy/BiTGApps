@@ -1181,16 +1181,16 @@ unmount_all() {
     ui_print "- Unmounting partitions"
     umount_apex
     if [ "$($l/grep -w -o /system $fstab)" ]; then
-      umount /system
-      umount -l /system
+      umount /system > /dev/null 2>&1
+      umount -l /system > /dev/null 2>&1
     fi
     if [ "$($l/grep -w -o /system_root $fstab)" ]; then
-      umount /system_root
-      umount -l /system_root
+      umount /system_root > /dev/null 2>&1
+      umount -l /system_root > /dev/null 2>&1
     fi
     if [ "$device_vendorpartition" == "true" ]; then
-      umount /vendor
-      umount -l /vendor
+      umount /vendor > /dev/null 2>&1
+      umount -l /vendor > /dev/null 2>&1
     fi
     # SystemExt
     umount /system_ext > /dev/null 2>&1

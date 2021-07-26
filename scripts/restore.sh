@@ -580,12 +580,12 @@ set_pathmap() {
 
 # Set fallback installation layout
 set_fallback_pathmap() {
-  if [ -f "/data/FALLBACK_PARTITION" ]; then
+  if { [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; } && [ -f "/data/FALLBACK_PARTITION" ]; then
     SYSTEM="$S/product"
     ensure_dir
   fi
   # Was data wiped or not decrypted ?
-  if [ ! -f "/data/FALLBACK_PARTITION" ]; then
+  if { [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; } && [ ! -f "/data/FALLBACK_PARTITION" ]; then
     ui_print "BackupTools: Failed to restore BiTGApps backup"
     exit 1
   fi
