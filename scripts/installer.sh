@@ -7991,7 +7991,44 @@ patch_bootimg() {
     block=`find /dev/block \( -type b -o -type c -o -type l \) -iname boot | head -n 1`
     dd if="$block" of="boot.img" > /dev/null 2>&1
   fi
+  # Set CHROMEOS status
+  CHROMEOS=false
+  # Unpack boot image
   ./magiskboot unpack -h boot.img > /dev/null 2>&1
+  case $? in
+    0 ) ;;
+    1 )
+      continue
+      ;;
+    2 )
+      CHROMEOS=true
+      ;;
+    * )
+      continue
+      ;;
+  esac
+  # Device Tree Patches
+  for dt in dtb kernel_dtb extra; do
+    [ -f $dt ] && ./magiskboot dtb $dt patch
+  done
+  # Binary Patches
+  if [ -f kernel ]; then
+   # Remove Samsung RKP
+   ./magiskboot hexpatch kernel \
+   49010054011440B93FA00F71E9000054010840B93FA00F7189000054001840B91FA00F7188010054 \
+   A1020054011440B93FA00F7140020054010840B93FA00F71E0010054001840B91FA00F7181010054
+
+   # Remove Samsung defex
+   # Before: [mov w2, #-221]   (-__NR_execve)
+   # After:  [mov w2, #-32768]
+   ./magiskboot hexpatch kernel 821B8012 E2FF8F12
+
+   # Force kernel to load rootfs
+   # skip_initramfs -> want_initramfs
+   ./magiskboot hexpatch kernel \
+   736B69705F696E697472616D667300 \
+   77616E745F696E697472616D667300
+  fi
   if [ -f "header" ]; then
     # Change selinux state to permissive, without this bootlog script failed to execute
     sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
@@ -8017,6 +8054,14 @@ patch_bootimg() {
     # Checkout ramdisk path
     cd ../
     ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    if [ "$CHROMEOS" == "true" ]; then
+      echo > empty
+      ./chromeos/futility vbutil_kernel --pack mboot.img.signed \
+      --keyblock ./chromeos/kernel.keyblock --signprivate ./chromeos/kernel_data_key.vbprivk \
+      --version 1 --vmlinuz mboot.img --config empty --arch arm --bootloader empty --flags 0x1
+      rm -f empty mboot.img
+      mv mboot.img.signed mboot.img
+    fi
     dd if="mboot.img" of="$block" > /dev/null 2>&1
     # Wipe boot dump
     rm -rf boot.img
@@ -8027,6 +8072,15 @@ patch_bootimg() {
   fi
   if [ ! -f "ramdisk/init.rc" ]; then
     ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    # Sign ChromeOS boot image
+    if [ "$CHROMEOS" == "true" ]; then
+      echo > empty
+      ./chromeos/futility vbutil_kernel --pack mboot.img.signed \
+      --keyblock ./chromeos/kernel.keyblock --signprivate ./chromeos/kernel_data_key.vbprivk \
+      --version 1 --vmlinuz mboot.img --config empty --arch arm --bootloader empty --flags 0x1
+      rm -f empty mboot.img
+      mv mboot.img.signed mboot.img
+    fi
     dd if="mboot.img" of="$block" > /dev/null 2>&1
     # Wipe boot dump
     rm -rf boot.img
@@ -8081,10 +8135,56 @@ spl_update_boot() {
     block=`find /dev/block \( -type b -o -type c -o -type l \) -iname boot | head -n 1`
     dd if="$block" of="boot.img" > /dev/null 2>&1
   fi
+  # Set CHROMEOS status
+  CHROMEOS=false
+  # Unpack boot image
   ./magiskboot unpack -h boot.img > /dev/null 2>&1
+  case $? in
+    0 ) ;;
+    1 )
+      continue
+      ;;
+    2 )
+      CHROMEOS=true
+      ;;
+    * )
+      continue
+      ;;
+  esac
+  # Device Tree Patches
+  for dt in dtb kernel_dtb extra; do
+    [ -f $dt ] && ./magiskboot dtb $dt patch
+  done
+  # Binary Patches
+  if [ -f kernel ]; then
+   # Remove Samsung RKP
+   ./magiskboot hexpatch kernel \
+   49010054011440B93FA00F71E9000054010840B93FA00F7189000054001840B91FA00F7188010054 \
+   A1020054011440B93FA00F7140020054010840B93FA00F71E0010054001840B91FA00F7181010054
+
+   # Remove Samsung defex
+   # Before: [mov w2, #-221]   (-__NR_execve)
+   # After:  [mov w2, #-32768]
+   ./magiskboot hexpatch kernel 821B8012 E2FF8F12
+
+   # Force kernel to load rootfs
+   # skip_initramfs -> want_initramfs
+   ./magiskboot hexpatch kernel \
+   736B69705F696E697472616D667300 \
+   77616E745F696E697472616D667300
+  fi
   if [ -f "header" ]; then
     sed -i '/os_patch_level/c\os_patch_level=2021-07' header
     ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    # Sign ChromeOS boot image
+    if [ "$CHROMEOS" == "true" ]; then
+      echo > empty
+      ./chromeos/futility vbutil_kernel --pack mboot.img.signed \
+      --keyblock ./chromeos/kernel.keyblock --signprivate ./chromeos/kernel_data_key.vbprivk \
+      --version 1 --vmlinuz mboot.img --config empty --arch arm --bootloader empty --flags 0x1
+      rm -f empty mboot.img
+      mv mboot.img.signed mboot.img
+    fi
     dd if="mboot.img" of="$block" > /dev/null 2>&1
     rm -rf boot.img
     rm -rf mboot.img
@@ -8280,7 +8380,44 @@ boot_whitelist_permission() {
     block=`find /dev/block \( -type b -o -type c -o -type l \) -iname boot | head -n 1`
     dd if="$block" of="boot.img" > /dev/null 2>&1
   fi
+  # Set CHROMEOS status
+  CHROMEOS=false
+  # Unpack boot image
   ./magiskboot unpack -h boot.img > /dev/null 2>&1
+  case $? in
+    0 ) ;;
+    1 )
+      continue
+      ;;
+    2 )
+      CHROMEOS=true
+      ;;
+    * )
+      continue
+      ;;
+  esac
+  # Device Tree Patches
+  for dt in dtb kernel_dtb extra; do
+    [ -f $dt ] && ./magiskboot dtb $dt patch && ui_print "- Patch fstab in $dt"
+  done
+  # Binary Patches
+  if [ -f kernel ]; then
+   # Remove Samsung RKP
+   ./magiskboot hexpatch kernel \
+   49010054011440B93FA00F71E9000054010840B93FA00F7189000054001840B91FA00F7188010054 \
+   A1020054011440B93FA00F7140020054010840B93FA00F71E0010054001840B91FA00F7181010054
+
+   # Remove Samsung defex
+   # Before: [mov w2, #-221]   (-__NR_execve)
+   # After:  [mov w2, #-32768]
+   ./magiskboot hexpatch kernel 821B8012 E2FF8F12
+
+   # Force kernel to load rootfs
+   # skip_initramfs -> want_initramfs
+   ./magiskboot hexpatch kernel \
+   736B69705F696E697472616D667300 \
+   77616E745F696E697472616D667300
+  fi
   if [ -f "ramdisk.cpio" ]; then
     mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk
   fi
@@ -8291,6 +8428,15 @@ boot_whitelist_permission() {
     # Checkout ramdisk path
     cd ../
     ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    # Sign ChromeOS boot image
+    if [ "$CHROMEOS" == "true" ]; then
+      echo > empty
+      ./chromeos/futility vbutil_kernel --pack mboot.img.signed \
+      --keyblock ./chromeos/kernel.keyblock --signprivate ./chromeos/kernel_data_key.vbprivk \
+      --version 1 --vmlinuz mboot.img --config empty --arch arm --bootloader empty --flags 0x1
+      rm -f empty mboot.img
+      mv mboot.img.signed mboot.img
+    fi
     dd if="mboot.img" of="$block" > /dev/null 2>&1
     # Wipe boot dump
     rm -rf boot.img
