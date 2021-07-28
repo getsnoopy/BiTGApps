@@ -7397,8 +7397,14 @@ set_addon_zip_sep() {
         rm -rf $SYSTEM/system_ext/priv-app/Youtube*
       fi
       # Install
-      ADDON_SYS="YouTube.tar.xz"
-      PKG_SYS="YouTube"
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
+        ADDON_SYS="YouTube_arm.tar.xz"
+        PKG_SYS="YouTube"
+      fi
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
+        ADDON_SYS="YouTube_arm64.tar.xz"
+        PKG_SYS="YouTube"
+      fi
       target_sys
       # Set Vanced MicroG
       TARGET_VANCED_MICROG="true"
