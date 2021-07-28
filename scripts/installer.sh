@@ -1762,18 +1762,22 @@ ext_pathmap_fallback() {
     SYSTEM_ETC_PERM="$SYSTEM/product/etc/permissions"
     SYSTEM_ETC_PREF="$SYSTEM/product/etc/preferred-apps"
     SYSTEM_FRAMEWORK="$SYSTEM/product/framework"
+    SYSTEM_OVERLAY="$SYSTEM/product/overlay"
     test -d $SYSTEM_ETC_CONFIG || mkdir $SYSTEM_ETC_CONFIG
     test -d $SYSTEM_ETC_DEFAULT || mkdir $SYSTEM_ETC_DEFAULT
     test -d $SYSTEM_ETC_PERM || mkdir $SYSTEM_ETC_PERM
     test -d $SYSTEM_ETC_PREF || mkdir $SYSTEM_ETC_PREF
+    test -d $SYSTEM_OVERLAY || mkdir $SYSTEM_OVERLAY
     chmod 0755 $SYSTEM_ETC_CONFIG
     chmod 0755 $SYSTEM_ETC_DEFAULT
     chmod 0755 $SYSTEM_ETC_PERM
     chmod 0755 $SYSTEM_ETC_PREF
+    chmod 0755 $SYSTEM_OVERLAY
     chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
     chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
     chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
     chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
+    chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
     # Shared library
     SYSTEM_APP_SHARED="$SYSTEM/app"
     SYSTEM_PRIV_APP_SHARED="$SYSTEM/priv-app"
@@ -1886,6 +1890,7 @@ create_module_pathmap() {
     SYSTEM_ETC_PERM="$SYSTEM/system/product/etc/permissions"
     SYSTEM_ETC_PREF="$SYSTEM/system/product/etc/preferred-apps"
     SYSTEM_FRAMEWORK="$SYSTEM/system/product/framework"
+    SYSTEM_OVERLAY="$SYSTEM/system/product/overlay"
     test -d $SYSTEM_PRODUCT || mkdir $SYSTEM_PRODUCT
     test -d $SYSTEM_APP || mkdir $SYSTEM_APP
     test -d $SYSTEM_PRIV_APP || mkdir $SYSTEM_PRIV_APP
@@ -1895,6 +1900,7 @@ create_module_pathmap() {
     test -d $SYSTEM_ETC_PERM || mkdir $SYSTEM_ETC_PERM
     test -d $SYSTEM_ETC_PREF || mkdir $SYSTEM_ETC_PREF
     test -d $SYSTEM_FRAMEWORK || mkdir $SYSTEM_FRAMEWORK
+    test -d $SYSTEM_OVERLAY || mkdir $SYSTEM_OVERLAY
     chmod 0755 $SYSTEM_PRODUCT
     chmod 0755 $SYSTEM_APP
     chmod 0755 $SYSTEM_PRIV_APP
@@ -1904,6 +1910,7 @@ create_module_pathmap() {
     chmod 0755 $SYSTEM_ETC_PERM
     chmod 0755 $SYSTEM_ETC_PREF
     chmod 0755 $SYSTEM_FRAMEWORK
+    chmod 0755 $SYSTEM_OVERLAY
     chcon -h u:object_r:system_file:s0 "$SYSTEM_PRODUCT"
     chcon -h u:object_r:system_file:s0 "$SYSTEM_APP"
     chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
@@ -1913,6 +1920,7 @@ create_module_pathmap() {
     chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
     chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
     chcon -h u:object_r:system_file:s0 "$SYSTEM_FRAMEWORK"
+    chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
     # SystemExt systemless pathmap
     SYSTEM_SYSTEMEXT="$SYSTEM/system/system_ext"
     SYSTEM_APP="$SYSTEM/system/system_ext/app"
@@ -1986,6 +1994,7 @@ ext_module_pathmap_fallback() {
     SYSTEM_ETC_PERM="$SYSTEM/system/product/etc/permissions"
     SYSTEM_ETC_PREF="$SYSTEM/system/product/etc/preferred-apps"
     SYSTEM_FRAMEWORK="$SYSTEM/system/product/framework"
+    SYSTEM_OVERLAY="$SYSTEM/system/product/overlay"
   fi
 }
 
