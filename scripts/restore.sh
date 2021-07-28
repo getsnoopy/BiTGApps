@@ -1651,6 +1651,7 @@ restoredirTMPAddon() {
     $TMP/addon/app/SoundPickerPrebuilt
     $TMP/addon/app/TrichromeLibrary
     $TMP/addon/app/WebViewBromite
+    $TMP/addon/app/WebViewGoogle
     $TMP/addon/app/YouTube
     $TMP/addon/app/MicroGGMSCore"
 
