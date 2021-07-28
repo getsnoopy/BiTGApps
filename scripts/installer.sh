@@ -5739,6 +5739,9 @@ set_addon_zip_conf() {
       ADDON_SYS="TrichromeLibrary.tar.xz"
       PKG_SYS="TrichromeLibrary"
       target_sys
+      ADDON_SYS="WebViewGoogle.tar.xz"
+      PKG_SYS="WebViewGoogle"
+      target_sys
     else
       ui_print "! Skip installing Chrome Google"
     fi
@@ -6752,6 +6755,9 @@ set_addon_zip_sep() {
       target_sys
       ADDON_SYS="TrichromeLibrary.tar.xz"
       PKG_SYS="TrichromeLibrary"
+      target_sys
+      ADDON_SYS="WebViewGoogle.tar.xz"
+      PKG_SYS="WebViewGoogle"
       target_sys
     fi
     if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
@@ -7785,6 +7791,7 @@ post_install_wipe() {
   rm -rf $SYSTEM_APP/SoundPickerPrebuilt
   rm -rf $SYSTEM_APP/TrichromeLibrary
   rm -rf $SYSTEM_APP/WebViewBromite
+  rm -rf $SYSTEM_APP/WebViewGoogle
   rm -rf $SYSTEM_APP/YouTube
   rm -rf $SYSTEM_PRIV_APP/CarrierServices
   rm -rf $SYSTEM_PRIV_APP/ContactsGooglePrebuilt
