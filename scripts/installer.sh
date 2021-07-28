@@ -4345,6 +4345,12 @@ pre_restore_pkg() {
       rm -rf $SYSTEM/app/GboardGooglePrebuilt
       rm -rf $SYSTEM/product/app/GboardGooglePrebuilt
       rm -rf $SYSTEM/system_ext/app/GboardGooglePrebuilt
+      # Wipe Gboard components
+      for f in $SYSTEM/usr $SYSTEM/product/usr $SYSTEM/system_ext/usr
+      do
+        rm -rf $f/share/ime
+        rm -rf $f/srec
+      done
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.gboard"
       remove_line $SYSTEM/config.prop "ro.config.keyboard"
@@ -4539,6 +4545,12 @@ pre_restore_pkg() {
       rm -rf $SYSTEM_SYSTEM/app/GboardGooglePrebuilt
       rm -rf $SYSTEM_SYSTEM/product/app/GboardGooglePrebuilt
       rm -rf $SYSTEM_SYSTEM/system_ext/app/GboardGooglePrebuilt
+      # Wipe Gboard components
+      for f in $SYSTEM_SYSTEM/usr $SYSTEM_SYSTEM/product/usr $SYSTEM_SYSTEM/system_ext/usr
+      do
+        rm -rf $f/share/ime
+        rm -rf $f/srec
+      done
     fi
     if [ "$supported_gearhead_wipe" == "true" ] || [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Android Auto"
