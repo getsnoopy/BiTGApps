@@ -7797,6 +7797,7 @@ post_install_wipe() {
   rm -rf $SYSTEM_APP/Gallery2
   rm -rf $SYSTEM_APP/Jelly
   rm -rf $SYSTEM_APP/LatinIME
+  rm -rf $SYSTEM_APP/webview
   rm -rf $SYSTEM_PRIV_APP/Launcher3
   rm -rf $SYSTEM_PRIV_APP/Launcher3QuickStep
   rm -rf $SYSTEM_PRIV_APP/NexusLauncherRelease
@@ -7896,6 +7897,7 @@ post_backup() {
         cp -fR $f/QuickAccessWallet $ANDROID_DATA/.backup/QuickAccessWallet > /dev/null 2>&1
         cp -f $f/com.android.launcher3.xml $ANDROID_DATA/.backup > /dev/null 2>&1
         cp -f $f/privapp_whitelist_com.android.launcher3-ext.xml $ANDROID_DATA/.backup > /dev/null 2>&1
+        cp -fR $f/webview $ANDROID_DATA/.backup/webview > /dev/null 2>&1
         # AOSP APKs and configs
         cp -fR $f/messaging $ANDROID_DATA/.backup/messaging > /dev/null 2>&1
         cp -fR $f/Contacts $ANDROID_DATA/.backup/Contacts > /dev/null 2>&1
@@ -7942,6 +7944,7 @@ post_restore() {
       cp -fR $f/QuickAccessWallet $SYSTEM/priv-app/QuickAccessWallet > /dev/null 2>&1
       cp -f $f/com.android.launcher3.xml $SYSTEM/etc/permissions > /dev/null 2>&1
       cp -f $f/privapp_whitelist_com.android.launcher3-ext.xml $SYSTEM/etc/permissions > /dev/null 2>&1
+      cp -fR $f/webview $SYSTEM/app/webview > /dev/null 2>&1
       # AOSP APKs and configs
       cp -fR $f/messaging $SYSTEM/app/messaging > /dev/null 2>&1
       cp -fR $f/Contacts $SYSTEM/priv-app/Contacts > /dev/null 2>&1
@@ -8429,7 +8432,7 @@ boot_whitelist_permission() {
   esac
   # Device Tree Patches
   for dt in dtb kernel_dtb extra; do
-    [ -f $dt ] && ./magiskboot dtb $dt patch && ui_print "- Patch fstab in $dt"
+    [ -f $dt ] && ./magiskboot dtb $dt patch
   done
   # Binary Patches
   if [ -f kernel ]; then
