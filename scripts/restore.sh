@@ -1801,6 +1801,7 @@ fix_addon_conflict() {
       rm -rf $S/app/TrichromeLibrary
       rm -rf $S/app/WebViewBromite
       rm -rf $S/app/WebViewGoogle
+      rm -rf $S/app/webview
       rm -rf $S/priv-app/BromitePrebuilt
       rm -rf $S/priv-app/Browser
       rm -rf $S/priv-app/Chrome*
@@ -1809,6 +1810,7 @@ fix_addon_conflict() {
       rm -rf $S/priv-app/TrichromeLibrary
       rm -rf $S/priv-app/WebViewBromite
       rm -rf $S/priv-app/WebViewGoogle
+      rm -rf $S/priv-app/webview
       rm -rf $S/product/app/BromitePrebuilt
       rm -rf $S/product/app/Browser
       rm -rf $S/product/app/Chrome*
@@ -1817,6 +1819,7 @@ fix_addon_conflict() {
       rm -rf $S/product/app/TrichromeLibrary
       rm -rf $S/product/app/WebViewBromite
       rm -rf $S/product/app/WebViewGoogle
+      rm -rf $S/product/app/webview
       rm -rf $S/product/priv-app/BromitePrebuilt
       rm -rf $S/product/priv-app/Browser
       rm -rf $S/product/priv-app/Chrome*
@@ -1825,6 +1828,7 @@ fix_addon_conflict() {
       rm -rf $S/product/priv-app/TrichromeLibrary
       rm -rf $S/product/priv-app/WebViewBromite
       rm -rf $S/product/priv-app/WebViewGoogle
+      rm -rf $S/product/priv-app/webview
       rm -rf $S/system_ext/app/BromitePrebuilt
       rm -rf $S/system_ext/app/Browser
       rm -rf $S/system_ext/app/Chrome*
@@ -1833,6 +1837,7 @@ fix_addon_conflict() {
       rm -rf $S/system_ext/app/TrichromeLibrary
       rm -rf $S/system_ext/app/WebViewBromite
       rm -rf $S/system_ext/app/WebViewGoogle
+      rm -rf $S/system_ext/app/webview
       rm -rf $S/system_ext/priv-app/BromitePrebuilt
       rm -rf $S/system_ext/priv-app/Browser
       rm -rf $S/system_ext/priv-app/Chrome*
@@ -1841,6 +1846,7 @@ fix_addon_conflict() {
       rm -rf $S/system_ext/priv-app/TrichromeLibrary
       rm -rf $S/system_ext/priv-app/WebViewBromite
       rm -rf $S/system_ext/priv-app/WebViewGoogle
+      rm -rf $S/system_ext/priv-app/webview
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.calculator)" ]; then
       rm -rf $S/app/Calculator*
@@ -1895,36 +1901,42 @@ fix_addon_conflict() {
       rm -rf $S/app/Jelly
       rm -rf $S/app/TrichromeLibrary
       rm -rf $S/app/WebViewGoogle
+      rm -rf $S/app/webview
       rm -rf $S/priv-app/Browser
       rm -rf $S/priv-app/Chrome*
       rm -rf $S/priv-app/GoogleChrome
       rm -rf $S/priv-app/Jelly
       rm -rf $S/priv-app/TrichromeLibrary
       rm -rf $S/priv-app/WebViewGoogle
+      rm -rf $S/priv-app/webview
       rm -rf $S/product/app/Browser
       rm -rf $S/product/app/Chrome*
       rm -rf $S/product/app/GoogleChrome
       rm -rf $S/product/app/Jelly
       rm -rf $S/product/app/TrichromeLibrary
       rm -rf $S/product/app/WebViewGoogle
+      rm -rf $S/product/app/webview
       rm -rf $S/product/priv-app/Browser
       rm -rf $S/product/priv-app/Chrome*
       rm -rf $S/product/priv-app/GoogleChrome
       rm -rf $S/product/priv-app/Jelly
       rm -rf $S/product/priv-app/TrichromeLibrary
       rm -rf $S/product/priv-app/WebViewGoogle
+      rm -rf $S/product/priv-app/webview
       rm -rf $S/system_ext/app/Browser
       rm -rf $S/system_ext/app/Chrome*
       rm -rf $S/system_ext/app/GoogleChrome
       rm -rf $S/system_ext/app/Jelly
       rm -rf $S/system_ext/app/TrichromeLibrary
       rm -rf $S/system_ext/app/WebViewGoogle
+      rm -rf $S/system_ext/app/webview
       rm -rf $S/system_ext/priv-app/Browser
       rm -rf $S/system_ext/priv-app/Chrome*
       rm -rf $S/system_ext/priv-app/GoogleChrome
       rm -rf $S/system_ext/priv-app/Jelly
       rm -rf $S/system_ext/priv-app/TrichromeLibrary
       rm -rf $S/system_ext/priv-app/WebViewGoogle
+      rm -rf $S/system_ext/priv-app/webview
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.contacts)" ]; then
       rm -rf $S/app/Contacts*
