@@ -4845,10 +4845,17 @@ dialer_config() {
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.25.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.30.xml
   fi
-  if [ "$android_sdk" -ge "30" ]; then
+  if [ "$android_sdk" -ge "30" ] && { [ ! "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
+                                      [ ! "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
     mv -f $SYSTEM_ETC_PERM/com.google.android.dialer.framework.30.xml $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.25.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.29.xml
+  fi
+  if [ "$android_sdk" -ge "30" ] && { [ "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
+                                      [ "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
+    mv -f $SYSTEM_ETC_PERM/com.google.android.dialer.framework.29.xml $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.25.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.30.xml
   fi
   # Set selinux context
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml"
@@ -4993,7 +5000,8 @@ gboard_usr() {
       # Recursively set folder permission
       find $SYSTEM_AS_SYSTEM/product/usr -type d | xargs chmod 0755
     fi
-    if [ "$android_sdk" -ge "30" ]; then
+    if [ "$android_sdk" -ge "30" ] && { [ ! "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
+                                        [ ! "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
       # Create components
       test -d $SYSTEM_AS_SYSTEM/system_ext/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_AS_SYSTEM/system_ext/usr/share/ime/google/d3_lms
       test -d $SYSTEM_AS_SYSTEM/system_ext/usr/srec/en-US || mkdir -p $SYSTEM_AS_SYSTEM/system_ext/usr/srec/en-US
@@ -5006,6 +5014,21 @@ gboard_usr() {
       done
       # Recursively set folder permission
       find $SYSTEM_AS_SYSTEM/system_ext/usr -type d | xargs chmod 0755
+    fi
+    if [ "$android_sdk" -ge "30" ] && { [ "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
+                                        [ "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
+      # Create components
+      test -d $SYSTEM_AS_SYSTEM/product/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_AS_SYSTEM/product/usr/share/ime/google/d3_lms
+      test -d $SYSTEM_AS_SYSTEM/product/usr/srec/en-US || mkdir -p $SYSTEM_AS_SYSTEM/product/usr/srec/en-US
+      # Install package
+      for share in $TMP_USR_SHARE/*; do
+        cp -f $share $SYSTEM_AS_SYSTEM/product/usr/share/ime/google/d3_lms
+      done
+      for srec in $TMP_USR_SREC/*; do
+        cp -f $srec $SYSTEM_AS_SYSTEM/product/usr/srec/en-US
+      done
+      # Recursively set folder permission
+      find $SYSTEM_AS_SYSTEM/product/usr -type d | xargs chmod 0755
     fi
   fi
   if [ "$supported_module_config" == "true" ]; then
@@ -5037,7 +5060,8 @@ gboard_usr() {
       # Recursively set folder permission
       find $SYSTEM_SYSTEM/product/usr -type d | xargs chmod 0755
     fi
-    if [ "$android_sdk" -ge "30" ]; then
+    if [ "$android_sdk" -ge "30" ] && { [ ! "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
+                                        [ ! "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
       # Create components
       test -d $SYSTEM_SYSTEM/system_ext/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_SYSTEM/system_ext/usr/share/ime/google/d3_lms
       test -d $SYSTEM_SYSTEM/system_ext/usr/srec/en-US || mkdir -p $SYSTEM_SYSTEM/system_ext/usr/srec/en-US
@@ -5050,6 +5074,21 @@ gboard_usr() {
       done
       # Recursively set folder permission
       find $SYSTEM_SYSTEM/system_ext/usr -type d | xargs chmod 0755
+    fi
+    if [ "$android_sdk" -ge "30" ] && { [ "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
+                                        [ "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
+      # Create components
+      test -d $SYSTEM_SYSTEM/product/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_SYSTEM/product/usr/share/ime/google/d3_lms
+      test -d $SYSTEM_SYSTEM/product/usr/srec/en-US || mkdir -p $SYSTEM_SYSTEM/product/usr/srec/en-US
+      # Install package
+      for share in $TMP_USR_SHARE/*; do
+        cp -f $share $SYSTEM_SYSTEM/product/usr/share/ime/google/d3_lms
+      done
+      for srec in $TMP_USR_SREC/*; do
+        cp -f $srec $SYSTEM_SYSTEM/product/usr/srec/en-US
+      done
+      # Recursively set folder permission
+      find $SYSTEM_SYSTEM/product/usr -type d | xargs chmod 0755
     fi
   fi
   # Wipe temporary components
@@ -5078,10 +5117,17 @@ maps_config() {
     rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.25.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.30.xml
   fi
-  if [ "$android_sdk" -ge "30" ]; then
+  if [ "$android_sdk" -ge "30" ] && { [ ! "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
+                                      [ ! "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
     mv -f $SYSTEM_ETC_PERM/com.google.android.maps.30.xml $SYSTEM_ETC_PERM/com.google.android.maps.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.25.xml
     rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.29.xml
+  fi
+  if [ "$android_sdk" -ge "30" ] && { [ "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
+                                      [ "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
+    mv -f $SYSTEM_ETC_PERM/com.google.android.maps.29.xml $SYSTEM_ETC_PERM/com.google.android.maps.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.25.xml
+    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.30.xml
   fi
   # Set selinux context
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.maps.xml"
