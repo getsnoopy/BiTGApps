@@ -8847,18 +8847,18 @@ df_system() {
     size=`df -k $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Default capacity
     if [ "$supported_addon_stack" == "false" ]; then
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1110000"
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1250000"
+      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1567000"
+      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1834000"
     fi
     # Selected capacity
     if [ "$supported_addon_stack" == "true" ]; then
       # Size of each package, according to Android platform
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         $supported_assistant_config && ASSISTANT="142000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="135000" || BROMITE="0"
+        $supported_bromite_config && BROMITE="200000" || BROMITE="0"
         $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
         $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="73000" || CHROME="0"
+        $supported_chrome_config && CHROME="445000" || CHROME="0"
         $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
         $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
         $supported_dialer_config && DIALER="45000" || DIALER="0"
@@ -8872,15 +8872,15 @@ df_system() {
         $supported_photos_config && PHOTOS="92000" || PHOTOS="0"
         $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
         $supported_tts_config && TTS="30000" || TTS="0"
-        $supported_vanced_config && VANCED="87000" || VANCED="0"
+        $supported_vanced_config && VANCED="94000" || VANCED="0"
         $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
       fi
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
         $supported_assistant_config && ASSISTANT="170000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="210000" || BROMITE="0"
+        $supported_bromite_config && BROMITE="374000" || BROMITE="0"
         $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
         $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="73000" || CHROME="0"
+        $supported_chrome_config && CHROME="445000" || CHROME="0"
         $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
         $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
         $supported_dialer_config && DIALER="52000" || DIALER="0"
@@ -8894,7 +8894,7 @@ df_system() {
         $supported_photos_config && PHOTOS="107000" || PHOTOS="0"
         $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
         $supported_tts_config && TTS="35000" || TTS="0"
-        $supported_vanced_config && VANCED="87000" || VANCED="0"
+        $supported_vanced_config && VANCED="114000" || VANCED="0"
         $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
       fi
       # Set capacity by targetting selected packages
@@ -8911,10 +8911,10 @@ df_system() {
     # Size of each package, according to Android platform
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
       $TARGET_ASSISTANT_GOOGLE && CAPACITY="142000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="135000"
+      $TARGET_BROMITE_GOOGLE && CAPACITY="200000"
       $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
       $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="73000"
+      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
       $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
       $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
       $TARGET_DIALER_GOOGLE && CAPACITY="45000"
@@ -8928,15 +8928,15 @@ df_system() {
       $TARGET_PHOTOS_GOOGLE && CAPACITY="92000"
       $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
       $TARGET_TTS_GOOGLE && CAPACITY="30000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="87000"
+      $TARGET_VANCED_GOOGLE && CAPACITY="94000"
       $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
     fi
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-      $TARGET_ASSISTANT_GOOGLE && CAPACITY="150000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="210000"
+      $TARGET_ASSISTANT_GOOGLE && CAPACITY="170000"
+      $TARGET_BROMITE_GOOGLE && CAPACITY="374000"
       $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
       $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="73000"
+      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
       $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
       $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
       $TARGET_DIALER_GOOGLE && CAPACITY="52000"
@@ -8950,7 +8950,7 @@ df_system() {
       $TARGET_PHOTOS_GOOGLE && CAPACITY="107000"
       $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
       $TARGET_TTS_GOOGLE && CAPACITY="35000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="87000"
+      $TARGET_VANCED_GOOGLE && CAPACITY="114000"
       $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
     fi
     # Common target
@@ -8977,18 +8977,18 @@ df_product() {
     size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Default capacity
     if [ "$supported_addon_stack" == "false" ]; then
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1110000"
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1250000"
+      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1567000"
+      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1834000"
     fi
     # Selected capacity
     if [ "$supported_addon_stack" == "true" ]; then
       # Size of each package, according to Android platform
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         $supported_assistant_config && ASSISTANT="142000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="135000" || BROMITE="0"
+        $supported_bromite_config && BROMITE="200000" || BROMITE="0"
         $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
         $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="73000" || CHROME="0"
+        $supported_chrome_config && CHROME="445000" || CHROME="0"
         $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
         $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
         $supported_dialer_config && DIALER="45000" || DIALER="0"
@@ -9002,15 +9002,15 @@ df_product() {
         $supported_photos_config && PHOTOS="92000" || PHOTOS="0"
         $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
         $supported_tts_config && TTS="30000" || TTS="0"
-        $supported_vanced_config && VANCED="87000" || VANCED="0"
+        $supported_vanced_config && VANCED="94000" || VANCED="0"
         $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
       fi
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
         $supported_assistant_config && ASSISTANT="170000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="210000" || BROMITE="0"
+        $supported_bromite_config && BROMITE="374000" || BROMITE="0"
         $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
         $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="73000" || CHROME="0"
+        $supported_chrome_config && CHROME="445000" || CHROME="0"
         $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
         $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
         $supported_dialer_config && DIALER="52000" || DIALER="0"
@@ -9024,7 +9024,7 @@ df_product() {
         $supported_photos_config && PHOTOS="107000" || PHOTOS="0"
         $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
         $supported_tts_config && TTS="35000" || TTS="0"
-        $supported_vanced_config && VANCED="87000" || VANCED="0"
+        $supported_vanced_config && VANCED="114000" || VANCED="0"
         $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
       fi
       # Set capacity by targetting selected packages
@@ -9041,10 +9041,10 @@ df_product() {
     # Size of each package, according to Android platform
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
       $TARGET_ASSISTANT_GOOGLE && CAPACITY="142000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="135000"
+      $TARGET_BROMITE_GOOGLE && CAPACITY="200000"
       $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
       $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="73000"
+      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
       $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
       $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
       $TARGET_DIALER_GOOGLE && CAPACITY="45000"
@@ -9058,15 +9058,15 @@ df_product() {
       $TARGET_PHOTOS_GOOGLE && CAPACITY="92000"
       $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
       $TARGET_TTS_GOOGLE && CAPACITY="30000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="87000"
+      $TARGET_VANCED_GOOGLE && CAPACITY="94000"
       $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
     fi
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-      $TARGET_ASSISTANT_GOOGLE && CAPACITY="150000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="210000"
+      $TARGET_ASSISTANT_GOOGLE && CAPACITY="170000"
+      $TARGET_BROMITE_GOOGLE && CAPACITY="374000"
       $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
       $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="73000"
+      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
       $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
       $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
       $TARGET_DIALER_GOOGLE && CAPACITY="52000"
@@ -9080,7 +9080,7 @@ df_product() {
       $TARGET_PHOTOS_GOOGLE && CAPACITY="107000"
       $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
       $TARGET_TTS_GOOGLE && CAPACITY="35000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="87000"
+      $TARGET_VANCED_GOOGLE && CAPACITY="114000"
       $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
     fi
     # Common target
@@ -9107,18 +9107,18 @@ df_systemExt() {
     size=`df -k /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Default capacity
     if [ "$supported_addon_stack" == "false" ]; then
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1110000"
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1250000"
+      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1567000"
+      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1834000"
     fi
     # Selected capacity
     if [ "$supported_addon_stack" == "true" ]; then
       # Size of each package, according to Android platform
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         $supported_assistant_config && ASSISTANT="142000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="135000" || BROMITE="0"
+        $supported_bromite_config && BROMITE="200000" || BROMITE="0"
         $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
         $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="73000" || CHROME="0"
+        $supported_chrome_config && CHROME="445000" || CHROME="0"
         $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
         $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
         $supported_dialer_config && DIALER="45000" || DIALER="0"
@@ -9132,15 +9132,15 @@ df_systemExt() {
         $supported_photos_config && PHOTOS="92000" || PHOTOS="0"
         $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
         $supported_tts_config && TTS="30000" || TTS="0"
-        $supported_vanced_config && VANCED="87000" || VANCED="0"
+        $supported_vanced_config && VANCED="94000" || VANCED="0"
         $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
       fi
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
         $supported_assistant_config && ASSISTANT="170000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="210000" || BROMITE="0"
+        $supported_bromite_config && BROMITE="374000" || BROMITE="0"
         $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
         $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="73000" || CHROME="0"
+        $supported_chrome_config && CHROME="445000" || CHROME="0"
         $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
         $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
         $supported_dialer_config && DIALER="52000" || DIALER="0"
@@ -9154,7 +9154,7 @@ df_systemExt() {
         $supported_photos_config && PHOTOS="107000" || PHOTOS="0"
         $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
         $supported_tts_config && TTS="35000" || TTS="0"
-        $supported_vanced_config && VANCED="87000" || VANCED="0"
+        $supported_vanced_config && VANCED="114000" || VANCED="0"
         $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
       fi
       # Set capacity by targetting selected packages
@@ -9171,10 +9171,10 @@ df_systemExt() {
     # Size of each package, according to Android platform
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
       $TARGET_ASSISTANT_GOOGLE && CAPACITY="142000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="135000"
+      $TARGET_BROMITE_GOOGLE && CAPACITY="200000"
       $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
       $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="73000"
+      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
       $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
       $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
       $TARGET_DIALER_GOOGLE && CAPACITY="45000"
@@ -9188,15 +9188,15 @@ df_systemExt() {
       $TARGET_PHOTOS_GOOGLE && CAPACITY="92000"
       $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
       $TARGET_TTS_GOOGLE && CAPACITY="30000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="87000"
+      $TARGET_VANCED_GOOGLE && CAPACITY="94000"
       $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
     fi
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-      $TARGET_ASSISTANT_GOOGLE && CAPACITY="150000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="210000"
+      $TARGET_ASSISTANT_GOOGLE && CAPACITY="170000"
+      $TARGET_BROMITE_GOOGLE && CAPACITY="374000"
       $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
       $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="73000"
+      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
       $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
       $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
       $TARGET_DIALER_GOOGLE && CAPACITY="52000"
@@ -9210,7 +9210,7 @@ df_systemExt() {
       $TARGET_PHOTOS_GOOGLE && CAPACITY="107000"
       $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
       $TARGET_TTS_GOOGLE && CAPACITY="35000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="87000"
+      $TARGET_VANCED_GOOGLE && CAPACITY="114000"
       $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
     fi
     # Common target
@@ -9237,18 +9237,18 @@ df_systemExt_fallback() {
     size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
     # Default capacity
     if [ "$supported_addon_stack" == "false" ]; then
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1110000"
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1250000"
+      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1567000"
+      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1834000"
     fi
     # Selected capacity
     if [ "$supported_addon_stack" == "true" ]; then
       # Size of each package, according to Android platform
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         $supported_assistant_config && ASSISTANT="142000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="135000" || BROMITE="0"
+        $supported_bromite_config && BROMITE="200000" || BROMITE="0"
         $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
         $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="73000" || CHROME="0"
+        $supported_chrome_config && CHROME="445000" || CHROME="0"
         $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
         $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
         $supported_dialer_config && DIALER="45000" || DIALER="0"
@@ -9262,15 +9262,15 @@ df_systemExt_fallback() {
         $supported_photos_config && PHOTOS="92000" || PHOTOS="0"
         $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
         $supported_tts_config && TTS="30000" || TTS="0"
-        $supported_vanced_config && VANCED="87000" || VANCED="0"
+        $supported_vanced_config && VANCED="94000" || VANCED="0"
         $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
       fi
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
         $supported_assistant_config && ASSISTANT="170000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="210000" || BROMITE="0"
+        $supported_bromite_config && BROMITE="374000" || BROMITE="0"
         $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
         $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="73000" || CHROME="0"
+        $supported_chrome_config && CHROME="445000" || CHROME="0"
         $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
         $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
         $supported_dialer_config && DIALER="52000" || DIALER="0"
@@ -9284,7 +9284,7 @@ df_systemExt_fallback() {
         $supported_photos_config && PHOTOS="107000" || PHOTOS="0"
         $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
         $supported_tts_config && TTS="35000" || TTS="0"
-        $supported_vanced_config && VANCED="87000" || VANCED="0"
+        $supported_vanced_config && VANCED="114000" || VANCED="0"
         $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
       fi
       # Set capacity by targetting selected packages
@@ -9301,10 +9301,10 @@ df_systemExt_fallback() {
     # Size of each package, according to Android platform
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
       $TARGET_ASSISTANT_GOOGLE && CAPACITY="142000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="135000"
+      $TARGET_BROMITE_GOOGLE && CAPACITY="200000"
       $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
       $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="73000"
+      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
       $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
       $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
       $TARGET_DIALER_GOOGLE && CAPACITY="45000"
@@ -9318,15 +9318,15 @@ df_systemExt_fallback() {
       $TARGET_PHOTOS_GOOGLE && CAPACITY="92000"
       $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
       $TARGET_TTS_GOOGLE && CAPACITY="30000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="87000"
+      $TARGET_VANCED_GOOGLE && CAPACITY="94000"
       $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
     fi
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-      $TARGET_ASSISTANT_GOOGLE && CAPACITY="150000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="210000"
+      $TARGET_ASSISTANT_GOOGLE && CAPACITY="170000"
+      $TARGET_BROMITE_GOOGLE && CAPACITY="374000"
       $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
       $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="73000"
+      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
       $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
       $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
       $TARGET_DIALER_GOOGLE && CAPACITY="52000"
@@ -9340,7 +9340,7 @@ df_systemExt_fallback() {
       $TARGET_PHOTOS_GOOGLE && CAPACITY="107000"
       $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
       $TARGET_TTS_GOOGLE && CAPACITY="35000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="87000"
+      $TARGET_VANCED_GOOGLE && CAPACITY="114000"
       $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
     fi
     # Common target
@@ -9352,7 +9352,7 @@ df_systemExt_fallback() {
   fi
 }
 
-# Check available space is greater than 150MB(150000KB) or 1.11GB(1110000KB)/1.25GB(1250000KB)
+# Check available space is greater than 150MB(150000KB) or 1.567GB(1567000KB)/1.834GB(1834000KB)
 diskfree() {
   # Do not execute this function, when ZIPTYPE target is set to 'patch'
   if [ "$ZIPTYPE" == "basic" ] || [ "$ZIPTYPE" == "addon" ]; then
@@ -9376,7 +9376,7 @@ diskfree() {
   fi
 }
 
-# Check available space is greater than 150MB(150000KB) or 1.11GB(1110000KB)/1.25GB(1250000KB)
+# Check available space is greater than 150MB(150000KB) or 1.567GB(1567000KB)/1.834GB(1834000KB)
 diskfreefallback() {
   # Do not execute this function, when ZIPTYPE target is set to 'patch'
   if { [ "$ZIPTYPE" == "basic" ] || [ "$ZIPTYPE" == "addon" ]; } && [ "$TARGET_FALLBACK_CHECK" == "true" ]; then
