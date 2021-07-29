@@ -58,6 +58,8 @@ ro.config.photos=false
 ro.config.soundpicker=false
 ro.config.tts=false
 ro.config.vanced=false
+ro.config.microg=false
+ro.config.data=false
 ro.config.wellbeing=false
 
 # Property for enabling Addons usage
@@ -86,6 +88,8 @@ ro.photos.wipe=false
 ro.soundpicker.wipe=false
 ro.tts.wipe=false
 ro.vanced.wipe=false
+ro.microg.wipe=false
+ro.data.wipe=false
 ro.wellbeing.wipe=false
 
 # Property for wiping BiTGApps components

@@ -25,7 +25,7 @@ BOOTMODE=false
 ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
 $BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
 
-# Change selinux status to permissive
+# Change selinux state to permissive
 setenforce 0
 
 # Create temporary log directory
@@ -51,6 +51,7 @@ env_vars() {
   BOOTMODE="$BOOTMODE"
   # ADDON variable 'conf' or 'sep'
   ADDON="$ADDON"
+  # Storage
   INTERNAL="/sdcard"
   EXTERNAL="/sdcard1"
   ANDROID_DATA="/data"
@@ -123,6 +124,7 @@ set_bb() {
           # Create script wrapper if symlinking and hardlinking failed because of restrictive selinux policy
           if ! echo "#!$bb" > "$l/$i" || ! chmod 0755 "$l/$i" ; then
             ui_print "! Failed to set-up pre-bundled busybox. Aborting..."
+            ui_print "! Installation failed"
             ui_print " "
             exit 1
           fi
@@ -131,17 +133,15 @@ set_bb() {
       # Set busybox components in environment
       export PATH="$l:$PATH"
       # Backup busybox in data partition for OTA script
-      rm -rf $ANDROID_DATA/busybox
-      mkdir $ANDROID_DATA/busybox
+      rm -rf $ANDROID_DATA/busybox && mkdir $ANDROID_DATA/busybox
       cp -f $TMP/busybox-arm $ANDROID_DATA/busybox/busybox-arm
       chmod -R 0755 $ANDROID_DATA/busybox
     fi
   fi
   if [ "$ARCH" == "x86" ] || [ "$ARCH" == "x86_64" ]; then
-    rm -rf $TMP/busybox-arm
-    rm -rf $TMP/installer.sh
-    rm -rf $TMP/updater
-    rm -rf $TMP/util_functions.sh
+    for i in busybox-arm installer.sh updater util_functions.sh; do
+      rm -rf $TMP/$i
+    done
     ui_print "! Wrong architecture detected. Aborting..."
     ui_print "! Installation failed"
     ui_print " "
@@ -149,24 +149,21 @@ set_bb() {
   fi
 }
 
-# Create busybox backup in multiple locations to overcome encryption issue
+# Create busybox backup in multiple locations to overcome encryption conflict
 mk_busybox_backup() {
   # Backup busybox in cache partition for OTA script
   if [ -n "$(cat $fstab | grep /cache)" ]; then
-    rm -rf /cache/busybox
-    mkdir /cache/busybox
+    rm -rf /cache/busybox && mkdir /cache/busybox
     cp -f $TMP/busybox-arm /cache/busybox/busybox-arm
     chmod -R 0755 /cache/busybox
   fi
   # Backup busybox in persist partition for OTA script
-  rm -rf /persist/busybox
-  mkdir /persist/busybox
+  rm -rf /persist/busybox && mkdir /persist/busybox
   cp -f $TMP/busybox-arm /persist/busybox/busybox-arm
   chmod -R 0755 /persist/busybox
   # Backup busybox in metadata partition for OTA script
   if [ -n "$(cat $fstab | grep /metadata)" ]; then
-    rm -rf /metadata/busybox
-    mkdir /metadata/busybox
+    rm -rf /metadata/busybox && mkdir /metadata/busybox
     cp -f $TMP/busybox-arm /metadata/busybox/busybox-arm
     chmod -R 0755 /metadata/busybox
   fi
@@ -238,10 +235,8 @@ build_defaults() {
   UNZIP_DIR="$TMP/unzip"
   TMP_ADDON="$UNZIP_DIR/tmp_addon"
   TMP_SYS="$UNZIP_DIR/tmp_sys"
-  TMP_SYS_JAR="$UNZIP_DIR/tmp_sys_jar"
   TMP_SYS_AOSP="$UNZIP_DIR/tmp_sys_aosp"
   TMP_PRIV="$UNZIP_DIR/tmp_priv"
-  TMP_PRIV_JAR="$UNZIP_DIR/tmp_priv_jar"
   TMP_PRIV_SETUP="$UNZIP_DIR/tmp_priv_setup"
   TMP_PRIV_AOSP="$UNZIP_DIR/tmp_priv_aosp"
   TMP_FIRMWARE="$UNZIP_DIR/tmp_firmware"
@@ -279,11 +274,9 @@ on_fstab_check() {
 # Set vendor mount point
 vendor_mnt() {
   device_vendorpartition="false"
-  if [ "$BOOTMODE" == "false" ]; then
-    if [ -n "$(cat $fstab | grep /vendor)" ]; then
-      device_vendorpartition="true"
-      VENDOR="/vendor"
-    fi
+  if [ "$BOOTMODE" == "false" ] && [ -n "$(cat $fstab | grep /vendor)" ]; then
+    device_vendorpartition="true"
+    VENDOR="/vendor"
   fi
   if [ "$BOOTMODE" == "true" ]; then
     DEVICE=`find /dev/block \( -type b -o -type c -o -type l \) -iname vendor | head -n 1`
@@ -294,10 +287,7 @@ vendor_mnt() {
 # Detect A/B partition layout https://source.android.com/devices/tech/ota/ab_updates
 ab_partition() {
   device_abpartition="false"
-  if [ ! -z "$slot_suffix" ]; then
-    device_abpartition="true"
-  fi
-  if [ "$AB_OTA_UPDATER" == "true" ]; then
+  if [ ! -z "$slot_suffix" ] || [ "$AB_OTA_UPDATER" == "true" ]; then
     device_abpartition="true"
   fi
 }
@@ -358,7 +348,6 @@ mount_apex() {
       *.apex)
         unzip -qo $apex apex_payload.img -d /apex
         mv -f /apex/apex_payload.img $dest.img
-        echo "- Mounting $dest" >> $TMP/bitgapps/apex.log
         mount -t ext4 -o ro,noatime $dest.img $dest 2>/dev/null
         if [ $? != 0 ]; then
           while [ $num -lt 64 ]; do
@@ -415,11 +404,9 @@ umount_apex() {
 
 umount_all() {
   if [ "$BOOTMODE" == "false" ]; then
-    (umount -l /system_root
-     umount -l /system
-     umount -l /product
-     umount -l /system_ext
-     umount -l /vendor) > /dev/null 2>&1
+    for i in /system_root /system /product /system_ext /vendor /persist /metadata; do
+      umount -l $i > /dev/null 2>&1
+    done
   fi
 }
 
@@ -434,15 +421,13 @@ mount_all() {
   fi
   if [ -n "$(cat $fstab | grep /cache)" ]; then
     mount -o ro -t auto /cache > /dev/null 2>&1
-    mount -o rw,remount -t auto /cache
+    mount -o rw,remount -t auto /cache > /dev/null 2>&1
   fi
-  # Persist Partition
   mount -o ro -t auto /persist > /dev/null 2>&1
-  mount -o rw,remount -t auto /persist
-  # Metadata Partition
+  mount -o rw,remount -t auto /persist > /dev/null 2>&1
   if [ -n "$(cat $fstab | grep /metadata)" ]; then
     mount -o ro -t auto /metadata > /dev/null 2>&1
-    mount -o rw,remount -t auto /metadata
+    mount -o rw,remount -t auto /metadata > /dev/null 2>&1
   fi
   $SYSTEM_ROOT && ui_print "- Device is system-as-root"
   $SUPER_PARTITION && ui_print "- Super partition detected"
@@ -454,12 +439,11 @@ mount_all() {
   fi
   [ -z $SLOT ] || ui_print "- Current boot slot: $SLOT"
   # Unset predefined environmental variable
-  OLD_ANDROID_ROOT=$ANDROID_ROOT
-  unset ANDROID_ROOT
+  OLD_ANDROID_ROOT=$ANDROID_ROOT && unset ANDROID_ROOT
   # Wipe conflicting layouts
-  rm -rf /system_root
-  rm -rf /product
-  rm -rf /system_ext
+  for i in /system_root /product /system_ext; do
+    rm -rf $i
+  done
   # Do not wipe system, if it create symlinks in root
   if [ ! "$(readlink -f "/bin")" = "/system/bin" ] && [ ! "$(readlink -f "/etc")" = "/system/etc" ]; then
     rm -rf /system
@@ -469,13 +453,12 @@ mount_all() {
   if [ "$($l/grep -w -o /system $fstab)" ]; then mkdir /system; export ANDROID_ROOT="/system"; fi
   if [ "$($l/grep -w -o /product $fstab)" ]; then mkdir /product; fi
   if [ "$($l/grep -w -o /system_ext $fstab)" ]; then mkdir /system_ext; fi
-  # Set '/system_root' as mount point, if previous check failed
-  # This adaption for recoveries using "/" as mount point in auto-generated,
-  # fstab but not actually mounting to "/" and using some other mount location.
-  # At this point we can mount system using its block device to any location.
+  # Set '/system_root' as mount point, if previous check failed. This adaption,
+  # for recoveries using "/" as mount point in auto-generated fstab but not,
+  # actually mounting to "/" and using some other mount location. At this point,
+  # we can mount system using its block device to any location.
   if [ -z "$ANDROID_ROOT" ]; then
-    mkdir /system_root
-    export ANDROID_ROOT="/system_root"
+    mkdir /system_root && export ANDROID_ROOT="/system_root"
   fi
   # Set A/B slot property
   local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
@@ -488,7 +471,7 @@ mount_all() {
       done
       ui_print "- Mounting /system"
       mount -o ro -t auto /dev/block/mapper/system$slot $ANDROID_ROOT > /dev/null 2>&1
-      mount -o rw,remount -t auto /dev/block/mapper/system$slot $ANDROID_ROOT
+      mount -o rw,remount -t auto /dev/block/mapper/system$slot $ANDROID_ROOT > /dev/null 2>&1
       is_mounted $ANDROID_ROOT || SYSTEM_DM_MOUNT="true"
       if [ "$SYSTEM_DM_MOUNT" == "true" ]; then
         if [ "$($l/grep -w -o /system_root $fstab)" ]; then
@@ -498,42 +481,42 @@ mount_all() {
           SYSTEM_MAPPER=`$l/grep -v '#' $fstab | $l/grep -E '/system' | $l/grep -oE '/dev/block/dm-[0-9]' | head -n 1`
         fi
         mount -o ro -t auto $SYSTEM_MAPPER $ANDROID_ROOT > /dev/null 2>&1
-        mount -o rw,remount -t auto $SYSTEM_MAPPER $ANDROID_ROOT
+        mount -o rw,remount -t auto $SYSTEM_MAPPER $ANDROID_ROOT > /dev/null 2>&1
       fi
       is_mounted $ANDROID_ROOT || on_abort "! Cannot mount $ANDROID_ROOT. Aborting..."
       if [ "$device_vendorpartition" == "true" ]; then
         ui_print "- Mounting /vendor"
         mount -o ro -t auto /dev/block/mapper/vendor$slot $VENDOR > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/vendor$slot $VENDOR
+        mount -o rw,remount -t auto /dev/block/mapper/vendor$slot $VENDOR > /dev/null 2>&1
         is_mounted $VENDOR || VENDOR_DM_MOUNT="true"
         if [ "$VENDOR_DM_MOUNT" == "true" ]; then
           VENDOR_MAPPER=`$l/grep -v '#' $fstab | $l/grep -E '/vendor' | $l/grep -oE '/dev/block/dm-[0-9]' | head -n 1`
           mount -o ro -t auto $VENDOR_MAPPER $VENDOR > /dev/null 2>&1
-          mount -o rw,remount -t auto $VENDOR_MAPPER $VENDOR
+          mount -o rw,remount -t auto $VENDOR_MAPPER $VENDOR > /dev/null 2>&1
         fi
         is_mounted $VENDOR || on_abort "! Cannot mount $VENDOR. Aborting..."
       fi
       if [ -n "$(cat $fstab | grep /product)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/product$slot /product
+        mount -o rw,remount -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
         is_mounted /product || PRODUCT_DM_MOUNT="true"
         if [ "$PRODUCT_DM_MOUNT" == "true" ]; then
           PRODUCT_MAPPER=`$l/grep -v '#' $fstab | $l/grep -E '/product' | $l/grep -oE '/dev/block/dm-[0-9]' | head -n 1`
           mount -o ro -t auto $PRODUCT_MAPPER /product > /dev/null 2>&1
-          mount -o rw,remount -t auto $PRODUCT_MAPPER /product
+          mount -o rw,remount -t auto $PRODUCT_MAPPER /product > /dev/null 2>&1
         fi
         is_mounted /product || on_abort "! Cannot mount /product. Aborting..."
       fi
       if [ -n "$(cat $fstab | grep /system_ext)" ]; then
         ui_print "- Mounting /system_ext"
         mount -o ro -t auto /dev/block/mapper/system_ext$slot /system_ext > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/system_ext$slot /system_ext
+        mount -o rw,remount -t auto /dev/block/mapper/system_ext$slot /system_ext > /dev/null 2>&1
         is_mounted /system_ext || SYSTEMEXT_DM_MOUNT="true"
         if [ "$SYSTEMEXT_DM_MOUNT" == "true" ]; then
           SYSTEMEXT_MAPPER=`$l/grep -v '#' $fstab | $l/grep -E '/system_ext' | $l/grep -oE '/dev/block/dm-[0-9]' | head -n 1`
           mount -o ro -t auto $SYSTEMEXT_MAPPER /system_ext > /dev/null 2>&1
-          mount -o rw,remount -t auto $SYSTEMEXT_MAPPER /system_ext
+          mount -o rw,remount -t auto $SYSTEMEXT_MAPPER /system_ext > /dev/null 2>&1
         fi
         is_mounted /system_ext || on_abort "! Cannot mount /system_ext. Aborting..."
       fi
@@ -544,24 +527,24 @@ mount_all() {
       done
       ui_print "- Mounting /system"
       mount -o ro -t auto /dev/block/mapper/system $ANDROID_ROOT > /dev/null 2>&1
-      mount -o rw,remount -t auto /dev/block/mapper/system $ANDROID_ROOT
+      mount -o rw,remount -t auto /dev/block/mapper/system $ANDROID_ROOT > /dev/null 2>&1
       is_mounted $ANDROID_ROOT || on_abort "! Cannot mount $ANDROID_ROOT. Aborting..."
       if [ "$device_vendorpartition" == "true" ]; then
         ui_print "- Mounting /vendor"
         mount -o ro -t auto /dev/block/mapper/vendor $VENDOR > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/vendor $VENDOR
+        mount -o rw,remount -t auto /dev/block/mapper/vendor $VENDOR > /dev/null 2>&1
         is_mounted $VENDOR || on_abort "! Cannot mount $VENDOR. Aborting..."
       fi
       if [ -n "$(cat $fstab | grep /product)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /dev/block/mapper/product /product > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/product /product
+        mount -o rw,remount -t auto /dev/block/mapper/product /product > /dev/null 2>&1
         is_mounted /product || on_abort "! Cannot mount /product. Aborting..."
       fi
       if [ -n "$(cat $fstab | grep /system_ext)" ]; then
         ui_print "- Mounting /system_ext"
         mount -o ro -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/system_ext /system_ext
+        mount -o rw,remount -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
         is_mounted /system_ext || on_abort "! Cannot mount /system_ext. Aborting..."
       fi
     fi
@@ -570,7 +553,7 @@ mount_all() {
     if [ "$device_abpartition" == "false" ]; then
       ui_print "- Mounting /system"
       mount -o ro -t auto $ANDROID_ROOT > /dev/null 2>&1
-      mount -o rw,remount -t auto $ANDROID_ROOT
+      mount -o rw,remount -t auto $ANDROID_ROOT > /dev/null 2>&1
       is_mounted $ANDROID_ROOT || NEED_BLOCK_MOUNT="true"
       if [ "$NEED_BLOCK_MOUNT" == "true" ]; then
         if [ -e "/dev/block/by-name/system" ]; then
@@ -584,23 +567,20 @@ mount_all() {
         else
           on_abort "! Cannot find system block. Aborting..."
         fi
-        # Keep system block for OTA survival script
-        echo "BLK=$BLK" >> $ANDROID_DATA/SYSTEM_BLOCK
-        chmod 0755 $ANDROID_DATA/SYSTEM_BLOCK
         # Mount using block device
-        mount $BLK $ANDROID_ROOT
+        mount $BLK $ANDROID_ROOT > /dev/null 2>&1
       fi
       is_mounted $ANDROID_ROOT || on_abort "! Cannot mount $ANDROID_ROOT. Aborting..."
       if [ "$device_vendorpartition" == "true" ]; then
         ui_print "- Mounting /vendor"
         mount -o ro -t auto $VENDOR > /dev/null 2>&1
-        mount -o rw,remount -t auto $VENDOR
+        mount -o rw,remount -t auto $VENDOR > /dev/null 2>&1
         is_mounted $VENDOR || on_abort "! Cannot mount $VENDOR. Aborting..."
       fi
       if [ -n "$(cat $fstab | grep /product)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /product > /dev/null 2>&1
-        mount -o rw,remount -t auto /product
+        mount -o rw,remount -t auto /product > /dev/null 2>&1
         is_mounted /product || on_abort "! Cannot mount /product. Aborting..."
       fi
     fi
@@ -608,23 +588,23 @@ mount_all() {
       ui_print "- Mounting /system"
       if [ "$ANDROID_ROOT" == "/system_root" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
+        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
       fi
       if [ "$ANDROID_ROOT" == "/system" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT
+        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
       fi
       is_mounted $ANDROID_ROOT || on_abort "! Cannot mount $ANDROID_ROOT. Aborting..."
       if [ "$device_vendorpartition" == "true" ]; then
         ui_print "- Mounting /vendor"
         mount -o ro -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR
+        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
         is_mounted $VENDOR || on_abort "! Cannot mount $VENDOR. Aborting..."
       fi
       if [ -n "$(cat $fstab | grep /product)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/product$slot /product
+        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
         is_mounted /product || on_abort "! Cannot mount /product. Aborting..."
       fi
     fi
@@ -660,7 +640,7 @@ check_rw_status() {
     fi
     if [ "$device_vendorpartition" == "true" ]; then
       vendor_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/vendor?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
-      if [ ! "$vendor_as_rw" == "rw" ]; then ui_print "! Read-only vendor partition"; fi
+      if [ ! "$vendor_as_rw" == "rw" ]; then ui_print "! Read-only vendor partition. Continue..."; fi
     fi
     if [ -n "$(cat $fstab | grep /product)" ]; then
       product_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/product?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
@@ -682,7 +662,7 @@ check_rw_status() {
     fi
     if [ "$device_vendorpartition" == "true" ]; then
       vendor_as_rw=`$l/grep -w /vendor /proc/mounts | $l/grep -ow rw | head -n 1`
-      if [ ! "$vendor_as_rw" == "rw" ]; then ui_print "! Read-only vendor partition"; fi
+      if [ ! "$vendor_as_rw" == "rw" ]; then ui_print "! Read-only vendor partition. Continue..."; fi
     fi
     if [ "$($l/grep -w -o /product /proc/mounts)" ]; then
       product_as_rw=`$l/grep -w /product /proc/mounts | $l/grep -ow rw | head -n 1`
@@ -713,9 +693,7 @@ system_layout() {
       export SYSTEM="/system_root/system"
     fi
   fi
-  if [ "$BOOTMODE" == "true" ]; then
-    export SYSTEM="/system"
-  fi
+  if [ "$BOOTMODE" == "true" ]; then export SYSTEM="/system"; fi
   # Systemless install will change system layout at 'post_install' stage and default,
   # system is still used by some functions besides systemless installation. So export,
   # default system layout with different variable instead of calling this function,
@@ -738,42 +716,20 @@ chk_inst_pkg() {
 }
 
 on_inst_abort() {
-  if [ "$GAPPS_TYPE" == "OpenGApps" ]; then
-    ui_print "! OpenGApps installed. Aborting..."
-    unmount_all
-    # Wipe ZIP extracts
-    cleanup
-    ui_print "! Installation failed"
-    ui_print " "
-    # Reset any error code
-    true
-    sync
-    exit 1
-  fi
-  if [ "$GAPPS_TYPE" == "FlameGApps" ]; then
-    ui_print "! FlameGApps installed. Aborting..."
-    unmount_all
-    # Wipe ZIP extracts
-    cleanup
-    ui_print "! Installation failed"
-    ui_print " "
-    # Reset any error code
-    true
-    sync
-    exit 1
-  fi
-  if [ "$GAPPS_TYPE" == "NikGApps" ]; then
-    ui_print "! NikGApps installed. Aborting..."
-    unmount_all
-    # Wipe ZIP extracts
-    cleanup
-    ui_print "! Installation failed"
-    ui_print " "
-    # Reset any error code
-    true
-    sync
-    exit 1
-  fi
+  case $GAPPS_TYPE in
+    OpenGApps )
+      ui_print "! OpenGApps installed. Aborting..."
+      lp_abort
+      ;;
+    FlameGApps )
+      ui_print "! FlameGApps installed. Aborting..."
+      lp_abort
+      ;;
+    NikGApps )
+      ui_print "! NikGApps installed. Aborting..."
+      lp_abort
+      ;;
+  esac
 }
 
 # Check mount status
@@ -793,72 +749,30 @@ del_error_log_zip() {
   if [ "$ZIPTYPE" == "basic" ]; then
     rm -rf $INTERNAL/bitgapps_debug_failed_logs.tar.gz
   fi
-  if [ "$ZIPTYPE" == "addon" ]; then
-    if [ "$ADDON" == "conf" ]; then
-      rm -rf $INTERNAL/bitgapps_addon_failed_logs.tar.gz
-    fi
-    if [ "$ADDON" == "sep" ]; then
-      if [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_assistant_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_bromite_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_calculator_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_calendar_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_chrome_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_contacts_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_deskclock_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_dialer_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_DPS_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_dps_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_gboard_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_gearhead_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_launcher_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_maps_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_markup_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_messages_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_photos_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_soundpicker_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_TTS_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_tts_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_vanced_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_WELLBEING_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_wellbeing_failed_logs.tar.gz
-      fi
-    fi
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ]; then
+    rm -rf $INTERNAL/bitgapps_addon_failed_logs.tar.gz
+  fi
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ]; then
+    [ "$TARGET_ASSISTANT_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_assistant_failed_logs.tar.gz
+    [ "$TARGET_BROMITE_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_bromite_failed_logs.tar.gz
+    [ "$TARGET_CALCULATOR_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_calculator_failed_logs.tar.gz
+    [ "$TARGET_CALENDAR_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_calendar_failed_logs.tar.gz
+    [ "$TARGET_CHROME_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_chrome_failed_logs.tar.gz
+    [ "$TARGET_CONTACTS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_contacts_failed_logs.tar.gz
+    [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_deskclock_failed_logs.tar.gz
+    [ "$TARGET_DIALER_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_dialer_failed_logs.tar.gz
+    [ "$TARGET_DPS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_dps_failed_logs.tar.gz
+    [ "$TARGET_GBOARD_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_gboard_failed_logs.tar.gz
+    [ "$TARGET_GEARHEAD_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_gearhead_failed_logs.tar.gz
+    [ "$TARGET_LAUNCHER_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_launcher_failed_logs.tar.gz
+    [ "$TARGET_MAPS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_maps_failed_logs.tar.gz
+    [ "$TARGET_MARKUP_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_markup_failed_logs.tar.gz
+    [ "$TARGET_MESSAGES_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_messages_failed_logs.tar.gz
+    [ "$TARGET_PHOTOS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_photos_failed_logs.tar.gz
+    [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_soundpicker_failed_logs.tar.gz
+    [ "$TARGET_TTS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_tts_failed_logs.tar.gz
+    [ "$TARGET_VANCED_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_vanced_failed_logs.tar.gz
+    [ "$TARGET_WELLBEING_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_wellbeing_failed_logs.tar.gz
   fi
 }
 
@@ -867,92 +781,90 @@ set_error_log_zip() {
     tar -cz -f "$TMP/bitgapps_debug_failed_logs.tar.gz" *
     cp -f $TMP/bitgapps_debug_failed_logs.tar.gz $INTERNAL/bitgapps_debug_failed_logs.tar.gz
   fi
-  if [ "$ZIPTYPE" == "addon" ]; then
-    if [ "$ADDON" == "conf" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_failed_logs.tar.gz $INTERNAL/bitgapps_addon_failed_logs.tar.gz
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ]; then
+    tar -cz -f "$TMP/bitgapps_addon_failed_logs.tar.gz" *
+    cp -f $TMP/bitgapps_addon_failed_logs.tar.gz $INTERNAL/bitgapps_addon_failed_logs.tar.gz
+  fi
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ]; then
+    if [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_assistant_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_assistant_failed_logs.tar.gz $INTERNAL/bitgapps_addon_assistant_failed_logs.tar.gz
     fi
-    if [ "$ADDON" == "sep" ]; then
-      if [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_assistant_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_assistant_failed_logs.tar.gz $INTERNAL/bitgapps_addon_assistant_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_bromite_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_bromite_failed_logs.tar.gz $INTERNAL/bitgapps_addon_bromite_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_calculator_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_calculator_failed_logs.tar.gz $INTERNAL/bitgapps_addon_calculator_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_calendar_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_calendar_failed_logs.tar.gz $INTERNAL/bitgapps_addon_calendar_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_chrome_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_chrome_failed_logs.tar.gz $INTERNAL/bitgapps_addon_chrome_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_contacts_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_contacts_failed_logs.tar.gz $INTERNAL/bitgapps_addon_contacts_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_deskclock_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_deskclock_failed_logs.tar.gz $INTERNAL/bitgapps_addon_deskclock_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_dialer_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_dialer_failed_logs.tar.gz $INTERNAL/bitgapps_addon_dialer_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_DPS_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_dps_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_dps_failed_logs.tar.gz $INTERNAL/bitgapps_addon_dps_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_gboard_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_gboard_failed_logs.tar.gz $INTERNAL/bitgapps_addon_gboard_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_gearhead_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_gearhead_failed_logs.tar.gz $INTERNAL/bitgapps_addon_gearhead_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_launcher_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_launcher_failed_logs.tar.gz $INTERNAL/bitgapps_addon_launcher_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_maps_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_maps_failed_logs.tar.gz $INTERNAL/bitgapps_addon_maps_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_markup_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_markup_failed_logs.tar.gz $INTERNAL/bitgapps_addon_markup_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_messages_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_messages_failed_logs.tar.gz $INTERNAL/bitgapps_addon_messages_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_photos_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_photos_failed_logs.tar.gz $INTERNAL/bitgapps_addon_photos_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_soundpicker_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_soundpicker_failed_logs.tar.gz $INTERNAL/bitgapps_addon_soundpicker_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_TTS_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_tts_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_tts_failed_logs.tar.gz $INTERNAL/bitgapps_addon_tts_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_vanced_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_vanced_failed_logs.tar.gz $INTERNAL/bitgapps_addon_vanced_failed_logs.tar.gz
-      fi
-      if [ "$TARGET_WELLBEING_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_wellbeing_failed_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_wellbeing_failed_logs.tar.gz $INTERNAL/bitgapps_addon_wellbeing_failed_logs.tar.gz
-      fi
+    if [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_bromite_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_bromite_failed_logs.tar.gz $INTERNAL/bitgapps_addon_bromite_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_calculator_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_calculator_failed_logs.tar.gz $INTERNAL/bitgapps_addon_calculator_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_calendar_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_calendar_failed_logs.tar.gz $INTERNAL/bitgapps_addon_calendar_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_chrome_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_chrome_failed_logs.tar.gz $INTERNAL/bitgapps_addon_chrome_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_contacts_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_contacts_failed_logs.tar.gz $INTERNAL/bitgapps_addon_contacts_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_deskclock_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_deskclock_failed_logs.tar.gz $INTERNAL/bitgapps_addon_deskclock_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_dialer_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_dialer_failed_logs.tar.gz $INTERNAL/bitgapps_addon_dialer_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_DPS_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_dps_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_dps_failed_logs.tar.gz $INTERNAL/bitgapps_addon_dps_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_gboard_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_gboard_failed_logs.tar.gz $INTERNAL/bitgapps_addon_gboard_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_gearhead_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_gearhead_failed_logs.tar.gz $INTERNAL/bitgapps_addon_gearhead_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_launcher_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_launcher_failed_logs.tar.gz $INTERNAL/bitgapps_addon_launcher_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_maps_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_maps_failed_logs.tar.gz $INTERNAL/bitgapps_addon_maps_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_markup_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_markup_failed_logs.tar.gz $INTERNAL/bitgapps_addon_markup_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_messages_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_messages_failed_logs.tar.gz $INTERNAL/bitgapps_addon_messages_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_photos_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_photos_failed_logs.tar.gz $INTERNAL/bitgapps_addon_photos_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_soundpicker_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_soundpicker_failed_logs.tar.gz $INTERNAL/bitgapps_addon_soundpicker_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_TTS_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_tts_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_tts_failed_logs.tar.gz $INTERNAL/bitgapps_addon_tts_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_vanced_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_vanced_failed_logs.tar.gz $INTERNAL/bitgapps_addon_vanced_failed_logs.tar.gz
+    fi
+    if [ "$TARGET_WELLBEING_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_wellbeing_failed_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_wellbeing_failed_logs.tar.gz $INTERNAL/bitgapps_addon_wellbeing_failed_logs.tar.gz
     fi
   fi
 }
@@ -961,72 +873,30 @@ del_comp_log_zip() {
   if [ "$ZIPTYPE" == "basic" ]; then
     rm -rf $INTERNAL/bitgapps_debug_complete_logs.tar.gz
   fi
-  if [ "$ZIPTYPE" == "addon" ]; then
-    if [ "$ADDON" == "conf" ]; then
-      rm -rf $INTERNAL/bitgapps_addon_complete_logs.tar.gz
-    fi
-    if [ "$ADDON" == "sep" ]; then
-      if [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_assistant_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_bromite_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_calculator_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_calendar_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_chrome_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_contacts_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_deskclock_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_dialer_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_DPS_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_dps_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_gboard_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_gearhead_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_launcher_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_maps_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_markup_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_messages_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_photos_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_soundpicker_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_TTS_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_tts_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_vanced_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_WELLBEING_GOOGLE" == "true" ]; then
-        rm -rf $INTERNAL/bitgapps_addon_wellbeing_complete_logs.tar.gz
-      fi
-    fi
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ]; then
+    rm -rf $INTERNAL/bitgapps_addon_complete_logs.tar.gz
+  fi
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ]; then
+    [ "$TARGET_ASSISTANT_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_assistant_complete_logs.tar.gz
+    [ "$TARGET_BROMITE_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_bromite_complete_logs.tar.gz
+    [ "$TARGET_CALCULATOR_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_calculator_complete_logs.tar.gz
+    [ "$TARGET_CALENDAR_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_calendar_complete_logs.tar.gz
+    [ "$TARGET_CHROME_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_chrome_complete_logs.tar.gz
+    [ "$TARGET_CONTACTS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_contacts_complete_logs.tar.gz
+    [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_deskclock_complete_logs.tar.gz
+    [ "$TARGET_DIALER_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_dialer_complete_logs.tar.gz
+    [ "$TARGET_DPS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_dps_complete_logs.tar.gz
+    [ "$TARGET_GBOARD_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_gboard_complete_logs.tar.gz
+    [ "$TARGET_GEARHEAD_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_gearhead_complete_logs.tar.gz
+    [ "$TARGET_LAUNCHER_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_launcher_complete_logs.tar.gz
+    [ "$TARGET_MAPS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_maps_complete_logs.tar.gz
+    [ "$TARGET_MARKUP_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_markup_complete_logs.tar.gz
+    [ "$TARGET_MESSAGES_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_messages_complete_logs.tar.gz
+    [ "$TARGET_PHOTOS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_photos_complete_logs.tar.gz
+    [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_soundpicker_complete_logs.tar.gz
+    [ "$TARGET_TTS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_tts_complete_logs.tar.gz
+    [ "$TARGET_VANCED_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_vanced_complete_logs.tar.gz
+    [ "$TARGET_WELLBEING_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_wellbeing_complete_logs.tar.gz
   fi
 }
 
@@ -1035,126 +905,117 @@ set_comp_log_zip() {
     tar -cz -f "$TMP/bitgapps_debug_complete_logs.tar.gz" *
     cp -f $TMP/bitgapps_debug_complete_logs.tar.gz $INTERNAL/bitgapps_debug_complete_logs.tar.gz
   fi
-  if [ "$ZIPTYPE" == "addon" ]; then
-    if [ "$ADDON" == "conf" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_complete_logs.tar.gz $INTERNAL/bitgapps_addon_complete_logs.tar.gz
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ]; then
+    tar -cz -f "$TMP/bitgapps_addon_complete_logs.tar.gz" *
+    cp -f $TMP/bitgapps_addon_complete_logs.tar.gz $INTERNAL/bitgapps_addon_complete_logs.tar.gz
+  fi
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ]; then
+    if [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_assistant_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_assistant_complete_logs.tar.gz $INTERNAL/bitgapps_addon_assistant_complete_logs.tar.gz
     fi
-    if [ "$ADDON" == "sep" ]; then
-      if [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_assistant_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_assistant_complete_logs.tar.gz $INTERNAL/bitgapps_addon_assistant_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_bromite_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_bromite_complete_logs.tar.gz $INTERNAL/bitgapps_addon_bromite_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_calculator_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_calculator_complete_logs.tar.gz $INTERNAL/bitgapps_addon_calculator_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_calendar_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_calendar_complete_logs.tar.gz $INTERNAL/bitgapps_addon_calendar_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_chrome_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_chrome_complete_logs.tar.gz $INTERNAL/bitgapps_addon_chrome_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_contacts_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_contacts_complete_logs.tar.gz $INTERNAL/bitgapps_addon_contacts_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_deskclock_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_deskclock_complete_logs.tar.gz $INTERNAL/bitgapps_addon_deskclock_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_dialer_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_dialer_complete_logs.tar.gz $INTERNAL/bitgapps_addon_dialer_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_DPS_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_dps_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_dps_complete_logs.tar.gz $INTERNAL/bitgapps_addon_dps_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_gboard_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_gboard_complete_logs.tar.gz $INTERNAL/bitgapps_addon_gboard_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_gearhead_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_gearhead_complete_logs.tar.gz $INTERNAL/bitgapps_addon_gearhead_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_launcher_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_launcher_complete_logs.tar.gz $INTERNAL/bitgapps_addon_launcher_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_maps_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_maps_complete_logs.tar.gz $INTERNAL/bitgapps_addon_maps_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_markup_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_markup_complete_logs.tar.gz $INTERNAL/bitgapps_addon_markup_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_messages_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_messages_complete_logs.tar.gz $INTERNAL/bitgapps_addon_messages_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_photos_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_photos_complete_logs.tar.gz $INTERNAL/bitgapps_addon_photos_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_soundpicker_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_soundpicker_complete_logs.tar.gz $INTERNAL/bitgapps_addon_soundpicker_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_TTS_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_tts_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_tts_complete_logs.tar.gz $INTERNAL/bitgapps_addon_tts_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_vanced_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_vanced_complete_logs.tar.gz $INTERNAL/bitgapps_addon_vanced_complete_logs.tar.gz
-      fi
-      if [ "$TARGET_WELLBEING_GOOGLE" == "true" ]; then
-        tar -cz -f "$TMP/bitgapps_addon_wellbeing_complete_logs.tar.gz" *
-        cp -f $TMP/bitgapps_addon_wellbeing_complete_logs.tar.gz $INTERNAL/bitgapps_addon_wellbeing_complete_logs.tar.gz
-      fi
+    if [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_bromite_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_bromite_complete_logs.tar.gz $INTERNAL/bitgapps_addon_bromite_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_calculator_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_calculator_complete_logs.tar.gz $INTERNAL/bitgapps_addon_calculator_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_calendar_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_calendar_complete_logs.tar.gz $INTERNAL/bitgapps_addon_calendar_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_chrome_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_chrome_complete_logs.tar.gz $INTERNAL/bitgapps_addon_chrome_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_contacts_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_contacts_complete_logs.tar.gz $INTERNAL/bitgapps_addon_contacts_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_deskclock_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_deskclock_complete_logs.tar.gz $INTERNAL/bitgapps_addon_deskclock_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_dialer_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_dialer_complete_logs.tar.gz $INTERNAL/bitgapps_addon_dialer_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_DPS_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_dps_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_dps_complete_logs.tar.gz $INTERNAL/bitgapps_addon_dps_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_gboard_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_gboard_complete_logs.tar.gz $INTERNAL/bitgapps_addon_gboard_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_gearhead_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_gearhead_complete_logs.tar.gz $INTERNAL/bitgapps_addon_gearhead_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_launcher_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_launcher_complete_logs.tar.gz $INTERNAL/bitgapps_addon_launcher_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_maps_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_maps_complete_logs.tar.gz $INTERNAL/bitgapps_addon_maps_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_markup_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_markup_complete_logs.tar.gz $INTERNAL/bitgapps_addon_markup_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_messages_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_messages_complete_logs.tar.gz $INTERNAL/bitgapps_addon_messages_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_photos_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_photos_complete_logs.tar.gz $INTERNAL/bitgapps_addon_photos_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_soundpicker_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_soundpicker_complete_logs.tar.gz $INTERNAL/bitgapps_addon_soundpicker_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_TTS_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_tts_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_tts_complete_logs.tar.gz $INTERNAL/bitgapps_addon_tts_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_vanced_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_vanced_complete_logs.tar.gz $INTERNAL/bitgapps_addon_vanced_complete_logs.tar.gz
+    fi
+    if [ "$TARGET_WELLBEING_GOOGLE" == "true" ]; then
+      tar -cz -f "$TMP/bitgapps_addon_wellbeing_complete_logs.tar.gz" *
+      cp -f $TMP/bitgapps_addon_wellbeing_complete_logs.tar.gz $INTERNAL/bitgapps_addon_wellbeing_complete_logs.tar.gz
     fi
   fi
 }
 
 set_install_logs() {
-  cp -f /cache/recovery/last_log $TMP/bitgapps/last.log > /dev/null 2>&1
-  cp -f /cache/recovery/log $TMP/bitgapps/log.log > /dev/null 2>&1
-  cp -f /cache/recovery.log $TMP/bitgapps/cache.log > /dev/null 2>&1
-  cp -f $TMP/recovery.log $TMP/bitgapps/recovery.log > /dev/null 2>&1
-  cp -f /etc/fstab $TMP/bitgapps/fstab > /dev/null 2>&1
-  cp -f /etc/recovery.fstab $TMP/bitgapps/recovery.fstab > /dev/null 2>&1
-  cp -f /etc/twrp.fstab $TMP/bitgapps/twrp.fstab > /dev/null 2>&1
-  cp -f $SYSTEM/build.prop $TMP/bitgapps/system.prop > /dev/null 2>&1
-  cp -f $SYSTEM/config.prop $TMP/bitgapps/config.prop > /dev/null 2>&1
-  cp -f $SYSTEM/product/build.prop $TMP/bitgapps/product.prop > /dev/null 2>&1
-  cp -f $SYSTEM/system_ext/build.prop $TMP/bitgapps/ext.prop > /dev/null 2>&1
-  if [ "$device_vendorpartition" == "false" ]; then
-    cp -f $SYSTEM/vendor/build.prop $TMP/bitgapps/treble.prop > /dev/null 2>&1
-    cp -f $SYSTEM/vendor/default.prop $TMP/bitgapps/treble.default > /dev/null 2>&1
-  fi
-  if [ "$device_vendorpartition" == "true" ]; then
-    cp -f $VENDOR/build.prop $TMP/bitgapps/vendor.prop > /dev/null 2>&1
-    cp -f $VENDOR/default.prop $TMP/bitgapps/vendor.default > /dev/null 2>&1
-    cp -f $VENDOR/odm/etc/build.prop $TMP/bitgapps/odm.prop > /dev/null 2>&1
-    cp -f $VENDOR/odm_dlkm/etc/build.prop $TMP/bitgapps/odm_dlkm.prop > /dev/null 2>&1
-    cp -f $VENDOR/vendor_dlkm/etc/build.prop $TMP/bitgapps/vendor_dlkm.prop > /dev/null 2>&1
-  fi
-  if [ -f $SYSTEM/etc/prop.default ]; then
-    cp -f $SYSTEM/etc/prop.default $TMP/bitgapps/system.default > /dev/null 2>&1
-  fi
-  cp -f $BITGAPPS_CONFIG $TMP/bitgapps/bitgapps-config.prop > /dev/null 2>&1
+  (cp -f /cache/recovery/last_log $TMP/bitgapps/last.log
+   cp -f /cache/recovery/log $TMP/bitgapps/log.log
+   cp -f /cache/recovery.log $TMP/bitgapps/cache.log
+   cp -f $TMP/recovery.log $TMP/bitgapps/recovery.log
+   cp -f /etc/fstab $TMP/bitgapps/fstab
+   cp -f /etc/recovery.fstab $TMP/bitgapps/recovery.fstab
+   cp -f /etc/twrp.fstab $TMP/bitgapps/twrp.fstab
+   cp -f $SYSTEM/build.prop $TMP/bitgapps/system.prop
+   cp -f $SYSTEM/config.prop $TMP/bitgapps/config.prop
+   cp -f $SYSTEM/product/build.prop $TMP/bitgapps/product.prop
+   cp -f $SYSTEM/system_ext/build.prop $TMP/bitgapps/ext.prop
+   cp -f $SYSTEM/vendor/build.prop $TMP/bitgapps/treble.prop
+   cp -f $SYSTEM/vendor/default.prop $TMP/bitgapps/treble.default
+   cp -f $VENDOR/build.prop $TMP/bitgapps/vendor.prop
+   cp -f $VENDOR/default.prop $TMP/bitgapps/vendor.default
+   cp -f $VENDOR/odm/etc/build.prop $TMP/bitgapps/odm.prop
+   cp -f $VENDOR/odm_dlkm/etc/build.prop $TMP/bitgapps/odm_dlkm.prop
+   cp -f $VENDOR/vendor_dlkm/etc/build.prop $TMP/bitgapps/vendor_dlkm.prop
+   cp -f $SYSTEM/etc/prop.default $TMP/bitgapps/system.default
+   cp -f $BITGAPPS_CONFIG $TMP/bitgapps/bitgapps-config.prop) > /dev/null 2>&1
 }
 
-# Generate log file on failed installation
 on_install_failed() {
   del_error_log_zip
   rm -rf $TMP/bitgapps
@@ -1163,70 +1024,52 @@ on_install_failed() {
   set_install_logs
   set_error_log_zip
   # Checkout log path
-  cd /
+  cd ../..
 }
 
-# Generate log file on complete installation
 on_install_complete() {
   del_comp_log_zip
   cd $TMP/bitgapps
   set_install_logs
   set_comp_log_zip
   # Checkout log path
-  cd /
+  cd ../..
 }
 
 unmount_all() {
   if [ "$BOOTMODE" == "false" ]; then
     ui_print "- Unmounting partitions"
     umount_apex
-    if [ "$($l/grep -w -o /system $fstab)" ]; then
-      umount /system > /dev/null 2>&1
-      umount -l /system > /dev/null 2>&1
-    fi
     if [ "$($l/grep -w -o /system_root $fstab)" ]; then
-      umount /system_root > /dev/null 2>&1
-      umount -l /system_root > /dev/null 2>&1
+      (umount /system_root && umount -l /system_root) > /dev/null 2>&1
+    fi
+    if [ "$($l/grep -w -o /system $fstab)" ]; then
+      (umount /system && umount -l /system) > /dev/null 2>&1
     fi
     if [ "$device_vendorpartition" == "true" ]; then
-      umount /vendor > /dev/null 2>&1
-      umount -l /vendor > /dev/null 2>&1
+      (umount /vendor && umount -l /vendor) > /dev/null 2>&1
     fi
-    # SystemExt
-    umount /system_ext > /dev/null 2>&1
-    umount -l /system_ext > /dev/null 2>&1
-    # Product
-    umount /product > /dev/null 2>&1
-    umount -l /product > /dev/null 2>&1
-    # Persist
-    umount /persist > /dev/null 2>&1
-    umount -l /persist > /dev/null 2>&1
-    # Metadata
-    umount /metadata > /dev/null 2>&1
-    umount -l /metadata > /dev/null 2>&1
-    # RNG Device
-    umount /dev/random > /dev/null 2>&1
+    for i in /product /system_ext /persist /metadata /dev/random; do
+      (umount $i && umount -l $i) > /dev/null 2>&1
+    done
     # Restore predefined environmental variable
     [ -z $OLD_ANDROID_ROOT ] || export ANDROID_ROOT=$OLD_ANDROID_ROOT
   fi
 }
 
-cleanup() {
-  rm -rf $TMP/90-bitgapps.sh
-  rm -rf $TMP/bitgapps*
-  rm -rf $TMP/busybox-arm
-  rm -rf $TMP/config.prop
-  rm -rf $TMP/g.prop
-  rm -rf $TMP/installer.sh
-  rm -rf $TMP/init.logcat.rc
-  rm -rf $TMP/LICENSE
-  rm -rf $TMP/MAGISK_VER_CODE
-  rm -rf $TMP/META-INF
-  rm -rf $TMP/out
-  rm -rf $TMP/unzip
-  rm -rf $TMP/updater
-  rm -rf $TMP/util_functions.sh
-  rm -rf $TMP/zip
+f_cleanup() { (find .$TMP -mindepth 1 -maxdepth 1 -type f -not -name 'recovery.log' -exec rm -rf '{}' \;); }
+
+d_cleanup() { (find .$TMP -mindepth 1 -maxdepth 1 -type d -not -name 'bin' -exec rm -rf '{}' \;); }
+
+lp_abort() {
+  unmount_all
+  f_cleanup
+  d_cleanup
+  ui_print "! Installation failed"
+  ui_print " "
+  true
+  sync
+  exit 1
 }
 
 on_abort() {
@@ -1234,10 +1077,10 @@ on_abort() {
   on_install_failed
   unmount_all
   recovery_cleanup
-  cleanup
+  f_cleanup
+  d_cleanup
   ui_print "! Installation failed"
   ui_print " "
-  # Reset any error code
   true
   sync
   exit 1
@@ -1247,10 +1090,10 @@ on_installed() {
   on_install_complete
   unmount_all
   recovery_cleanup
-  cleanup
+  f_cleanup
+  d_cleanup
   ui_print "- Installation complete"
   ui_print " "
-  # Reset any error code
   true
   sync
   exit "$?"
@@ -1295,10 +1138,7 @@ get_prop() {
 }
 
 # Check Deprecated Release Tag
-on_release_tag() {
-  android_release="$(get_prop "ro.gapps.release_tag")"
-  unsupported_release="$TARGET_GAPPS_RELEASE"
-}
+on_release_tag() { android_release="$(get_prop "ro.gapps.release_tag")" && supported_release="$TARGET_GAPPS_RELEASE"; }
 
 # Set Config Version Property
 on_config_version() { supported_config_version="$(get_prop "ro.config.version")"; }
@@ -1322,7 +1162,18 @@ on_module_check() {
   fi
 }
 
-# Safetynet Patch Config Property
+# YouTube Vanced MicroG
+on_microg_check() {
+  if [ ! -f "$BITGAPPS_CONFIG" ]; then
+    supported_microg_config="false"
+    supported_data_config="false"
+  else
+    supported_microg_config="$(get_prop "ro.config.microg")"
+    supported_data_config="$(get_prop "ro.config.data")"
+  fi
+}
+
+# Safetynet Config Property
 on_safetynet_check() { supported_safetynet_config="$(get_prop "ro.config.safetynet")"; }
 
 # SetupWizard Config Property
@@ -1333,9 +1184,6 @@ on_addon_config() { supported_addon_config="$(get_prop "ro.config.addon")"; }
 
 # Addon Stack Property
 on_addon_stack() { supported_addon_stack="$(get_prop "ro.config.stack")"; }
-
-# Addon Wipe Property
-on_addon_wipe() { supported_addon_wipe="$(get_prop "ro.addon.wipe")"; }
 
 # Addon Config Properties
 on_addon_check() {
@@ -1358,8 +1206,13 @@ on_addon_check() {
   supported_soundpicker_config="$(get_prop "ro.config.soundpicker")"
   supported_tts_config="$(get_prop "ro.config.tts")"
   supported_vanced_config="$(get_prop "ro.config.vanced")"
+  supported_microg_config="$(get_prop "ro.config.microg")"
+  supported_data_config="$(get_prop "ro.config.data")"
   supported_wellbeing_config="$(get_prop "ro.config.wellbeing")"
 }
+
+# Addon Wipe Property
+on_addon_wipe() { supported_addon_wipe="$(get_prop "ro.addon.wipe")"; }
 
 # Addon Config Properties
 on_addon_chk() {
@@ -1382,6 +1235,8 @@ on_addon_chk() {
   supported_soundpicker_wipe="$(get_prop "ro.soundpicker.wipe")"
   supported_tts_wipe="$(get_prop "ro.tts.wipe")"
   supported_vanced_wipe="$(get_prop "ro.vanced.wipe")"
+  supported_microg_wipe="$(get_prop "ro.microg.wipe")"
+  supported_data_wipe="$(get_prop "ro.data.wipe")"
   supported_wellbeing_wipe="$(get_prop "ro.wellbeing.wipe")"
 }
 
@@ -1390,95 +1245,78 @@ on_wipe_check() { supported_wipe_config="$(get_prop "ro.config.wipe")"; }
 
 # Set SDK and Version check property
 on_version_check() {
-  if [ "$ZIPTYPE" == "addon" ]; then
-    android_sdk="$(get_prop "ro.build.version.sdk")"
-  fi
+  if [ "$ZIPTYPE" == "addon" ]; then android_sdk="$(get_prop "ro.build.version.sdk")"; fi
   if [ "$ZIPTYPE" == "basic" ]; then
     if [ "$TARGET_ANDROID_SDK" == "31" ]; then
-      android_sdk="$(get_prop "ro.build.version.sdk")"
-      supported_sdk="31"
-      android_version="$(get_prop "ro.build.version.release")"
-      supported_version="12"
+      android_sdk="$(get_prop "ro.build.version.sdk")" && supported_sdk="31"
+      android_version="$(get_prop "ro.build.version.release")" && supported_version="12"
     fi
     if [ "$TARGET_ANDROID_SDK" == "30" ]; then
-      android_sdk="$(get_prop "ro.build.version.sdk")"
-      supported_sdk="30"
-      android_version="$(get_prop "ro.build.version.release")"
-      supported_version="11"
+      android_sdk="$(get_prop "ro.build.version.sdk")" && supported_sdk="30"
+      android_version="$(get_prop "ro.build.version.release")" && supported_version="11"
     fi
     if [ "$TARGET_ANDROID_SDK" == "29" ]; then
-      android_sdk="$(get_prop "ro.build.version.sdk")"
-      supported_sdk="29"
-      android_version="$(get_prop "ro.build.version.release")"
-      supported_version="10"
+      android_sdk="$(get_prop "ro.build.version.sdk")" && supported_sdk="29"
+      android_version="$(get_prop "ro.build.version.release")" && supported_version="10"
     fi
     if [ "$TARGET_ANDROID_SDK" == "28" ]; then
-      android_sdk="$(get_prop "ro.build.version.sdk")"
-      supported_sdk="28"
-      android_version="$(get_prop "ro.build.version.release")"
-      supported_version="9"
+      android_sdk="$(get_prop "ro.build.version.sdk")" && supported_sdk="28"
+      android_version="$(get_prop "ro.build.version.release")" && supported_version="9"
     fi
     if [ "$TARGET_ANDROID_SDK" == "27" ]; then
-      android_sdk="$(get_prop "ro.build.version.sdk")"
-      supported_sdk="27"
-      android_version="$(get_prop "ro.build.version.release")"
-      supported_version="8.1.0"
+      android_sdk="$(get_prop "ro.build.version.sdk")" && supported_sdk="27"
+      android_version="$(get_prop "ro.build.version.release")" && supported_version="8.1.0"
     fi
     if [ "$TARGET_ANDROID_SDK" == "26" ]; then
-      android_sdk="$(get_prop "ro.build.version.sdk")"
-      supported_sdk="26"
-      android_version="$(get_prop "ro.build.version.release")"
-      supported_version="8.0.0"
+      android_sdk="$(get_prop "ro.build.version.sdk")" && supported_sdk="26"
+      android_version="$(get_prop "ro.build.version.release")" && supported_version="8.0.0"
     fi
     if [ "$TARGET_ANDROID_SDK" == "25" ]; then
-      android_sdk="$(get_prop "ro.build.version.sdk")"
-      supported_sdk="25"
+      android_sdk="$(get_prop "ro.build.version.sdk")" && supported_sdk="25"
       android_version="$(get_prop "ro.build.version.release")"
-      if [ "$($l/grep -w -o "7.1.2" $SYSTEM/build.prop)" ]; then
-        supported_version="7.1.2"
-      fi
-      if [ "$($l/grep -w -o "7.1.1" $SYSTEM/build.prop)" ]; then
-        supported_version="7.1.1"
-      fi
+      [ "$($l/grep -w -o "7.1.2" $SYSTEM/build.prop)" ] && supported_version="7.1.2"
+      [ "$($l/grep -w -o "7.1.1" $SYSTEM/build.prop)" ] && supported_version="7.1.1"
     fi
   fi
 }
 
-# Set platform check property
-on_platform_check() {
-  # Obsolete build property in use
-  device_architecture="$(get_prop "ro.product.cpu.abi")"
-}
+# Set platform check property; Obsolete build property in use
+on_platform_check() { device_architecture="$(get_prop "ro.product.cpu.abi")"; }
 
 # Set supported Android Platform
-on_target_platform() {
-  ANDROID_PLATFORM_ARM32="armeabi-v7a"
-  ANDROID_PLATFORM_ARM64="arm64-v8a"
-}
+on_target_platform() { ANDROID_PLATFORM_ARM32="armeabi-v7a" && ANDROID_PLATFORM_ARM64="arm64-v8a"; }
 
 build_platform() {
-  if [ "$TARGET_ANDROID_ARCH" == "ARM" ]; then
-    ANDROID_PLATFORM="$ANDROID_PLATFORM_ARM32"
-  fi
-  if [ "$TARGET_ANDROID_ARCH" == "ARM64" ]; then
-    ANDROID_PLATFORM="$ANDROID_PLATFORM_ARM64"
-  fi
+  if [ "$TARGET_ANDROID_ARCH" == "ARM" ]; then ANDROID_PLATFORM="$ANDROID_PLATFORM_ARM32"; fi
+  if [ "$TARGET_ANDROID_ARCH" == "ARM64" ]; then ANDROID_PLATFORM="$ANDROID_PLATFORM_ARM64"; fi
 }
 
 # Check install type
 check_release_tag() {
-  if [ -n "$(cat $SYSTEM/build.prop | grep ro.gapps.release_tag)" ]; then
-    if [ "$android_release" -lt "$unsupported_release" ]; then
-      DEPRECATED_RELEASE_TAG="true"
+  if [ "$($l/grep -w -o 'ro.gapps.release_tag' $SYSTEM/build.prop)" ]; then
+    if [ "$android_release" -lt "$supported_release" ]; then DEPRECATED_RELEASE_TAG="true"; fi
+    if [ ! "$TARGET_DIRTY_INSTALL" == "true" ] && [ "$DEPRECATED_RELEASE_TAG" == "true" ]; then
+      on_abort "! Deprecated release tag detected. Aborting..."
+    else
+      # Update release tag in system build
+      remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
+      insert_line $SYSTEM/build.prop "ro.gapps.release_tag=$TARGET_RELEASE_TAG" after 'net.bt.name=Android' "ro.gapps.release_tag=$TARGET_RELEASE_TAG"
     fi
-    if [ ! "$TARGET_DIRTY_INSTALL" == "true" ]; then
-      if [ "$DEPRECATED_RELEASE_TAG" == "true" ]; then
-        on_abort "! Deprecated Release tag detected. Aborting..."
-      fi
-    fi
-    # Set release tag in system build
-    remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
+  fi
+  # Set release tag in system build
+  if [ ! "$($l/grep -w -o 'ro.gapps.release_tag' $SYSTEM/build.prop)" ]; then
     insert_line $SYSTEM/build.prop "ro.gapps.release_tag=$TARGET_RELEASE_TAG" after 'net.bt.name=Android' "ro.gapps.release_tag=$TARGET_RELEASE_TAG"
+  fi
+}
+
+chk_release_tag() {
+  if [ "$($l/grep -w -o 'ro.gapps.release_tag' $SYSTEM/build.prop)" ]; then
+    if [ ! "$android_release" == "$supported_release" ]; then UNSUPPORTED_RELEASE_TAG="true"; fi
+    if [ ! "$TARGET_DIRTY_INSTALL" == "true" ] && [ "$UNSUPPORTED_RELEASE_TAG" == "true" ]; then
+      on_abort "! Unsupported release tag detected. Aborting..."
+    fi
+  else
+    on_abort "! Cannot find release tag. Aborting..."
   fi
 }
 
@@ -1534,9 +1372,7 @@ RTP_v29() {
 RTP_v30() {
   # Get runtime permissions config path
   for RTP in $(find /data -iname "runtime-permissions.xml" 2>/dev/null); do
-    if [ -e "$RTP" ]; then
-      RTP_DEST="$RTP"
-    fi
+    if [ -e "$RTP" ]; then RTP_DEST="$RTP"; fi
   done
   # Did this 11.0+ system already boot and generated runtime permissions
   if [ -e "$RTP_DEST" ]; then
@@ -1549,38 +1385,29 @@ RTP_v30() {
 }
 
 # Wipe runtime permissions
-clean_inst() {
-  if [ "$android_sdk" -le "29" ]; then
-    RTP_v29
-  fi
-  if [ "$android_sdk" -ge "30" ]; then
-    RTP_v30
-  fi
-}
+clean_inst() { { [ "$android_sdk" -le "29" ] && RTP_v29; } && { [ "$android_sdk" -ge "30" ] && RTP_v30; }; }
 
 # Create installation components
 mk_component() {
-  for d in $UNZIP_DIR/tmp_addon \
-           $UNZIP_DIR/tmp_sys \
-           $UNZIP_DIR/tmp_sys_jar \
-           $UNZIP_DIR/tmp_sys_aosp \
-           $UNZIP_DIR/tmp_priv \
-           $UNZIP_DIR/tmp_priv_jar \
-           $UNZIP_DIR/tmp_priv_setup \
-           $UNZIP_DIR/tmp_priv_aosp \
-           $UNZIP_DIR/tmp_firmware \
-           $UNZIP_DIR/tmp_framework \
-           $UNZIP_DIR/tmp_config \
-           $UNZIP_DIR/tmp_default \
-           $UNZIP_DIR/tmp_perm \
-           $UNZIP_DIR/tmp_perm_aosp \
-           $UNZIP_DIR/tmp_pref \
-           $UNZIP_DIR/tmp_overlay \
-           $UNZIP_DIR/tmp_share \
-           $UNZIP_DIR/tmp_srec \
-           $UNZIP_DIR/tmp_aik \
-           $UNZIP_DIR/tmp_keystore
-  do
+  for d in \
+    $UNZIP_DIR/tmp_addon \
+    $UNZIP_DIR/tmp_sys \
+    $UNZIP_DIR/tmp_sys_aosp \
+    $UNZIP_DIR/tmp_priv \
+    $UNZIP_DIR/tmp_priv_setup \
+    $UNZIP_DIR/tmp_priv_aosp \
+    $UNZIP_DIR/tmp_firmware \
+    $UNZIP_DIR/tmp_framework \
+    $UNZIP_DIR/tmp_config \
+    $UNZIP_DIR/tmp_default \
+    $UNZIP_DIR/tmp_perm \
+    $UNZIP_DIR/tmp_perm_aosp \
+    $UNZIP_DIR/tmp_pref \
+    $UNZIP_DIR/tmp_overlay \
+    $UNZIP_DIR/tmp_share \
+    $UNZIP_DIR/tmp_srec \
+    $UNZIP_DIR/tmp_aik \
+    $UNZIP_DIR/tmp_keystore; do
     mkdir $d
     # Recursively change folder permission
     chmod -R 0755 $TMP
@@ -1592,21 +1419,14 @@ on_rwg_check() {
   # Set RWG Status
   TARGET_RWG_STATUS="false"
   # Add support for Paranoid Android
-  if [ -n "$(cat $SYSTEM/build.prop | grep ro.pa.device)" ]; then
-    TARGET_RWG_STATUS="true"
-  fi
+  if [ -n "$(cat $SYSTEM/build.prop | grep ro.pa.device)" ]; then TARGET_RWG_STATUS="true"; fi
   # Add support for PixelExperience
-  if [ -n "$(cat $SYSTEM/build.prop | grep org.pixelexperience.version)" ]; then
-    TARGET_RWG_STATUS="true"
-  fi
+  if [ -n "$(cat $SYSTEM/build.prop | grep org.pixelexperience.version)" ]; then TARGET_RWG_STATUS="true"; fi
 }
 
 # Check presence of playstore
 on_unsupported_rwg() {
-  for f in $SYSTEM/priv-app \
-           $SYSTEM/product/priv-app \
-           $SYSTEM/system_ext/priv-app
-  do
+  for f in $SYSTEM/priv-app $SYSTEM/product/priv-app $SYSTEM/system_ext/priv-app; do
     # Add playstore in detection
     if [ -d "$f/Phonesky" ]; then
       TARGET_APP_PLAYSTORE="true"
@@ -1616,12 +1436,10 @@ on_unsupported_rwg() {
   done
 }
 
-# Abort installation for unsupported ROMs. Collectively targeting through playstore
+# Abort installation for unsupported ROMs; Collectively targeting through playstore
 skip_on_unsupported() {
   if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$TARGET_APP_PLAYSTORE" == "true" ]; then
-    if [ ! -n "$(cat $SYSTEM/etc/g.prop | grep BiTGApps)" ]; then
-      on_abort "! Unsupported RWG device. Aborting..."
-    fi
+    if [ ! -n "$(cat $SYSTEM/etc/g.prop | grep BiTGApps)" ]; then on_abort "! Unsupported RWG device. Aborting..."; fi
   fi
 }
 
@@ -1630,190 +1448,81 @@ rwg_aosp_install() { [ "$TARGET_RWG_STATUS" == "true" ] && AOSP_PKG_INSTALL="tru
 
 # Patch OTA config with RWG property
 rwg_ota_prop() {
-  if [ "$supported_module_config" == "false" ]; then
-    [ "$AOSP_PKG_INSTALL" == "true" ] && insert_line $SYSTEM/config.prop "ro.rwg.device=true" after '# Begin build properties' "ro.rwg.device=true"
+  if [ "$supported_module_config" == "false" ] && [ "$AOSP_PKG_INSTALL" == "true" ]; then
+    insert_line $SYSTEM/config.prop "ro.rwg.device=true" after '# Begin build properties' "ro.rwg.device=true"
   fi
 }
 
 # Set AOSP Dialer/Messaging as default
 set_aosp_default() {
-  if [ "$AOSP_PKG_INSTALL" == "true" ]; then
-    # Secure settings only exits in Android 9 and lower
-    if [ "$android_sdk" -le "28" ]; then
-      setver="122" # lowest version in MM, tagged at 6.0.0
-      setsec="/data/system/users/0/settings_secure.xml"
-      if [ ! -f "$setsec" ]; then
-        install -d "/data/system/users/0"
-        chown -R 1000:1000 "/data/system"
-        chmod -R 775 "/data/system"
-        chmod 700 "/data/system/users/0"
-        { echo -e "<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>\r"
-          echo -e '<settings version="'$setver'">\r'
-          echo -e '  <setting id="1" name="dialer_default_application" value="com.android.dialer" package="android" defaultValue="com.android.dialer" defaultSysSet="true" />\r'
-          echo -e '  <setting id="2" name="sms_default_application" value="com.android.messaging" package="com.android.phone" defaultValue="com.android.messaging" defaultSysSet="true" />\r'
-          echo -e '</settings>'
-        } > "$setsec"
-      fi
-      chown 1000:1000 "$setsec"
-      chmod 600 "$setsec"
+  if [ "$AOSP_PKG_INSTALL" == "true" ] && [ "$android_sdk" -le "28" ]; then
+    setver="122" # lowest version in MM, tagged at 6.0.0
+    setsec="/data/system/users/0/settings_secure.xml"
+    if [ ! -f "$setsec" ]; then
+      install -d "/data/system/users/0"
+      chown -R 1000:1000 "/data/system"
+      chmod -R 775 "/data/system"
+      chmod 700 "/data/system/users/0"
+      { echo -e "<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>\r"
+        echo -e '<settings version="'$setver'">\r'
+        echo -e '  <setting id="1" name="dialer_default_application" value="com.android.dialer" package="android" defaultValue="com.android.dialer" defaultSysSet="true" />\r'
+        echo -e '  <setting id="2" name="sms_default_application" value="com.android.messaging" package="com.android.phone" defaultValue="com.android.messaging" defaultSysSet="true" />\r'
+        echo -e '</settings>'
+      } > "$setsec"
     fi
-    # Roles settings only exits in Android 10 and above
-    if [ "$android_sdk" == "29" ]; then
-      roles="/data/system/users/0/roles.xml"
-      if [ ! -f "$roles" ]; then
-        install -d "/data/system/users/0"
-        chown -R 1000:1000 "/data/system"
-        chmod -R 775 "/data/system"
-        chmod 700 "/data/system/users/0"
-        { echo -e "<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>\r"
-          echo -e '<roles version="-1" packagesHash="3AE1B2E37AEFB206E89C640F07641B07BA657E72EF4936013E63F6848A9BD223">\r'
-          echo -e '  <role name="android.app.role.SMS">\r'
-          echo -e '    <holder name="com.android.messaging" />\r'
-          echo -e '  </role>\r'
-          echo -e '  <role name="android.app.role.DIALER">\r'
-          echo -e '    <holder name="com.android.dialer" />\r'
-          echo -e '  </role>\r'
-          echo -e '</roles>'
-        } > "$roles"
-      fi
-      chown 1000:1000 "$roles"
-      chmod 600 "$roles"
+    chown 1000:1000 "$setsec"
+    chmod 600 "$setsec"
+  fi
+  if [ "$AOSP_PKG_INSTALL" == "true" ] && [ "$android_sdk" == "29" ]; then
+    roles="/data/system/users/0/roles.xml"
+    if [ ! -f "$roles" ]; then
+      install -d "/data/system/users/0"
+      chown -R 1000:1000 "/data/system"
+      chmod -R 775 "/data/system"
+      chmod 700 "/data/system/users/0"
+      { echo -e "<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>\r"
+        echo -e '<roles version="-1" packagesHash="3AE1B2E37AEFB206E89C640F07641B07BA657E72EF4936013E63F6848A9BD223">\r'
+        echo -e '  <role name="android.app.role.SMS">\r'
+        echo -e '    <holder name="com.android.messaging" />\r'
+        echo -e '  </role>\r'
+        echo -e '  <role name="android.app.role.DIALER">\r'
+        echo -e '    <holder name="com.android.dialer" />\r'
+        echo -e '  </role>\r'
+        echo -e '</roles>'
+      } > "$roles"
     fi
-    if [ "$android_sdk" -ge "30" ]; then
-      roles="/data/misc_de/0/apexdata/com.android.permission/roles.xml"
-      if [ ! -f "$roles" ]; then
-        install -d "/data/misc_de/0/apexdata/com.android.permission"
-        chown -R 1000:9998 "/data/misc_de"
-        chmod -R 1771 "/data/misc_de/0"
-        chmod 711 "/data/misc_de/0/apexdata"
-        chmod 771 "/data/misc_de/0/apexdata/com.android.permission"
-        { echo -e "<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>\r"
-          echo -e '<roles version="-1" packagesHash="1C8E61B7486E56E0D6A43CC8BE8A90E47A87460DDFDE6E414A7764BFE889E625">\r'
-          echo -e '  <role name="android.app.role.SMS">\r'
-          echo -e '    <holder name="com.android.messaging" />\r'
-          echo -e '  </role>\r'
-          echo -e '  <role name="android.app.role.DIALER">\r'
-          echo -e '    <holder name="com.android.dialer" />\r'
-          echo -e '  </role>\r'
-          echo -e '</roles>'
-        } > "$roles"
-      fi
-      chown 1000:1000 "$roles"
-      chmod 600 "$roles"
+    chown 1000:1000 "$roles"
+    chmod 600 "$roles"
+  fi
+  if [ "$AOSP_PKG_INSTALL" == "true" ] && [ "$android_sdk" -ge "30" ]; then
+    roles="/data/misc_de/0/apexdata/com.android.permission/roles.xml"
+    if [ ! -f "$roles" ]; then
+      install -d "/data/misc_de/0/apexdata/com.android.permission"
+      chown -R 1000:9998 "/data/misc_de"
+      chmod -R 1771 "/data/misc_de/0"
+      chmod 711 "/data/misc_de/0/apexdata"
+      chmod 771 "/data/misc_de/0/apexdata/com.android.permission"
+      { echo -e "<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>\r"
+        echo -e '<roles version="-1" packagesHash="1C8E61B7486E56E0D6A43CC8BE8A90E47A87460DDFDE6E414A7764BFE889E625">\r'
+        echo -e '  <role name="android.app.role.SMS">\r'
+        echo -e '    <holder name="com.android.messaging" />\r'
+        echo -e '  </role>\r'
+        echo -e '  <role name="android.app.role.DIALER">\r'
+        echo -e '    <holder name="com.android.dialer" />\r'
+        echo -e '  </role>\r'
+        echo -e '</roles>'
+      } > "$roles"
     fi
-  fi
-}
-
-# Set pathmap
-ext_pathmap() {
-  if [ "$android_sdk" -ge "30" ] && [ "$supported_module_config" == "false" ]; then
-    SYSTEM_ADDOND="$SYSTEM/addon.d"
-    SYSTEM_APP="$SYSTEM/system_ext/app"
-    SYSTEM_PRIV_APP="$SYSTEM/system_ext/priv-app"
-    SYSTEM_ETC="$SYSTEM/system_ext/etc"
-    SYSTEM_ETC_CONFIG="$SYSTEM/system_ext/etc/sysconfig"
-    SYSTEM_ETC_DEFAULT="$SYSTEM/system_ext/etc/default-permissions"
-    SYSTEM_ETC_PERM="$SYSTEM/system_ext/etc/permissions"
-    SYSTEM_ETC_PREF="$SYSTEM/system_ext/etc/preferred-apps"
-    SYSTEM_FRAMEWORK="$SYSTEM/system_ext/framework"
-    SYSTEM_OVERLAY="$SYSTEM/system_ext/overlay"
-    test -d $SYSTEM_APP || mkdir $SYSTEM_APP
-    test -d $SYSTEM_PRIV_APP || mkdir $SYSTEM_PRIV_APP
-    test -d $SYSTEM_ETC || mkdir $SYSTEM_ETC
-    test -d $SYSTEM_ETC_CONFIG || mkdir $SYSTEM_ETC_CONFIG
-    test -d $SYSTEM_ETC_DEFAULT || mkdir $SYSTEM_ETC_DEFAULT
-    test -d $SYSTEM_ETC_PERM || mkdir $SYSTEM_ETC_PERM
-    test -d $SYSTEM_ETC_PREF || mkdir $SYSTEM_ETC_PREF
-    test -d $SYSTEM_FRAMEWORK || mkdir $SYSTEM_FRAMEWORK
-    test -d $SYSTEM_OVERLAY || mkdir $SYSTEM_OVERLAY
-    chmod 0755 $SYSTEM_APP
-    chmod 0755 $SYSTEM_PRIV_APP
-    chmod 0755 $SYSTEM_ETC
-    chmod 0755 $SYSTEM_ETC_CONFIG
-    chmod 0755 $SYSTEM_ETC_DEFAULT
-    chmod 0755 $SYSTEM_ETC_PERM
-    chmod 0755 $SYSTEM_ETC_PREF
-    chmod 0755 $SYSTEM_FRAMEWORK
-    chmod 0755 $SYSTEM_OVERLAY
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_APP"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_FRAMEWORK"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
-    # Shared library
-    SYSTEM_APP_SHARED="$SYSTEM/app"
-    SYSTEM_PRIV_APP_SHARED="$SYSTEM/priv-app"
-  fi
-}
-
-ext_pathmap_fallback() {
-  if [ "$android_sdk" -ge "30" ] && [ "$supported_module_config" == "false" ] &&
-                                  { [ "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
-                                    [ "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
-    SYSTEM_ADDOND="$SYSTEM/addon.d"
-    SYSTEM_APP="$SYSTEM/product/app"
-    SYSTEM_PRIV_APP="$SYSTEM/product/priv-app"
-    SYSTEM_ETC_CONFIG="$SYSTEM/product/etc/sysconfig"
-    SYSTEM_ETC_DEFAULT="$SYSTEM/product/etc/default-permissions"
-    SYSTEM_ETC_PERM="$SYSTEM/product/etc/permissions"
-    SYSTEM_ETC_PREF="$SYSTEM/product/etc/preferred-apps"
-    SYSTEM_FRAMEWORK="$SYSTEM/product/framework"
-    SYSTEM_OVERLAY="$SYSTEM/product/overlay"
-    test -d $SYSTEM_ETC_CONFIG || mkdir $SYSTEM_ETC_CONFIG
-    test -d $SYSTEM_ETC_DEFAULT || mkdir $SYSTEM_ETC_DEFAULT
-    test -d $SYSTEM_ETC_PERM || mkdir $SYSTEM_ETC_PERM
-    test -d $SYSTEM_ETC_PREF || mkdir $SYSTEM_ETC_PREF
-    test -d $SYSTEM_OVERLAY || mkdir $SYSTEM_OVERLAY
-    chmod 0755 $SYSTEM_ETC_CONFIG
-    chmod 0755 $SYSTEM_ETC_DEFAULT
-    chmod 0755 $SYSTEM_ETC_PERM
-    chmod 0755 $SYSTEM_ETC_PREF
-    chmod 0755 $SYSTEM_OVERLAY
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
-    # Shared library
-    SYSTEM_APP_SHARED="$SYSTEM/app"
-    SYSTEM_PRIV_APP_SHARED="$SYSTEM/priv-app"
-  fi
-}
-
-product_pathmap() {
-  if [ "$android_sdk" == "29" ] && [ "$supported_module_config" == "false" ]; then
-    SYSTEM_ADDOND="$SYSTEM/addon.d"
-    SYSTEM_APP="$SYSTEM/product/app"
-    SYSTEM_PRIV_APP="$SYSTEM/product/priv-app"
-    SYSTEM_ETC_CONFIG="$SYSTEM/product/etc/sysconfig"
-    SYSTEM_ETC_DEFAULT="$SYSTEM/product/etc/default-permissions"
-    SYSTEM_ETC_PERM="$SYSTEM/product/etc/permissions"
-    SYSTEM_ETC_PREF="$SYSTEM/product/etc/preferred-apps"
-    SYSTEM_FRAMEWORK="$SYSTEM/product/framework"
-    test -d $SYSTEM_ETC_CONFIG || mkdir $SYSTEM_ETC_CONFIG
-    test -d $SYSTEM_ETC_DEFAULT || mkdir $SYSTEM_ETC_DEFAULT
-    test -d $SYSTEM_ETC_PERM || mkdir $SYSTEM_ETC_PERM
-    test -d $SYSTEM_ETC_PREF || mkdir $SYSTEM_ETC_PREF
-    chmod 0755 $SYSTEM_ETC_CONFIG
-    chmod 0755 $SYSTEM_ETC_DEFAULT
-    chmod 0755 $SYSTEM_ETC_PERM
-    chmod 0755 $SYSTEM_ETC_PREF
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
-    # Shared library
-    SYSTEM_APP_SHARED="$SYSTEM/app"
-    SYSTEM_PRIV_APP_SHARED="$SYSTEM/priv-app"
+    chown 1000:1000 "$roles"
+    chmod 600 "$roles"
   fi
 }
 
 system_pathmap() {
-  if [ "$android_sdk" -le "28" ] && [ "$supported_module_config" == "false" ]; then
+  if [ "$supported_module_config" == "false" ]; then
+    SYSTEM_ADB="$SYSTEM/adb"
+    SYSTEM_ADB_APP="$SYSTEM/adb/app"
+    SYSTEM_ADB_XBIN="$SYSTEM/adb/xbin"
     SYSTEM_ADDOND="$SYSTEM/addon.d"
     SYSTEM_APP="$SYSTEM/app"
     SYSTEM_PRIV_APP="$SYSTEM/priv-app"
@@ -1822,21 +1531,20 @@ system_pathmap() {
     SYSTEM_ETC_PERM="$SYSTEM/etc/permissions"
     SYSTEM_ETC_PREF="$SYSTEM/etc/preferred-apps"
     SYSTEM_FRAMEWORK="$SYSTEM/framework"
-    test -d $SYSTEM_ETC_CONFIG || mkdir $SYSTEM_ETC_CONFIG
-    test -d $SYSTEM_ETC_DEFAULT || mkdir $SYSTEM_ETC_DEFAULT
-    test -d $SYSTEM_ETC_PERM || mkdir $SYSTEM_ETC_PERM
-    test -d $SYSTEM_ETC_PREF || mkdir $SYSTEM_ETC_PREF
-    chmod 0755 $SYSTEM_ETC_CONFIG
-    chmod 0755 $SYSTEM_ETC_DEFAULT
-    chmod 0755 $SYSTEM_ETC_PERM
-    chmod 0755 $SYSTEM_ETC_PREF
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
-    # Shared library
-    SYSTEM_APP_SHARED="$SYSTEM/app"
-    SYSTEM_PRIV_APP_SHARED="$SYSTEM/priv-app"
+    SYSTEM_OVERLAY="$SYSTEM/overlay"
+    for i in app xbin; do
+      mkdir -p $SYSTEM_ADB/$i
+      chmod -R 0755 $SYSTEM_ADB
+      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ADB"
+    done
+    for i in \
+      $SYSTEM_ETC_DEFAULT \
+      $SYSTEM_ETC_PREF \
+      $SYSTEM_OVERLAY; do
+      test -d $i || mkdir $i
+      chmod 0755 $i
+      chcon -h u:object_r:system_file:s0 "$i"
+    done
   fi
 }
 
@@ -1853,33 +1561,22 @@ create_module_pathmap() {
     SYSTEM_ETC_PERM="$SYSTEM/system/etc/permissions"
     SYSTEM_ETC_PREF="$SYSTEM/system/etc/preferred-apps"
     SYSTEM_FRAMEWORK="$SYSTEM/system/framework"
-    test -d $SYSTEM_SYSTEM || mkdir $SYSTEM_SYSTEM
-    test -d $SYSTEM_APP || mkdir $SYSTEM_APP
-    test -d $SYSTEM_PRIV_APP || mkdir $SYSTEM_PRIV_APP
-    test -d $SYSTEM_ETC || mkdir $SYSTEM_ETC
-    test -d $SYSTEM_ETC_CONFIG || mkdir $SYSTEM_ETC_CONFIG
-    test -d $SYSTEM_ETC_DEFAULT || mkdir $SYSTEM_ETC_DEFAULT
-    test -d $SYSTEM_ETC_PERM || mkdir $SYSTEM_ETC_PERM
-    test -d $SYSTEM_ETC_PREF || mkdir $SYSTEM_ETC_PREF
-    test -d $SYSTEM_FRAMEWORK || mkdir $SYSTEM_FRAMEWORK
-    chmod 0755 $SYSTEM_SYSTEM
-    chmod 0755 $SYSTEM_APP
-    chmod 0755 $SYSTEM_PRIV_APP
-    chmod 0755 $SYSTEM_ETC
-    chmod 0755 $SYSTEM_ETC_CONFIG
-    chmod 0755 $SYSTEM_ETC_DEFAULT
-    chmod 0755 $SYSTEM_ETC_PERM
-    chmod 0755 $SYSTEM_ETC_PREF
-    chmod 0755 $SYSTEM_FRAMEWORK
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_SYSTEM"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_APP"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_FRAMEWORK"
+    SYSTEM_OVERLAY="$SYSTEM/system/overlay"
+    for i in \
+      $SYSTEM_SYSTEM \
+      $SYSTEM_APP \
+      $SYSTEM_PRIV_APP \
+      $SYSTEM_ETC \
+      $SYSTEM_ETC_CONFIG \
+      $SYSTEM_ETC_DEFAULT \
+      $SYSTEM_ETC_PERM \
+      $SYSTEM_ETC_PREF \
+      $SYSTEM_FRAMEWORK \
+      $SYSTEM_OVERLAY; do
+      test -d $i || mkdir $i
+      chmod 0755 $i
+      chcon -h u:object_r:system_file:s0 "$i"
+    done
     # Product systemless pathmap
     SYSTEM_PRODUCT="$SYSTEM/system/product"
     SYSTEM_APP="$SYSTEM/system/product/app"
@@ -1891,36 +1588,21 @@ create_module_pathmap() {
     SYSTEM_ETC_PREF="$SYSTEM/system/product/etc/preferred-apps"
     SYSTEM_FRAMEWORK="$SYSTEM/system/product/framework"
     SYSTEM_OVERLAY="$SYSTEM/system/product/overlay"
-    test -d $SYSTEM_PRODUCT || mkdir $SYSTEM_PRODUCT
-    test -d $SYSTEM_APP || mkdir $SYSTEM_APP
-    test -d $SYSTEM_PRIV_APP || mkdir $SYSTEM_PRIV_APP
-    test -d $SYSTEM_ETC || mkdir $SYSTEM_ETC
-    test -d $SYSTEM_ETC_CONFIG || mkdir $SYSTEM_ETC_CONFIG
-    test -d $SYSTEM_ETC_DEFAULT || mkdir $SYSTEM_ETC_DEFAULT
-    test -d $SYSTEM_ETC_PERM || mkdir $SYSTEM_ETC_PERM
-    test -d $SYSTEM_ETC_PREF || mkdir $SYSTEM_ETC_PREF
-    test -d $SYSTEM_FRAMEWORK || mkdir $SYSTEM_FRAMEWORK
-    test -d $SYSTEM_OVERLAY || mkdir $SYSTEM_OVERLAY
-    chmod 0755 $SYSTEM_PRODUCT
-    chmod 0755 $SYSTEM_APP
-    chmod 0755 $SYSTEM_PRIV_APP
-    chmod 0755 $SYSTEM_ETC
-    chmod 0755 $SYSTEM_ETC_CONFIG
-    chmod 0755 $SYSTEM_ETC_DEFAULT
-    chmod 0755 $SYSTEM_ETC_PERM
-    chmod 0755 $SYSTEM_ETC_PREF
-    chmod 0755 $SYSTEM_FRAMEWORK
-    chmod 0755 $SYSTEM_OVERLAY
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_PRODUCT"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_APP"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_FRAMEWORK"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
+    for i in \
+      $SYSTEM_PRODUCT \
+      $SYSTEM_APP \
+      $SYSTEM_PRIV_APP \
+      $SYSTEM_ETC \
+      $SYSTEM_ETC_CONFIG \
+      $SYSTEM_ETC_DEFAULT \
+      $SYSTEM_ETC_PERM \
+      $SYSTEM_ETC_PREF \
+      $SYSTEM_FRAMEWORK \
+      $SYSTEM_OVERLAY; do
+      test -d $i || mkdir $i
+      chmod 0755 $i
+      chcon -h u:object_r:system_file:s0 "$i"
+    done
     # SystemExt systemless pathmap
     SYSTEM_SYSTEMEXT="$SYSTEM/system/system_ext"
     SYSTEM_APP="$SYSTEM/system/system_ext/app"
@@ -1932,87 +1614,26 @@ create_module_pathmap() {
     SYSTEM_ETC_PREF="$SYSTEM/system/system_ext/etc/preferred-apps"
     SYSTEM_FRAMEWORK="$SYSTEM/system/system_ext/framework"
     SYSTEM_OVERLAY="$SYSTEM/system/system_ext/overlay"
-    test -d $SYSTEM_SYSTEMEXT || mkdir $SYSTEM_SYSTEMEXT
-    test -d $SYSTEM_APP || mkdir $SYSTEM_APP
-    test -d $SYSTEM_PRIV_APP || mkdir $SYSTEM_PRIV_APP
-    test -d $SYSTEM_ETC || mkdir $SYSTEM_ETC
-    test -d $SYSTEM_ETC_CONFIG || mkdir $SYSTEM_ETC_CONFIG
-    test -d $SYSTEM_ETC_DEFAULT || mkdir $SYSTEM_ETC_DEFAULT
-    test -d $SYSTEM_ETC_PERM || mkdir $SYSTEM_ETC_PERM
-    test -d $SYSTEM_ETC_PREF || mkdir $SYSTEM_ETC_PREF
-    test -d $SYSTEM_FRAMEWORK || mkdir $SYSTEM_FRAMEWORK
-    test -d $SYSTEM_OVERLAY || mkdir $SYSTEM_OVERLAY
-    chmod 0755 $SYSTEM_SYSTEMEXT
-    chmod 0755 $SYSTEM_APP
-    chmod 0755 $SYSTEM_PRIV_APP
-    chmod 0755 $SYSTEM_ETC
-    chmod 0755 $SYSTEM_ETC_CONFIG
-    chmod 0755 $SYSTEM_ETC_DEFAULT
-    chmod 0755 $SYSTEM_ETC_PERM
-    chmod 0755 $SYSTEM_ETC_PREF
-    chmod 0755 $SYSTEM_FRAMEWORK
-    chmod 0755 $SYSTEM_OVERLAY
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_SYSTEMEXT"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_APP"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_FRAMEWORK"
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
-    # Shared library
-    SYSTEM_APP_SHARED="$SYSTEM/system/app"
-    SYSTEM_PRIV_APP_SHARED="$SYSTEM/system/priv-app"
-  fi
-}
-
-ext_module_pathmap() {
-  if [ "$android_sdk" -ge "30" ] && [ "$supported_module_config" == "true" ]; then
-    SYSTEM_APP="$SYSTEM/system/system_ext/app"
-    SYSTEM_PRIV_APP="$SYSTEM/system/system_ext/priv-app"
-    SYSTEM_ETC="$SYSTEM/system/system_ext/etc"
-    SYSTEM_ETC_CONFIG="$SYSTEM/system/system_ext/etc/sysconfig"
-    SYSTEM_ETC_DEFAULT="$SYSTEM/system/system_ext/etc/default-permissions"
-    SYSTEM_ETC_PERM="$SYSTEM/system/system_ext/etc/permissions"
-    SYSTEM_ETC_PREF="$SYSTEM/system/system_ext/etc/preferred-apps"
-    SYSTEM_FRAMEWORK="$SYSTEM/system/system_ext/framework"
-    SYSTEM_OVERLAY="$SYSTEM/system/system_ext/overlay"
-  fi
-}
-
-ext_module_pathmap_fallback() {
-  if [ "$android_sdk" -ge "30" ] && [ "$supported_module_config" == "true" ] &&
-                                  { [ "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
-                                    [ "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
-    SYSTEM_APP="$SYSTEM/system/product/app"
-    SYSTEM_PRIV_APP="$SYSTEM/system/product/priv-app"
-    SYSTEM_ETC="$SYSTEM/system/product/etc"
-    SYSTEM_ETC_CONFIG="$SYSTEM/system/product/etc/sysconfig"
-    SYSTEM_ETC_DEFAULT="$SYSTEM/system/product/etc/default-permissions"
-    SYSTEM_ETC_PERM="$SYSTEM/system/product/etc/permissions"
-    SYSTEM_ETC_PREF="$SYSTEM/system/product/etc/preferred-apps"
-    SYSTEM_FRAMEWORK="$SYSTEM/system/product/framework"
-    SYSTEM_OVERLAY="$SYSTEM/system/product/overlay"
-  fi
-}
-
-product_module_pathmap() {
-  if [ "$android_sdk" == "29" ] && [ "$supported_module_config" == "true" ]; then
-    SYSTEM_APP="$SYSTEM/system/product/app"
-    SYSTEM_PRIV_APP="$SYSTEM/system/product/priv-app"
-    SYSTEM_ETC="$SYSTEM/system/product/etc"
-    SYSTEM_ETC_CONFIG="$SYSTEM/system/product/etc/sysconfig"
-    SYSTEM_ETC_DEFAULT="$SYSTEM/system/product/etc/default-permissions"
-    SYSTEM_ETC_PERM="$SYSTEM/system/product/etc/permissions"
-    SYSTEM_ETC_PREF="$SYSTEM/system/product/etc/preferred-apps"
-    SYSTEM_FRAMEWORK="$SYSTEM/system/product/framework"
+    for i in \
+      $SYSTEM_SYSTEMEXT \
+      $SYSTEM_APP \
+      $SYSTEM_PRIV_APP \
+      $SYSTEM_ETC \
+      $SYSTEM_ETC_CONFIG \
+      $SYSTEM_ETC_DEFAULT \
+      $SYSTEM_ETC_PERM \
+      $SYSTEM_ETC_PREF \
+      $SYSTEM_FRAMEWORK \
+      $SYSTEM_OVERLAY; do
+      test -d $i || mkdir $i
+      chmod 0755 $i
+      chcon -h u:object_r:system_file:s0 "$i"
+    done
   fi
 }
 
 system_module_pathmap() {
-  if [ "$android_sdk" -le "28" ] && [ "$supported_module_config" == "true" ]; then
+  if [ "$supported_module_config" == "true" ]; then
     SYSTEM_APP="$SYSTEM/system/app"
     SYSTEM_PRIV_APP="$SYSTEM/system/priv-app"
     SYSTEM_ETC="$SYSTEM/system/etc"
@@ -2021,986 +1642,128 @@ system_module_pathmap() {
     SYSTEM_ETC_PERM="$SYSTEM/system/etc/permissions"
     SYSTEM_ETC_PREF="$SYSTEM/system/etc/preferred-apps"
     SYSTEM_FRAMEWORK="$SYSTEM/system/framework"
+    SYSTEM_OVERLAY="$SYSTEM/system/overlay"
   fi
 }
 
 # Remove pre-installed packages shipped with ROM
 pkg_System() {
-  rm -rf $SYSTEM_AS_SYSTEM/addon.d/30*
-  rm -rf $SYSTEM_AS_SYSTEM/addon.d/50*
-  rm -rf $SYSTEM_AS_SYSTEM/addon.d/69*
-  rm -rf $SYSTEM_AS_SYSTEM/addon.d/70*
-  rm -rf $SYSTEM_AS_SYSTEM/addon.d/71*
-  rm -rf $SYSTEM_AS_SYSTEM/addon.d/74*
-  rm -rf $SYSTEM_AS_SYSTEM/addon.d/75*
-  rm -rf $SYSTEM_AS_SYSTEM/addon.d/78*
-  rm -rf $SYSTEM_AS_SYSTEM/addon.d/90*
-  rm -rf $SYSTEM_AS_SYSTEM/app/AndroidAuto*
-  rm -rf $SYSTEM_AS_SYSTEM/app/arcore
-  rm -rf $SYSTEM_AS_SYSTEM/app/Books*
-  rm -rf $SYSTEM_AS_SYSTEM/app/CarHomeGoogle
-  rm -rf $SYSTEM_AS_SYSTEM/app/CalculatorGoogle*
-  rm -rf $SYSTEM_AS_SYSTEM/app/CalendarGoogle*
-  rm -rf $SYSTEM_AS_SYSTEM/app/CarHomeGoogle
-  rm -rf $SYSTEM_AS_SYSTEM/app/Chrome*
-  rm -rf $SYSTEM_AS_SYSTEM/app/CloudPrint*
-  rm -rf $SYSTEM_AS_SYSTEM/app/DevicePersonalizationServices
-  rm -rf $SYSTEM_AS_SYSTEM/app/DMAgent
-  rm -rf $SYSTEM_AS_SYSTEM/app/Drive
-  rm -rf $SYSTEM_AS_SYSTEM/app/Duo
-  rm -rf $SYSTEM_AS_SYSTEM/app/EditorsDocs
-  rm -rf $SYSTEM_AS_SYSTEM/app/Editorssheets
-  rm -rf $SYSTEM_AS_SYSTEM/app/EditorsSlides
-  rm -rf $SYSTEM_AS_SYSTEM/app/ExchangeServices
-  rm -rf $SYSTEM_AS_SYSTEM/app/FaceLock
-  rm -rf $SYSTEM_AS_SYSTEM/app/Fitness*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GalleryGo*
-  rm -rf $SYSTEM_AS_SYSTEM/app/Gcam*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GCam*
-  rm -rf $SYSTEM_AS_SYSTEM/app/Gmail*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleCamera*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleCalendar*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleCalendarSyncAdapter
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleContactsSyncAdapter
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleCloudPrint
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleEarth
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleExtshared
-  rm -rf $SYSTEM_AS_SYSTEM/app/GooglePrintRecommendationService
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleGo*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleHome*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleHindiIME*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleKeep*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleJapaneseInput*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleLoginService*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleMusic*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleNow*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GooglePhotos*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GooglePinyinIME*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GooglePlus
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleTTS*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleVrCore*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GoogleZhuyinIME*
-  rm -rf $SYSTEM_AS_SYSTEM/app/Hangouts
-  rm -rf $SYSTEM_AS_SYSTEM/app/KoreanIME*
-  rm -rf $SYSTEM_AS_SYSTEM/app/Maps
-  rm -rf $SYSTEM_AS_SYSTEM/app/Markup*
-  rm -rf $SYSTEM_AS_SYSTEM/app/Music2*
-  rm -rf $SYSTEM_AS_SYSTEM/app/Newsstand
-  rm -rf $SYSTEM_AS_SYSTEM/app/NexusWallpapers*
-  rm -rf $SYSTEM_AS_SYSTEM/app/Ornament
-  rm -rf $SYSTEM_AS_SYSTEM/app/Photos*
-  rm -rf $SYSTEM_AS_SYSTEM/app/PlayAutoInstallConfig*
-  rm -rf $SYSTEM_AS_SYSTEM/app/PlayGames*
-  rm -rf $SYSTEM_AS_SYSTEM/app/PrebuiltExchange3Google
-  rm -rf $SYSTEM_AS_SYSTEM/app/PrebuiltGmail
-  rm -rf $SYSTEM_AS_SYSTEM/app/PrebuiltKeep
-  rm -rf $SYSTEM_AS_SYSTEM/app/Street
-  rm -rf $SYSTEM_AS_SYSTEM/app/Stickers*
-  rm -rf $SYSTEM_AS_SYSTEM/app/TalkBack
-  rm -rf $SYSTEM_AS_SYSTEM/app/talkBack
-  rm -rf $SYSTEM_AS_SYSTEM/app/talkback
-  rm -rf $SYSTEM_AS_SYSTEM/app/TranslatePrebuilt
-  rm -rf $SYSTEM_AS_SYSTEM/app/Tycho
-  rm -rf $SYSTEM_AS_SYSTEM/app/Videos
-  rm -rf $SYSTEM_AS_SYSTEM/app/Wallet
-  rm -rf $SYSTEM_AS_SYSTEM/app/WallpapersBReel*
-  rm -rf $SYSTEM_AS_SYSTEM/app/YouTube
-  rm -rf $SYSTEM_AS_SYSTEM/app/Abstruct
-  rm -rf $SYSTEM_AS_SYSTEM/app/BasicDreams
-  rm -rf $SYSTEM_AS_SYSTEM/app/BlissPapers
-  rm -rf $SYSTEM_AS_SYSTEM/app/BookmarkProvider
-  rm -rf $SYSTEM_AS_SYSTEM/app/Browser*
-  rm -rf $SYSTEM_AS_SYSTEM/app/Camera*
-  rm -rf $SYSTEM_AS_SYSTEM/app/Chromium
-  rm -rf $SYSTEM_AS_SYSTEM/app/ColtPapers
-  rm -rf $SYSTEM_AS_SYSTEM/app/EasterEgg*
-  rm -rf $SYSTEM_AS_SYSTEM/app/EggGame
-  rm -rf $SYSTEM_AS_SYSTEM/app/Email*
-  rm -rf $SYSTEM_AS_SYSTEM/app/ExactCalculator
-  rm -rf $SYSTEM_AS_SYSTEM/app/Exchange2
-  rm -rf $SYSTEM_AS_SYSTEM/app/Gallery*
-  rm -rf $SYSTEM_AS_SYSTEM/app/GugelClock
-  rm -rf $SYSTEM_AS_SYSTEM/app/HTMLViewer
-  rm -rf $SYSTEM_AS_SYSTEM/app/Jelly
-  rm -rf $SYSTEM_AS_SYSTEM/app/messaging
-  rm -rf $SYSTEM_AS_SYSTEM/app/MiXplorer*
-  rm -rf $SYSTEM_AS_SYSTEM/app/Music*
-  rm -rf $SYSTEM_AS_SYSTEM/app/Partnerbookmark*
-  rm -rf $SYSTEM_AS_SYSTEM/app/PartnerBookmark*
-  rm -rf $SYSTEM_AS_SYSTEM/app/Phonograph
-  rm -rf $SYSTEM_AS_SYSTEM/app/PhotoTable
-  rm -rf $SYSTEM_AS_SYSTEM/app/RetroMusic*
-  rm -rf $SYSTEM_AS_SYSTEM/app/VanillaMusic
-  rm -rf $SYSTEM_AS_SYSTEM/app/Via*
-  rm -rf $SYSTEM_AS_SYSTEM/app/QPGallery
-  rm -rf $SYSTEM_AS_SYSTEM/app/QuickSearchBox
-  rm -rf $SYSTEM_AS_SYSTEM/etc/default-permissions/default-permissions.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/default-permissions/opengapps-permissions.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/default-permissions.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/privapp-permissions-google.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/privapp-permissions-google*
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/com.android.contacts.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/com.android.dialer.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/com.android.managedprovisioning.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/com.android.provision.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/com.google.android.camera*
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/com.google.android.dialer*
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/com.google.android.maps*
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/split-permissions-google.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/preferred-apps/google.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/preferred-apps/google_build.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/pixel_2017_exclusive.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/pixel_experience_2017.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/gmsexpress.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/googledialergo-sysconfig.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/google-hiddenapi-package-whitelist.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/google.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/google_build.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/google_experience.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/google_exclusives_enable.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/go_experience.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/nga.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/nexus.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/pixel*
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/turbo.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/wellbeing.xml
-  rm -rf $SYSTEM_AS_SYSTEM/framework/com.google.android.camera*
-  rm -rf $SYSTEM_AS_SYSTEM/framework/com.google.android.dialer*
-  rm -rf $SYSTEM_AS_SYSTEM/framework/com.google.android.maps*
-  rm -rf $SYSTEM_AS_SYSTEM/framework/oat/arm/com.google.android.camera*
-  rm -rf $SYSTEM_AS_SYSTEM/framework/oat/arm/com.google.android.dialer*
-  rm -rf $SYSTEM_AS_SYSTEM/framework/oat/arm/com.google.android.maps*
-  rm -rf $SYSTEM_AS_SYSTEM/framework/oat/arm64/com.google.android.camera*
-  rm -rf $SYSTEM_AS_SYSTEM/framework/oat/arm64/com.google.android.dialer*
-  rm -rf $SYSTEM_AS_SYSTEM/framework/oat/arm64/com.google.android.maps*
-  rm -rf $SYSTEM_AS_SYSTEM/lib/libaiai-annotators.so
-  rm -rf $SYSTEM_AS_SYSTEM/lib/libcronet.70.0.3522.0.so
-  rm -rf $SYSTEM_AS_SYSTEM/lib/libfilterpack_facedetect.so
-  rm -rf $SYSTEM_AS_SYSTEM/lib/libfrsdk.so
-  rm -rf $SYSTEM_AS_SYSTEM/lib/libgcam.so
-  rm -rf $SYSTEM_AS_SYSTEM/lib/libgcam_swig_jni.so
-  rm -rf $SYSTEM_AS_SYSTEM/lib/libocr.so
-  rm -rf $SYSTEM_AS_SYSTEM/lib/libparticle-extractor_jni.so
-  rm -rf $SYSTEM_AS_SYSTEM/lib64/libbarhopper.so
-  rm -rf $SYSTEM_AS_SYSTEM/lib64/libfacenet.so
-  rm -rf $SYSTEM_AS_SYSTEM/lib64/libfilterpack_facedetect.so
-  rm -rf $SYSTEM_AS_SYSTEM/lib64/libfrsdk.so
-  rm -rf $SYSTEM_AS_SYSTEM/lib64/libgcam.so
-  rm -rf $SYSTEM_AS_SYSTEM/lib64/libgcam_swig_jni.so
-  rm -rf $SYSTEM_AS_SYSTEM/lib64/libsketchology_native.so
-  rm -rf $SYSTEM_AS_SYSTEM/overlay/PixelConfigOverlay*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Aiai*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/AmbientSense*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/AndroidAuto*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/AndroidMigrate*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/AndroidPlatformServices
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/CalendarGoogle*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/CalculatorGoogle*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Camera*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/CarrierServices
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/CarrierSetup
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/ConfigUpdater
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/DataTransferTool
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/DeviceHealthServices
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/DevicePersonalizationServices
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/DigitalWellbeing*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/FaceLock
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Gcam*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GCam*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GCS
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GmsCore*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GoogleCalculator*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GoogleCalendar*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GoogleCamera*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GoogleBackupTransport
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GoogleExtservices
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GoogleExtServicesPrebuilt
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GoogleFeedback
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GoogleOneTimeInitializer
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GooglePartnerSetup
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GoogleRestore
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GoogleServicesFramework
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/HotwordEnrollment*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/HotWordEnrollment*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/matchmaker*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Matchmaker*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Phonesky
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/PixelLive*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/PrebuiltGmsCore*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/PixelSetupWizard*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/SetupWizard*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Tag*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Tips*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Turbo*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Velvet
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Wellbeing*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/AudioFX
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Camera*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Eleven
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/MatLog
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/MusicFX
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/OmniSwitch
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Snap*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Tag*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Via*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/VinylMusicPlayer
-  rm -rf $SYSTEM_AS_SYSTEM/usr/srec/en-US
-  # MicroG
-  rm -rf $SYSTEM_AS_SYSTEM/app/AppleNLP*
-  rm -rf $SYSTEM_AS_SYSTEM/app/AuroraDroid
-  rm -rf $SYSTEM_AS_SYSTEM/app/AuroraStore
-  rm -rf $SYSTEM_AS_SYSTEM/app/DejaVu*
-  rm -rf $SYSTEM_AS_SYSTEM/app/DroidGuard
-  rm -rf $SYSTEM_AS_SYSTEM/app/LocalGSM*
-  rm -rf $SYSTEM_AS_SYSTEM/app/LocalWiFi*
-  rm -rf $SYSTEM_AS_SYSTEM/app/MicroG*
-  rm -rf $SYSTEM_AS_SYSTEM/app/MozillaUnified*
-  rm -rf $SYSTEM_AS_SYSTEM/app/nlp*
-  rm -rf $SYSTEM_AS_SYSTEM/app/Nominatim*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/AuroraServices
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/FakeStore
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GmsCore
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/GsfProxy
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/MicroG*
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/PatchPhonesky
-  rm -rf $SYSTEM_AS_SYSTEM/priv-app/Phonesky
-  rm -rf $SYSTEM_AS_SYSTEM/etc/default-permissions/microg*
-  rm -rf $SYSTEM_AS_SYSTEM/etc/default-permissions/phonesky*
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/features.xml
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/com.android.vending*
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/com.aurora.services*
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/com.google.android.backup*
-  rm -rf $SYSTEM_AS_SYSTEM/etc/permissions/com.google.android.gms*
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/microg*
-  rm -rf $SYSTEM_AS_SYSTEM/etc/sysconfig/nogoolag*
-}
-
-pkg_Product() {
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/AndroidAuto*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/arcore
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Books*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/CalculatorGoogle*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/CalendarGoogle*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/CarHomeGoogle
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Chrome*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/CloudPrint*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/DMAgent
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/DevicePersonalizationServices
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Drive
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Duo
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/EditorsDocs
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Editorssheets
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/EditorsSlides
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/ExchangeServices
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/FaceLock
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Fitness*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GalleryGo*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Gcam*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GCam*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Gmail*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleCamera*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleCalendar*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleContacts*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleCloudPrint
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleEarth
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleExtshared
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleExtShared
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleGalleryGo
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleGo*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleHome*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleHindiIME*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleKeep*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleJapaneseInput*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleLoginService*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleMusic*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleNow*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GooglePhotos*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GooglePinyinIME*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GooglePlus
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleTTS*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleVrCore*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/GoogleZhuyinIME*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Hangouts
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/KoreanIME*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/LocationHistory*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Maps
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Markup*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/MicropaperPrebuilt
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Music2*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Newsstand
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/NexusWallpapers*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Ornament
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Photos*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/PlayAutoInstallConfig*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/PlayGames*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/PrebuiltBugle
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/PrebuiltClockGoogle
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/PrebuiltDeskClockGoogle
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/PrebuiltExchange3Google
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/PrebuiltGmail
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/PrebuiltKeep
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/SoundAmplifierPrebuilt
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Street
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Stickers*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/TalkBack
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/talkBack
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/talkback
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/TranslatePrebuilt
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Tycho
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Videos
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Wallet
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/WallpapersBReel*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/YouTube*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/AboutBliss
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/BasicDreams
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/BlissStatistics
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/BookmarkProvider
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Browser*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Calendar*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Camera*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Dashboard
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/DeskClock
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/EasterEgg*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Email*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/EmergencyInfo
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Etar
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Gallery*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/HTMLViewer
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Jelly
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Messaging
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/messaging
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Music*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Partnerbookmark*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/PartnerBookmark*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/PhotoTable*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Recorder*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/RetroMusic*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/SimpleGallery
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Via*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/WallpaperZone
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/QPGallery
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/QuickSearchBox
-  rm -rf $SYSTEM_AS_SYSTEM/product/overlay/ChromeOverlay
-  rm -rf $SYSTEM_AS_SYSTEM/product/overlay/TelegramOverlay
-  rm -rf $SYSTEM_AS_SYSTEM/product/overlay/WhatsAppOverlay
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/default-permissions/default-permissions.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/default-permissions/opengapps-permissions.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/default-permissions.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/privapp-permissions-google.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/privapp-permissions-google*
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/com.android.contacts.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/com.android.dialer.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/com.android.managedprovisioning.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/com.android.provision.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/com.google.android.camera*
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/com.google.android.dialer*
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/com.google.android.maps*
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/split-permissions-google.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/preferred-apps/google.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/preferred-apps/google_build.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/pixel_2017_exclusive.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/pixel_experience_2017.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/gmsexpress.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/googledialergo-sysconfig.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/google-hiddenapi-package-whitelist.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/google.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/google_build.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/google_experience.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/google_exclusives_enable.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/go_experience.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/nexus.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/nga.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/pixel*
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/turbo.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/wellbeing.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/framework/com.google.android.camera*
-  rm -rf $SYSTEM_AS_SYSTEM/product/framework/com.google.android.dialer*
-  rm -rf $SYSTEM_AS_SYSTEM/product/framework/com.google.android.maps*
-  rm -rf $SYSTEM_AS_SYSTEM/product/framework/oat/arm/com.google.android.camera*
-  rm -rf $SYSTEM_AS_SYSTEM/product/framework/oat/arm/com.google.android.dialer*
-  rm -rf $SYSTEM_AS_SYSTEM/product/framework/oat/arm/com.google.android.maps*
-  rm -rf $SYSTEM_AS_SYSTEM/product/framework/oat/arm64/com.google.android.camera*
-  rm -rf $SYSTEM_AS_SYSTEM/product/framework/oat/arm64/com.google.android.dialer*
-  rm -rf $SYSTEM_AS_SYSTEM/product/framework/oat/arm64/com.google.android.maps*
-  rm -rf $SYSTEM_AS_SYSTEM/product/lib/libaiai-annotators.so
-  rm -rf $SYSTEM_AS_SYSTEM/product/lib/libcronet.70.0.3522.0.so
-  rm -rf $SYSTEM_AS_SYSTEM/product/lib/libfilterpack_facedetect.so
-  rm -rf $SYSTEM_AS_SYSTEM/product/lib/libfrsdk.so
-  rm -rf $SYSTEM_AS_SYSTEM/product/lib/libgcam.so
-  rm -rf $SYSTEM_AS_SYSTEM/product/lib/libgcam_swig_jni.so
-  rm -rf $SYSTEM_AS_SYSTEM/product/lib/libocr.so
-  rm -rf $SYSTEM_AS_SYSTEM/product/lib/libparticle-extractor_jni.so
-  rm -rf $SYSTEM_AS_SYSTEM/product/lib64/libbarhopper.so
-  rm -rf $SYSTEM_AS_SYSTEM/product/lib64/libfacenet.so
-  rm -rf $SYSTEM_AS_SYSTEM/product/lib64/libfilterpack_facedetect.so
-  rm -rf $SYSTEM_AS_SYSTEM/product/lib64/libfrsdk.so
-  rm -rf $SYSTEM_AS_SYSTEM/product/lib64/libgcam.so
-  rm -rf $SYSTEM_AS_SYSTEM/product/lib64/libgcam_swig_jni.so
-  rm -rf $SYSTEM_AS_SYSTEM/product/lib64/libsketchology_native.so
-  rm -rf $SYSTEM_AS_SYSTEM/product/overlay/GoogleConfigOverlay*
-  rm -rf $SYSTEM_AS_SYSTEM/product/overlay/PixelConfigOverlay*
-  rm -rf $SYSTEM_AS_SYSTEM/product/overlay/Gms*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Aiai*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/AmbientSense*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/AndroidAuto*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/AndroidMigrate*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/AndroidPlatformServices
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/CalendarGoogle*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/CalculatorGoogle*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Camera*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/CarrierServices
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/CarrierSetup
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/ConfigUpdater
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/ConnMetrics
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/DataTransferTool
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/DeviceHealthServices
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/DevicePersonalizationServices
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/DigitalWellbeing*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/FaceLock
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Gcam*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GCam*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GCS
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GmsCore*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GoogleBackupTransport
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GoogleCalculator*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GoogleCalendar*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GoogleCamera*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GoogleContacts*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GoogleDialer
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GoogleExtservices
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GoogleExtServices
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GoogleFeedback
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GoogleOneTimeInitializer
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GooglePartnerSetup
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GoogleRestore
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GoogleServicesFramework
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/HotwordEnrollment*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/HotWordEnrollment*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/MaestroPrebuilt
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/matchmaker*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Matchmaker*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Phonesky
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/PixelLive*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/PrebuiltGmsCore*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/PixelSetupWizard*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/RecorderPrebuilt
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/SCONE
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Scribe*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/SetupWizard*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Tag*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Tips*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Turbo*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Velvet
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/WallpaperPickerGoogleRelease
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Wellbeing*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/AncientWallpaperZone
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Camera*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Contacts
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/crDroidMusic
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Dialer
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Eleven
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/EmergencyInfo
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Gallery2
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/MatLog
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/MusicFX
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/OmniSwitch
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Recorder*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Snap*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Tag*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Via*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/VinylMusicPlayer
-  rm -rf $SYSTEM_AS_SYSTEM/product/usr/srec/en-US
-  # MicroG
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/AppleNLP*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/AuroraDroid
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/AuroraStore
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/DejaVu*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/DroidGuard
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/LocalGSM*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/LocalWiFi*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/MicroG*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/MozillaUnified*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/nlp*
-  rm -rf $SYSTEM_AS_SYSTEM/product/app/Nominatim*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/AuroraServices
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/FakeStore
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GmsCore
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/GsfProxy
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/MicroG*
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/PatchPhonesky
-  rm -rf $SYSTEM_AS_SYSTEM/product/priv-app/Phonesky
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/default-permissions/microg*
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/default-permissions/phonesky*
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/features.xml
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/com.android.vending*
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/com.aurora.services*
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/com.google.android.backup*
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/permissions/com.google.android.gms*
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/microg*
-  rm -rf $SYSTEM_AS_SYSTEM/product/etc/sysconfig/nogoolag*
-}
-
-pkg_Ext() {
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/addon.d/30*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/addon.d/69*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/addon.d/70*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/addon.d/71*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/addon.d/74*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/addon.d/75*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/addon.d/78*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/addon.d/90*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/AndroidAuto*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/arcore
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Books*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/CarHomeGoogle
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/CalculatorGoogle*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/CalendarGoogle*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/CarHomeGoogle
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Chrome*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/CloudPrint*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/DevicePersonalizationServices
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/DMAgent
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Drive
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Duo
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/EditorsDocs
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Editorssheets
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/EditorsSlides
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/ExchangeServices
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/FaceLock
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Fitness*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GalleryGo*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Gcam*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GCam*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Gmail*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleCamera*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleCalendar*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleCalendarSyncAdapter
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleContactsSyncAdapter
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleCloudPrint
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleEarth
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleExtshared
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GooglePrintRecommendationService
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleGo*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleHome*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleHindiIME*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleKeep*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleJapaneseInput*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleLoginService*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleMusic*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleNow*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GooglePhotos*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GooglePinyinIME*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GooglePlus
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleTTS*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleVrCore*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GoogleZhuyinIME*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Hangouts
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/KoreanIME*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Maps
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Markup*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Music2*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Newsstand
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/NexusWallpapers*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Ornament
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Photos*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/PlayAutoInstallConfig*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/PlayGames*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/PrebuiltExchange3Google
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/PrebuiltGmail
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/PrebuiltKeep
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Street
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Stickers*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/TalkBack
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/talkBack
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/talkback
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/TranslatePrebuilt
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Tycho
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Videos
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Wallet
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/WallpapersBReel*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/YouTube
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Abstruct
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/BasicDreams
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/BlissPapers
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/BookmarkProvider
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Browser*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Camera*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Chromium
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/ColtPapers
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/EasterEgg*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/EggGame
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Email*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/ExactCalculator
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Exchange2
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Gallery*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/GugelClock
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/HTMLViewer
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Jelly
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/messaging
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/MiXplorer*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Music*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Partnerbookmark*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/PartnerBookmark*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Phonograph
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/PhotoTable
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/RetroMusic*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/VanillaMusic
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Via*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/QPGallery
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/QuickSearchBox
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/default-permissions/default-permissions.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/default-permissions/opengapps-permissions.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/default-permissions.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/privapp-permissions-google.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/privapp-permissions-google*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/com.android.contacts.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/com.android.dialer.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/com.android.managedprovisioning.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/com.android.provision.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/com.google.android.camera*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/com.google.android.dialer*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/com.google.android.maps*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/split-permissions-google.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/preferred-apps/google.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/preferred-apps/google_build.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/pixel_2017_exclusive.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/pixel_experience_2017.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/gmsexpress.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/googledialergo-sysconfig.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/google-hiddenapi-package-whitelist.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/google.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/google_build.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/google_experience.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/google_exclusives_enable.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/go_experience.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/nga.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/nexus.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/pixel*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/turbo.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/wellbeing.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/framework/com.google.android.camera*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/framework/com.google.android.dialer*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/framework/com.google.android.maps*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/framework/oat/arm/com.google.android.camera*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/framework/oat/arm/com.google.android.dialer*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/framework/oat/arm/com.google.android.maps*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/framework/oat/arm64/com.google.android.camera*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/framework/oat/arm64/com.google.android.dialer*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/framework/oat/arm64/com.google.android.maps*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/lib/libaiai-annotators.so
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/lib/libcronet.70.0.3522.0.so
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/lib/libfilterpack_facedetect.so
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/lib/libfrsdk.so
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/lib/libgcam.so
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/lib/libgcam_swig_jni.so
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/lib/libocr.so
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/lib/libparticle-extractor_jni.so
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/lib64/libbarhopper.so
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/lib64/libfacenet.so
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/lib64/libfilterpack_facedetect.so
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/lib64/libfrsdk.so
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/lib64/libgcam.so
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/lib64/libgcam_swig_jni.so
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/lib64/libsketchology_native.so
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/overlay/PixelConfigOverlay*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Aiai*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/AmbientSense*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/AndroidAuto*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/AndroidMigrate*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/AndroidPlatformServices
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/CalendarGoogle*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/CalculatorGoogle*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Camera*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/CarrierServices
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/CarrierSetup
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/ConfigUpdater
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/DataTransferTool
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/DeviceHealthServices
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/DevicePersonalizationServices
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/DigitalWellbeing*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/FaceLock
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Gcam*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GCam*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GCS
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GmsCore*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GoogleCalculator*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GoogleCalendar*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GoogleCamera*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GoogleBackupTransport
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GoogleExtservices
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GoogleExtServicesPrebuilt
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GoogleFeedback
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GoogleOneTimeInitializer
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GooglePartnerSetup
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GoogleRestore
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GoogleServicesFramework
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/HotwordEnrollment*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/HotWordEnrollment*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/matchmaker*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Matchmaker*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Phonesky
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/PixelLive*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/PrebuiltGmsCore*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/PixelSetupWizard*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/SetupWizard*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Tag*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Tips*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Turbo*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Velvet
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Wellbeing*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/AudioFX
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Camera*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Eleven
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/MatLog
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/MusicFX
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/OmniSwitch
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Snap*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Tag*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Via*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/VinylMusicPlayer
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/usr/srec/en-US
-  # MicroG
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/AppleNLP*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/AuroraDroid
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/AuroraStore
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/DejaVu*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/DroidGuard
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/LocalGSM*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/LocalWiFi*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/MicroG*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/MozillaUnified*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/nlp*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/app/Nominatim*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/AuroraServices
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/FakeStore
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GmsCore
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/GsfProxy
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/MicroG*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/PatchPhonesky
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/priv-app/Phonesky
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/default-permissions/microg*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/default-permissions/phonesky*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/features.xml
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/com.android.vending*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/com.aurora.services*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/com.google.android.backup*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/com.google.android.gms*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/microg*
-  rm -rf $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/nogoolag*
+  rm -rf $SYSTEM_AS_SYSTEM/addon.d/* $SYSTEM_AS_SYSTEM/product/addon.d/* $SYSTEM_AS_SYSTEM/system_ext/addon.d/*
+  for i in \
+    AndroidAuto* arcore Books* CarHomeGoogle CalculatorGoogle* CalendarGoogle* CarHomeGoogle Chrome* \
+    CloudPrint* DevicePersonalizationServices DMAgent Drive Duo EditorsDocs Editorssheets EditorsSlides \
+    ExchangeServices FaceLock Fitness* GalleryGo* Gcam* GCam* Gmail* GoogleCamera* GoogleCalendar* \
+    GoogleCalendarSyncAdapter GoogleContactsSyncAdapter GoogleCloudPrint GoogleEarth GoogleExtshared \
+    GooglePrintRecommendationService GoogleGo* GoogleHome* GoogleHindiIME* GoogleKeep* GoogleJapaneseInput* \
+    GoogleLoginService* GoogleMusic* GoogleNow* GooglePhotos* GooglePinyinIME* GooglePlus GoogleTTS* \
+    GoogleVrCore* GoogleZhuyinIME* Hangouts KoreanIME* Maps Markup* Music2* Newsstand NexusWallpapers* \
+    Ornament Photos* PlayAutoInstallConfig* PlayGames* PrebuiltExchange3Google PrebuiltGmail PrebuiltKeep \
+    Street Stickers* TalkBack talkBack talkback TranslatePrebuilt Tycho Videos Wallet WallpapersBReel* \
+    YouTube Abstruct BasicDreams BlissPapers BookmarkProvider Browser* Camera* Chromium ColtPapers \
+    EasterEgg* EggGame Email* ExactCalculator Exchange2 Gallery* GugelClock HTMLViewer Jelly \
+    messaging MiXplorer* Music* Partnerbookmark* PartnerBookmark* Phonograph PhotoTable RetroMusic* \
+    VanillaMusic Via* QPGallery QuickSearchBox; do
+    rm -rf $SYSTEM_AS_SYSTEM/app/$i $SYSTEM_AS_SYSTEM/product/app/$i $SYSTEM_AS_SYSTEM/system_ext/app/$i
+  done
+  for i in \
+    Aiai* AmbientSense* AndroidAuto* AndroidMigrate* AndroidPlatformServices CalendarGoogle* CalculatorGoogle* \
+    Camera* CarrierServices CarrierSetup ConfigUpdater DataTransferTool DeviceHealthServices DevicePersonalizationServices \
+    DigitalWellbeing* FaceLock Gcam* GCam* GCS GmsCore* GoogleCalculator* GoogleCalendar* GoogleCamera* GoogleBackupTransport \
+    GoogleExtservices GoogleExtServicesPrebuilt GoogleFeedback GoogleOneTimeInitializer GooglePartnerSetup GoogleRestore \
+    GoogleServicesFramework HotwordEnrollment* HotWordEnrollment* matchmaker* Matchmaker* Phonesky PixelLive* PrebuiltGmsCore* \
+    PixelSetupWizard* SetupWizard* Tag* Tips* Turbo* Velvet Wellbeing* AudioFX Camera* Eleven MatLog MusicFX OmniSwitch \
+    Snap* Tag* Via* VinylMusicPlayer; do
+    rm -rf $SYSTEM_AS_SYSTEM/priv-app/$i $SYSTEM_AS_SYSTEM/product/priv-app/$i $SYSTEM_AS_SYSTEM/system_ext/priv-app/$i
+  done
+  for i in \
+    default-permissions/default-permissions.xml default-permissions/opengapps-permissions.xml \
+    permissions/default-permissions.xml permissions/privapp-permissions-google.xml \
+    permissions/privapp-permissions-google* permissions/com.android.contacts.xml \
+    permissions/com.android.dialer.xml permissions/com.android.managedprovisioning.xml \
+    permissions/com.android.provision.xml permissions/com.google.android.camera* \
+    permissions/com.google.android.dialer* permissions/com.google.android.maps* \
+    permissions/split-permissions-google.xml preferred-apps/google.xml preferred-apps/google_build.xml \
+    sysconfig/pixel_2017_exclusive.xml sysconfig/pixel_experience_2017.xml sysconfig/gmsexpress.xml \
+    sysconfig/googledialergo-sysconfig.xml sysconfig/google-hiddenapi-package-whitelist.xml \
+    sysconfig/google.xml sysconfig/google_build.xml sysconfig/google_experience.xml \
+    sysconfig/google_exclusives_enable.xml sysconfig/go_experience.xml sysconfig/nga.xml \
+    sysconfig/nexus.xml sysconfig/pixel* sysconfig/turbo.xml sysconfig/wellbeing.xml; do
+    rm -rf $SYSTEM_AS_SYSTEM/etc/$i $SYSTEM_AS_SYSTEM/product/etc/$i $SYSTEM_AS_SYSTEM/system_ext/etc/$i
+  done
+  for i in \
+    com.google.android.camera* com.google.android.dialer* com.google.android.maps* \
+    oat/arm/com.google.android.camera* oat/arm/com.google.android.dialer* \
+    oat/arm/com.google.android.maps* oat/arm64/com.google.android.camera* \
+    oat/arm64/com.google.android.dialer* oat/arm64/com.google.android.maps*; do
+    rm -rf $SYSTEM_AS_SYSTEM/framework/$i $SYSTEM_AS_SYSTEM/product/framework/$i $SYSTEM_AS_SYSTEM/system_ext/framework/$i
+  done
+  for i in \
+    libaiai-annotators.so libcronet.70.0.3522.0.so libfilterpack_facedetect.so \
+    libfrsdk.so libgcam.so libgcam_swig_jni.so libocr.so libparticle-extractor_jni.so \
+    libbarhopper.so libfacenet.so libfilterpack_facedetect.so libfrsdk.so libgcam.so \
+    libgcam_swig_jni.so libsketchology_native.so; do
+    rm -rf $SYSTEM_AS_SYSTEM/lib*/$i $SYSTEM_AS_SYSTEM/product/lib*/$i $SYSTEM_AS_SYSTEM/system_ext/lib*/$i
+  done
+  for i in AppleNLP* AuroraDroid AuroraStore DejaVu* DroidGuard LocalGSM* LocalWiFi* MicroG* MozillaUnified* nlp* Nominatim*; do
+    rm -rf $SYSTEM_AS_SYSTEM/app/$i $SYSTEM_AS_SYSTEM/product/app/$i $SYSTEM_AS_SYSTEM/system_ext/app/$i
+  done
+  for i in AuroraServices FakeStore GmsCore GsfProxy MicroG* PatchPhonesky Phonesky; do
+    rm -rf $SYSTEM_AS_SYSTEM/priv-app/$i $SYSTEM_AS_SYSTEM/product/priv-app/$i $SYSTEM_AS_SYSTEM/system_ext/priv-app/$i
+  done
+  for i in \
+    default-permissions/microg* default-permissions/phonesky* \
+    permissions/features.xml permissions/com.android.vending* \
+    permissions/com.aurora.services* permissions/com.google.android.backup* \
+    permissions/com.google.android.gms* sysconfig/microg* sysconfig/nogoolag*; do
+    rm -rf $SYSTEM_AS_SYSTEM/etc/$i $SYSTEM_AS_SYSTEM/product/etc/$i $SYSTEM_AS_SYSTEM/system_ext/etc/$i
+  done
+  for i in $SYSTEM_AS_SYSTEM/overlay $SYSTEM_AS_SYSTEM/product/overlay $SYSTEM_AS_SYSTEM/system_ext/overlay; do
+    rm -rf $i/PixelConfigOverlay*
+  done
+  for i in $SYSTEM_AS_SYSTEM/usr $SYSTEM_AS_SYSTEM/product/usr $SYSTEM_AS_SYSTEM/system_ext/usr; do
+    rm -rf $i/share/ime $i/srec
+  done
 }
 
 # Wipe temporary data
 pkg_data() {
-  rm -rf $ANDROID_DATA/app/com.android.vending*
-  rm -rf $ANDROID_DATA/app/com.google.android*
-  rm -rf $ANDROID_DATA/app/*/com.android.vending*
-  rm -rf $ANDROID_DATA/app/*/com.google.android*
-  rm -rf $ANDROID_DATA/data/com.android.vending*
-  rm -rf $ANDROID_DATA/data/com.google.android*
+  for i in \
+    $ANDROID_DATA/app/com.android.vending* \
+    $ANDROID_DATA/app/com.google.android* \
+    $ANDROID_DATA/app/*/com.android.vending* \
+    $ANDROID_DATA/app/*/com.google.android* \
+    $ANDROID_DATA/data/com.android.vending* \
+    $ANDROID_DATA/data/com.google.android*; do
+    rm -rf $i
+  done
 }
 
 # Limit installation of AOSP APKs
-lim_aosp_install() { if [ "$TARGET_RWG_STATUS" == "true" ]; then pkg_System; pkg_Product; pkg_Ext; pkg_data; fi; }
+lim_aosp_install() { if [ "$TARGET_RWG_STATUS" == "true" ]; then pkg_System; pkg_data; fi; }
 
 # Remove pre-installed system files
-pre_installed_v31() {
-  if [ "$android_sdk" == "31" ]; then
-    rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter
-    rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter
-    rm -rf $SYSTEM_APP/GoogleExtShared
-    rm -rf $SYSTEM_PRIV_APP/ConfigUpdater
-    rm -rf $SYSTEM_PRIV_APP/GoogleServicesFramework
-    rm -rf $SYSTEM_PRIV_APP/Phonesky
-    rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreSvc
-    rm -rf $SYSTEM_ETC_CONFIG/google.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
-    rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
-    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
-    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
-    rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
-    rm -rf $SYSTEM_ETC_PREF/google.xml
-    rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay
-    # Default ExtShared
-    rm -rf $SYSTEM_APP_SHARED/ExtShared
-  fi
-}
-
-pre_installed_v30() {
-  if [ "$android_sdk" == "30" ]; then
-    rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter
-    rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter
-    rm -rf $SYSTEM_APP/GoogleExtShared
-    rm -rf $SYSTEM_PRIV_APP/ConfigUpdater
-    rm -rf $SYSTEM_PRIV_APP/GoogleServicesFramework
-    rm -rf $SYSTEM_PRIV_APP/Phonesky
-    rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreRvc
-    rm -rf $SYSTEM_ETC_CONFIG/google.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
-    rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
-    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
-    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
-    rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
-    rm -rf $SYSTEM_ETC_PREF/google.xml
-    rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay
-    # Default ExtShared
-    rm -rf $SYSTEM_APP_SHARED/ExtShared
-  fi
-}
-
-pre_installed_v29() {
-  if [ "$android_sdk" == "29" ]; then
-    rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter
-    rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter
-    rm -rf $SYSTEM_APP/GoogleExtShared
-    rm -rf $SYSTEM_PRIV_APP/ConfigUpdater
-    rm -rf $SYSTEM_PRIV_APP/GoogleExtServices
-    rm -rf $SYSTEM_PRIV_APP/GoogleServicesFramework
-    rm -rf $SYSTEM_PRIV_APP/Phonesky
-    rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreQt
-    rm -rf $SYSTEM_ETC_CONFIG/google.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
-    rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
-    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
-    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
-    rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
-    rm -rf $SYSTEM_ETC_PREF/google.xml
-    # Default ExtShared
-    rm -rf $SYSTEM_APP_SHARED/ExtShared
-    # Default ExtServices
-    rm -rf $SYSTEM_PRIV_APP_SHARED/ExtServices
-  fi
-}
-
-pre_installed_v28() {
-  if [ "$android_sdk" == "28" ]; then
-    rm -rf $SYSTEM_APP/FaceLock
-    rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter
-    rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter
-    rm -rf $SYSTEM_APP/GoogleExtShared
-    rm -rf $SYSTEM_PRIV_APP/ConfigUpdater
-    rm -rf $SYSTEM_PRIV_APP/GoogleExtServices
-    rm -rf $SYSTEM_PRIV_APP/GoogleServicesFramework
-    rm -rf $SYSTEM_PRIV_APP/Phonesky
-    rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCorePi
-    rm -rf $SYSTEM_ETC_CONFIG/google.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
-    rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
-    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
-    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
-    rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
-    rm -rf $SYSTEM_ETC_PREF/google.xml
-    # Default ExtShared
-    rm -rf $SYSTEM_APP_SHARED/ExtShared
-    # Default ExtServices
-    rm -rf $SYSTEM_PRIV_APP_SHARED/ExtServices
-  fi
-}
-
-pre_installed_v27() {
-  if [ "$android_sdk" == "27" ]; then
-    rm -rf $SYSTEM_APP/FaceLock
-    rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter
-    rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter
-    rm -rf $SYSTEM_APP/GoogleExtShared
-    rm -rf $SYSTEM_PRIV_APP/ConfigUpdater
-    rm -rf $SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt
-    rm -rf $SYSTEM_PRIV_APP/GoogleExtServices
-    rm -rf $SYSTEM_PRIV_APP/GoogleServicesFramework
-    rm -rf $SYSTEM_PRIV_APP/Phonesky
-    rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCorePix
-    rm -rf $SYSTEM_ETC_CONFIG/google.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
-    rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
-    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
-    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
-    rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
-    rm -rf $SYSTEM_ETC_PREF/google.xml
-    # Default ExtShared
-    rm -rf $SYSTEM_APP_SHARED/ExtShared
-    # Default ExtServices
-    rm -rf $SYSTEM_PRIV_APP_SHARED/ExtServices
-  fi
-}
-
-pre_installed_v26() {
-  if [ "$android_sdk" == "26" ]; then
-    rm -rf $SYSTEM_APP/FaceLock
-    rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter
-    rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter
-    rm -rf $SYSTEM_APP/GoogleExtShared
-    rm -rf $SYSTEM_PRIV_APP/ConfigUpdater
-    rm -rf $SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt
-    rm -rf $SYSTEM_PRIV_APP/GoogleExtServices
-    rm -rf $SYSTEM_PRIV_APP/GoogleServicesFramework
-    rm -rf $SYSTEM_PRIV_APP/Phonesky
-    rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCorePix
-    rm -rf $SYSTEM_ETC_CONFIG/google.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
-    rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
-    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
-    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
-    rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
-    rm -rf $SYSTEM_ETC_PREF/google.xml
-    # Default ExtShared
-    rm -rf $SYSTEM_APP_SHARED/ExtShared
-    # Default ExtServices
-    rm -rf $SYSTEM_PRIV_APP_SHARED/ExtServices
-  fi
-}
-
 pre_installed_v25() {
-  if [ "$android_sdk" == "25" ]; then
-    rm -rf $SYSTEM_APP/FaceLock
-    rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter
-    rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter
-    rm -rf $SYSTEM_APP/GoogleExtShared
-    rm -rf $SYSTEM_PRIV_APP/ConfigUpdater
-    rm -rf $SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt
-    rm -rf $SYSTEM_PRIV_APP/GoogleExtServices
-    rm -rf $SYSTEM_PRIV_APP/GoogleLoginService
-    rm -rf $SYSTEM_PRIV_APP/GoogleServicesFramework
-    rm -rf $SYSTEM_PRIV_APP/Phonesky
-    rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCore
-    rm -rf $SYSTEM_ETC_CONFIG/google.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
-    rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
-    rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
-    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
-    rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
-    rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
-    rm -rf $SYSTEM_ETC_PREF/google.xml
-    # Default ExtShared
-    rm -rf $SYSTEM_APP_SHARED/ExtShared
-    # Default ExtServices
-    rm -rf $SYSTEM_PRIV_APP_SHARED/ExtServices
-  fi
+  for i in ExtShared FaceLock GoogleCalendarSyncAdapter GoogleContactsSyncAdapter GoogleExtShared; do
+    rm -rf $SYSTEM_APP/$i
+  done
+  for i in ConfigUpdater ExtServices GmsCoreSetupPrebuilt GoogleExtServices GoogleLoginService GoogleServicesFramework Phonesky PrebuiltGmsCore*; do
+    rm -rf $SYSTEM_PRIV_APP/$i
+  done
+  for i in \
+    $SYSTEM_ETC_CONFIG/google.xml \
+    $SYSTEM_ETC_CONFIG/google_build.xml \
+    $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml \
+    $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml \
+    $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml \
+    $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml \
+    $SYSTEM_ETC_DEFAULT/default-permissions.xml \
+    $SYSTEM_ETC_PERM/privapp-permissions-atv.xml \
+    $SYSTEM_ETC_PERM/privapp-permissions-google.xml \
+    $SYSTEM_ETC_PERM/split-permissions-google.xml \
+    $SYSTEM_ETC_PREF/google.xml; do
+    rm -rf $i
+  done
+  rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay
 }
 
 # Set package install function
@@ -3016,18 +1779,6 @@ pkg_TMPSys() {
   done
 }
 
-pkg_TMPSysJar() {
-  file_list="$(find "$TMP_SYS_JAR/" -mindepth 1 -type f | cut -d/ -f5-)"
-  dir_list="$(find "$TMP_SYS_JAR/" -mindepth 1 -type d | cut -d/ -f5-)"
-  for file in $file_list; do
-    install -D "$TMP_SYS_JAR/${file}" "$SYSTEM_APP_SHARED/${file}"
-    chmod 0644 "$SYSTEM_APP_SHARED/${file}"
-  done
-  for dir in $dir_list; do
-    chmod 0755 "$SYSTEM_APP_SHARED/${dir}"
-  done
-}
-
 pkg_TMPSysAosp() {
   file_list="$(find "$TMP_SYS_AOSP/" -mindepth 1 -type f | cut -d/ -f5-)"
   dir_list="$(find "$TMP_SYS_AOSP/" -mindepth 1 -type d | cut -d/ -f5-)"
@@ -3040,6 +1791,30 @@ pkg_TMPSysAosp() {
   done
 }
 
+pkg_TMPSysAdb() {
+  file_list="$(find "$TMP_SYS/" -mindepth 1 -type f | cut -d/ -f5-)"
+  dir_list="$(find "$TMP_SYS/" -mindepth 1 -type d | cut -d/ -f5-)"
+  for file in $file_list; do
+    install -D "$TMP_SYS/${file}" "$SYSTEM_ADB_APP/${file}"
+    chmod 0644 "$SYSTEM_ADB_APP/${file}"
+  done
+  for dir in $dir_list; do
+    chmod 0755 "$SYSTEM_ADB_APP/${dir}"
+  done
+}
+
+pkg_TMPSysData() {
+  file_list="$(find "$TMP_SYS/" -mindepth 1 -type f | cut -d/ -f5-)"
+  dir_list="$(find "$TMP_SYS/" -mindepth 1 -type d | cut -d/ -f5-)"
+  for file in $file_list; do
+    install -D "$TMP_SYS/${file}" "$ANDROID_DATA/adb/${file}"
+    chmod 0644 "$ANDROID_DATA/adb/${file}"
+  done
+  for dir in $dir_list; do
+    chmod 0755 "$ANDROID_DATA/adb/${dir}"
+  done
+}
+
 pkg_TMPPriv() {
   file_list="$(find "$TMP_PRIV/" -mindepth 1 -type f | cut -d/ -f5-)"
   dir_list="$(find "$TMP_PRIV/" -mindepth 1 -type d | cut -d/ -f5-)"
@@ -3049,18 +1824,6 @@ pkg_TMPPriv() {
   done
   for dir in $dir_list; do
     chmod 0755 "$SYSTEM_PRIV_APP/${dir}"
-  done
-}
-
-pkg_TMPPrivJar() {
-  file_list="$(find "$TMP_PRIV_JAR/" -mindepth 1 -type f | cut -d/ -f5-)"
-  dir_list="$(find "$TMP_PRIV_JAR/" -mindepth 1 -type d | cut -d/ -f5-)"
-  for file in $file_list; do
-    install -D "$TMP_PRIV_JAR/${file}" "$SYSTEM_PRIV_APP_SHARED/${file}"
-    chmod 0644 "$SYSTEM_PRIV_APP_SHARED/${file}"
-  done
-  for dir in $dir_list; do
-    chmod 0755 "$SYSTEM_PRIV_APP_SHARED/${dir}"
   done
 }
 
@@ -3184,512 +1947,92 @@ pkg_TMPAddon() {
   done
 }
 
-# Set installation functions for Android SDK 31
-sdk_v31_install() {
-  if [ "$android_sdk" == "31" ]; then
-    # Set default packages and unpack
-    ZIP="
-      zip/core/ConfigUpdater.tar.xz
-      zip/core/GoogleServicesFramework.tar.xz
-      zip/core/Phonesky.tar.xz
-      zip/core/PrebuiltGmsCoreSvc.tar.xz
-      zip/sys/GoogleCalendarSyncAdapter.tar.xz
-      zip/sys/GoogleContactsSyncAdapter.tar.xz
-      zip/sys/GoogleExtShared.tar.xz
-      zip/Sysconfig.tar.xz
-      zip/Default.tar.xz
-      zip/Permissions.tar.xz
-      zip/Preferred.tar.xz
-      zip/overlay/PlayStoreOverlay.tar.xz"
-
-    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
-
-    # Unpack system files
-    extract_app() {
-      tar -xf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleExtShared.tar.xz -C $TMP_SYS_JAR
-      tar -xf $ZIP_FILE/core/ConfigUpdater.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/GoogleServicesFramework.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/Phonesky.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/PrebuiltGmsCoreSvc.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/Sysconfig.tar.xz -C $TMP_SYSCONFIG
-      tar -xf $ZIP_FILE/Default.tar.xz -C $TMP_DEFAULT
-      tar -xf $ZIP_FILE/Permissions.tar.xz -C $TMP_PERMISSION
-      tar -xf $ZIP_FILE/Preferred.tar.xz -C $TMP_PREFERRED
-      tar -xf $ZIP_FILE/overlay/PlayStoreOverlay.tar.xz -C $TMP_OVERLAY
-    }
-
-    # Set selinux context
-    selinux_context() {
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_APP_SHARED"
-    }
-
-    # Execute functions
-    ui_print "- Installing GApps"
-    unpack_zip
-    extract_app
-    pkg_TMPSys
-    pkg_TMPSysJar
-    pkg_TMPPriv
-    pkg_TMPConfig
-    pkg_TMPDefault
-    pkg_TMPPref
-    pkg_TMPPerm
-    pkg_TMPOverlay
-    selinux_context
-  fi
-}
-
-# Set installation functions for Android SDK 30
-sdk_v30_install() {
-  if [ "$android_sdk" == "30" ]; then
-    # Set default packages and unpack
-    ZIP="
-      zip/core/ConfigUpdater.tar.xz
-      zip/core/GoogleServicesFramework.tar.xz
-      zip/core/Phonesky.tar.xz
-      zip/core/PrebuiltGmsCoreRvc.tar.xz
-      zip/sys/GoogleCalendarSyncAdapter.tar.xz
-      zip/sys/GoogleContactsSyncAdapter.tar.xz
-      zip/sys/GoogleExtShared.tar.xz
-      zip/Sysconfig.tar.xz
-      zip/Default.tar.xz
-      zip/Permissions.tar.xz
-      zip/Preferred.tar.xz
-      zip/overlay/PlayStoreOverlay.tar.xz"
-
-    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
-
-    # Unpack system files
-    extract_app() {
-      tar -xf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleExtShared.tar.xz -C $TMP_SYS_JAR
-      tar -xf $ZIP_FILE/core/ConfigUpdater.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/GoogleServicesFramework.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/Phonesky.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/PrebuiltGmsCoreRvc.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/Sysconfig.tar.xz -C $TMP_SYSCONFIG
-      tar -xf $ZIP_FILE/Default.tar.xz -C $TMP_DEFAULT
-      tar -xf $ZIP_FILE/Permissions.tar.xz -C $TMP_PERMISSION
-      tar -xf $ZIP_FILE/Preferred.tar.xz -C $TMP_PREFERRED
-      tar -xf $ZIP_FILE/overlay/PlayStoreOverlay.tar.xz -C $TMP_OVERLAY
-    }
-
-    # Set selinux context
-    selinux_context() {
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_OVERLAY"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_APP_SHARED"
-    }
-
-    # Execute functions
-    ui_print "- Installing GApps"
-    unpack_zip
-    extract_app
-    pkg_TMPSys
-    pkg_TMPSysJar
-    pkg_TMPPriv
-    pkg_TMPConfig
-    pkg_TMPDefault
-    pkg_TMPPref
-    pkg_TMPPerm
-    pkg_TMPOverlay
-    selinux_context
-  fi
-}
-
-# Set installation functions for Android SDK 29
-sdk_v29_install() {
-  if [ "$android_sdk" == "29" ]; then
-    # Set default packages and unpack
-    ZIP="
-      zip/core/ConfigUpdater.tar.xz
-      zip/core/GoogleExtServices.tar.xz
-      zip/core/GoogleServicesFramework.tar.xz
-      zip/core/Phonesky.tar.xz
-      zip/core/PrebuiltGmsCoreQt.tar.xz
-      zip/sys/GoogleCalendarSyncAdapter.tar.xz
-      zip/sys/GoogleContactsSyncAdapter.tar.xz
-      zip/sys/GoogleExtShared.tar.xz
-      zip/Sysconfig.tar.xz
-      zip/Default.tar.xz
-      zip/Permissions.tar.xz
-      zip/Preferred.tar.xz"
-
-    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
-
-    # Unpack system files
-    extract_app() {
-      tar -xf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleExtShared.tar.xz -C $TMP_SYS_JAR
-      tar -xf $ZIP_FILE/core/ConfigUpdater.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/GoogleExtServices.tar.xz -C $TMP_PRIV_JAR
-      tar -xf $ZIP_FILE/core/GoogleServicesFramework.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/Phonesky.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/PrebuiltGmsCoreQt.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/Sysconfig.tar.xz -C $TMP_SYSCONFIG
-      tar -xf $ZIP_FILE/Default.tar.xz -C $TMP_DEFAULT
-      tar -xf $ZIP_FILE/Permissions.tar.xz -C $TMP_PERMISSION
-      tar -xf $ZIP_FILE/Preferred.tar.xz -C $TMP_PREFERRED
-    }
-
-    # Set selinux context
-    selinux_context() {
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_APP_SHARED"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP_SHARED"
-    }
-
-    # Execute functions
-    ui_print "- Installing GApps"
-    unpack_zip
-    extract_app
-    pkg_TMPSys
-    pkg_TMPSysJar
-    pkg_TMPPriv
-    pkg_TMPPrivJar
-    pkg_TMPConfig
-    pkg_TMPDefault
-    pkg_TMPPref
-    pkg_TMPPerm
-    selinux_context
-  fi
-}
-
-# Set installation functions for Android SDK 28
-sdk_v28_install() {
-  if [ "$android_sdk" == "28" ]; then
-    # Set default packages and unpack
-    ZIP="
-      zip/core/ConfigUpdater.tar.xz
-      zip/core/GoogleExtServices.tar.xz
-      zip/core/GoogleServicesFramework.tar.xz
-      zip/core/Phonesky.tar.xz
-      zip/core/PrebuiltGmsCorePi.tar.xz
-      zip/sys/FaceLock.tar.xz
-      zip/sys/GoogleCalendarSyncAdapter.tar.xz
-      zip/sys/GoogleContactsSyncAdapter.tar.xz
-      zip/sys/GoogleExtShared.tar.xz
-      zip/Sysconfig.tar.xz
-      zip/Default.tar.xz
-      zip/Permissions.tar.xz
-      zip/Preferred.tar.xz"
-
-    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
-
-    # Unpack system files
-    extract_app() {
-      tar -xf $ZIP_FILE/sys/FaceLock.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleExtShared.tar.xz -C $TMP_SYS_JAR
-      tar -xf $ZIP_FILE/core/ConfigUpdater.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/GoogleExtServices.tar.xz -C $TMP_PRIV_JAR
-      tar -xf $ZIP_FILE/core/GoogleServicesFramework.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/Phonesky.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/PrebuiltGmsCorePi.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/Sysconfig.tar.xz -C $TMP_SYSCONFIG
-      tar -xf $ZIP_FILE/Default.tar.xz -C $TMP_DEFAULT
-      tar -xf $ZIP_FILE/Permissions.tar.xz -C $TMP_PERMISSION
-      tar -xf $ZIP_FILE/Preferred.tar.xz -C $TMP_PREFERRED
-    }
-
-    # Set selinux context
-    selinux_context() {
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_APP_SHARED"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP_SHARED"
-    }
-
-    # Execute functions
-    ui_print "- Installing GApps"
-    unpack_zip
-    extract_app
-    pkg_TMPSys
-    pkg_TMPSysJar
-    pkg_TMPPriv
-    pkg_TMPPrivJar
-    pkg_TMPConfig
-    pkg_TMPDefault
-    pkg_TMPPref
-    pkg_TMPPerm
-    selinux_context
-  fi
-}
-
-# Set installation functions for Android SDK 27
-sdk_v27_install() {
-  if [ "$android_sdk" == "27" ]; then
-    # Set default packages and unpack
-    ZIP="
-      zip/core/ConfigUpdater.tar.xz
-      zip/core/GmsCoreSetupPrebuilt.tar.xz
-      zip/core/GoogleExtServices.tar.xz
-      zip/core/GoogleServicesFramework.tar.xz
-      zip/core/Phonesky.tar.xz
-      zip/core/PrebuiltGmsCorePix.tar.xz
-      zip/sys/FaceLock.tar.xz
-      zip/sys/GoogleCalendarSyncAdapter.tar.xz
-      zip/sys/GoogleContactsSyncAdapter.tar.xz
-      zip/sys/GoogleExtShared.tar.xz
-      zip/Sysconfig.tar.xz
-      zip/Default.tar.xz
-      zip/Permissions.tar.xz
-      zip/Preferred.tar.xz"
-
-    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
-
-    # Unpack system files
-    extract_app() {
-      tar -xf $ZIP_FILE/sys/FaceLock.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleExtShared.tar.xz -C $TMP_SYS_JAR
-      tar -xf $ZIP_FILE/core/ConfigUpdater.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/GmsCoreSetupPrebuilt.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/GoogleExtServices.tar.xz -C $TMP_PRIV_JAR
-      tar -xf $ZIP_FILE/core/GoogleServicesFramework.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/Phonesky.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/PrebuiltGmsCorePix.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/Sysconfig.tar.xz -C $TMP_SYSCONFIG
-      tar -xf $ZIP_FILE/Default.tar.xz -C $TMP_DEFAULT
-      tar -xf $ZIP_FILE/Permissions.tar.xz -C $TMP_PERMISSION
-      tar -xf $ZIP_FILE/Preferred.tar.xz -C $TMP_PREFERRED
-    }
-
-    # Set selinux context
-    selinux_context() {
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_APP_SHARED"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP_SHARED"
-    }
-
-    # Execute functions
-    ui_print "- Installing GApps"
-    unpack_zip
-    extract_app
-    pkg_TMPSys
-    pkg_TMPSysJar
-    pkg_TMPPriv
-    pkg_TMPPrivJar
-    pkg_TMPConfig
-    pkg_TMPDefault
-    pkg_TMPPref
-    pkg_TMPPerm
-    selinux_context
-  fi
-}
-
-# Set installation functions for Android SDK 26
-sdk_v26_install() {
-  if [ "$android_sdk" == "26" ]; then
-    # Set default packages and unpack
-    ZIP="
-      zip/core/ConfigUpdater.tar.xz
-      zip/core/GmsCoreSetupPrebuilt.tar.xz
-      zip/core/GoogleExtServices.tar.xz
-      zip/core/GoogleServicesFramework.tar.xz
-      zip/core/Phonesky.tar.xz
-      zip/core/PrebuiltGmsCorePix.tar.xz
-      zip/sys/FaceLock.tar.xz
-      zip/sys/GoogleCalendarSyncAdapter.tar.xz
-      zip/sys/GoogleContactsSyncAdapter.tar.xz
-      zip/sys/GoogleExtShared.tar.xz
-      zip/Sysconfig.tar.xz
-      zip/Default.tar.xz
-      zip/Permissions.tar.xz
-      zip/Preferred.tar.xz"
-
-    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
-
-    # Unpack system files
-    extract_app() {
-      tar -xf $ZIP_FILE/sys/FaceLock.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleExtShared.tar.xz -C $TMP_SYS_JAR
-      tar -xf $ZIP_FILE/core/ConfigUpdater.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/GmsCoreSetupPrebuilt.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/GoogleExtServices.tar.xz -C $TMP_PRIV_JAR
-      tar -xf $ZIP_FILE/core/GoogleServicesFramework.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/Phonesky.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/PrebuiltGmsCorePix.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/Sysconfig.tar.xz -C $TMP_SYSCONFIG
-      tar -xf $ZIP_FILE/Default.tar.xz -C $TMP_DEFAULT
-      tar -xf $ZIP_FILE/Permissions.tar.xz -C $TMP_PERMISSION
-      tar -xf $ZIP_FILE/Preferred.tar.xz -C $TMP_PREFERRED
-    }
-
-    # Set selinux context
-    selinux_context() {
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_APP_SHARED"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP_SHARED"
-    }
-
-    # Execute functions
-    ui_print "- Installing GApps"
-    unpack_zip
-    extract_app
-    pkg_TMPSys
-    pkg_TMPSysJar
-    pkg_TMPPriv
-    pkg_TMPPrivJar
-    pkg_TMPConfig
-    pkg_TMPDefault
-    pkg_TMPPref
-    pkg_TMPPerm
-    selinux_context
-  fi
-}
-
-# Set installation functions for Android SDK 25
+# Set installation functions
 sdk_v25_install() {
-  if [ "$android_sdk" == "25" ]; then
-    # Set default packages and unpack
-    ZIP="
-      zip/core/ConfigUpdater.tar.xz
-      zip/core/GmsCoreSetupPrebuilt.tar.xz
-      zip/core/GoogleExtServices.tar.xz
-      zip/core/GoogleLoginService.tar.xz
-      zip/core/GoogleServicesFramework.tar.xz
-      zip/core/Phonesky.tar.xz
-      zip/core/PrebuiltGmsCore.tar.xz
-      zip/sys/FaceLock.tar.xz
-      zip/sys/GoogleCalendarSyncAdapter.tar.xz
-      zip/sys/GoogleContactsSyncAdapter.tar.xz
-      zip/sys/GoogleExtShared.tar.xz
-      zip/Sysconfig.tar.xz
-      zip/Default.tar.xz
-      zip/Permissions.tar.xz
-      zip/Preferred.tar.xz"
-
-    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
-
-    # Unpack system files
-    extract_app() {
-      tar -xf $ZIP_FILE/sys/FaceLock.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz -C $TMP_SYS
-      tar -xf $ZIP_FILE/sys/GoogleExtShared.tar.xz -C $TMP_SYS_JAR
-      tar -xf $ZIP_FILE/core/ConfigUpdater.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/GmsCoreSetupPrebuilt.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/GoogleExtServices.tar.xz -C $TMP_PRIV_JAR
-      tar -xf $ZIP_FILE/core/GoogleLoginService.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/GoogleServicesFramework.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/Phonesky.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/core/PrebuiltGmsCore.tar.xz -C $TMP_PRIV
-      tar -xf $ZIP_FILE/Sysconfig.tar.xz -C $TMP_SYSCONFIG
-      tar -xf $ZIP_FILE/Default.tar.xz -C $TMP_DEFAULT
-      tar -xf $ZIP_FILE/Permissions.tar.xz -C $TMP_PERMISSION
-      tar -xf $ZIP_FILE/Preferred.tar.xz -C $TMP_PREFERRED
-    }
-
-    # Set selinux context
-    selinux_context() {
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_CONFIG"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_DEFAULT"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_PREF"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_APP_SHARED"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP_SHARED"
-    }
-
-    # Execute functions
-    ui_print "- Installing GApps"
-    unpack_zip
-    extract_app
-    pkg_TMPSys
-    pkg_TMPSysJar
-    pkg_TMPPriv
-    pkg_TMPPrivJar
-    pkg_TMPConfig
-    pkg_TMPDefault
-    pkg_TMPPref
-    pkg_TMPPerm
-    selinux_context
-  fi
+  ui_print "- Installing GApps"
+  # Set default packages
+  ZIP="zip/core/ConfigUpdater.tar.xz zip/core/GmsCoreSetupPrebuilt.tar.xz
+       zip/core/GoogleExtServices.tar.xz zip/core/GoogleLoginService.tar.xz
+       zip/core/GoogleServicesFramework.tar.xz zip/core/Phonesky.tar.xz
+       zip/core/PrebuiltGmsCore.tar.xz zip/core/PrebuiltGmsCorePix.tar.xz
+       zip/core/PrebuiltGmsCorePi.tar.xz zip/core/PrebuiltGmsCoreQt.tar.xz
+       zip/core/PrebuiltGmsCoreRvc.tar.xz zip/core/PrebuiltGmsCoreSvc.tar.xz
+       zip/sys/FaceLock.tar.xz zip/sys/GoogleCalendarSyncAdapter.tar.xz
+       zip/sys/GoogleContactsSyncAdapter.tar.xz zip/sys/GoogleExtShared.tar.xz
+       zip/Sysconfig.tar.xz zip/Default.tar.xz
+       zip/Permissions.tar.xz zip/Preferred.tar.xz
+       zip/overlay/PlayStoreOverlay.tar.xz"
+  # Unpack system files
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # Common packages
+  tar -xf $ZIP_FILE/sys/GoogleCalendarSyncAdapter.tar.xz -C $TMP_SYS
+  tar -xf $ZIP_FILE/sys/GoogleContactsSyncAdapter.tar.xz -C $TMP_SYS
+  tar -xf $ZIP_FILE/sys/GoogleExtShared.tar.xz -C $TMP_SYS
+  tar -xf $ZIP_FILE/core/ConfigUpdater.tar.xz -C $TMP_PRIV
+  tar -xf $ZIP_FILE/core/GoogleExtServices.tar.xz -C $TMP_PRIV
+  tar -xf $ZIP_FILE/core/GoogleServicesFramework.tar.xz -C $TMP_PRIV
+  tar -xf $ZIP_FILE/core/Phonesky.tar.xz -C $TMP_PRIV
+  tar -xf $ZIP_FILE/Sysconfig.tar.xz -C $TMP_SYSCONFIG
+  tar -xf $ZIP_FILE/Default.tar.xz -C $TMP_DEFAULT
+  tar -xf $ZIP_FILE/Permissions.tar.xz -C $TMP_PERMISSION
+  tar -xf $ZIP_FILE/Preferred.tar.xz -C $TMP_PREFERRED
+  # API Specific
+  [ "$android_sdk" -le "28" ] && tar -xf $ZIP_FILE/sys/FaceLock.tar.xz -C $TMP_SYS
+  [ "$android_sdk" -le "27" ] && tar -xf $ZIP_FILE/core/GmsCoreSetupPrebuilt.tar.xz -C $TMP_PRIV
+  [ "$android_sdk" == "25" ] && tar -xf $ZIP_FILE/core/GoogleLoginService.tar.xz -C $TMP_PRIV
+  [ "$android_sdk" == "25" ] && tar -xf $ZIP_FILE/core/PrebuiltGmsCore.tar.xz -C $TMP_PRIV
+  [ "$android_sdk" == "26" ] && tar -xf $ZIP_FILE/core/PrebuiltGmsCorePix.tar.xz -C $TMP_PRIV
+  [ "$android_sdk" == "27" ] && tar -xf $ZIP_FILE/core/PrebuiltGmsCorePix.tar.xz -C $TMP_PRIV
+  [ "$android_sdk" == "28" ] && tar -xf $ZIP_FILE/core/PrebuiltGmsCorePi.tar.xz -C $TMP_PRIV
+  [ "$android_sdk" == "29" ] && tar -xf $ZIP_FILE/core/PrebuiltGmsCoreQt.tar.xz -C $TMP_PRIV
+  [ "$android_sdk" == "30" ] && tar -xf $ZIP_FILE/core/PrebuiltGmsCoreRvc.tar.xz -C $TMP_PRIV
+  [ "$android_sdk" == "31" ] && tar -xf $ZIP_FILE/core/PrebuiltGmsCoreSvc.tar.xz -C $TMP_PRIV
+  [ "$android_sdk" -ge "30" ] && tar -xf $ZIP_FILE/overlay/PlayStoreOverlay.tar.xz -C $TMP_OVERLAY
+  # Runtime functions
+  pkg_TMPSys
+  pkg_TMPPriv
+  pkg_TMPConfig
+  pkg_TMPDefault
+  pkg_TMPPref
+  pkg_TMPPerm
+  pkg_TMPOverlay
+  # Selinux context
+  for i in \
+    $SYSTEM_APP $SYSTEM_PRIV_APP \
+    $SYSTEM_ETC_CONFIG $SYSTEM_ETC_DEFAULT \
+    $SYSTEM_ETC_PERM $SYSTEM_ETC_PREF \
+    $SYSTEM_OVERLAY; do
+    chcon -hR u:object_r:system_file:s0 "$i"
+  done
 }
 
-# Set installation functions for AOSP APKs
+# Set installation functions
 aosp_pkg_install() {
-  if [ "$AOSP_PKG_INSTALL" == "true" ]; then
-    # Set default packages and unpack
-    ZIP="
-      zip/aosp/core/Contacts.tar.xz
-      zip/aosp/core/Dialer.tar.xz
-      zip/aosp/core/ManagedProvisioning.tar.xz
-      zip/aosp/core/Provision.tar.xz
-      zip/aosp/sys/Messaging.tar.xz
-      zip/aosp/Permissions.tar.xz"
-
-    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
-
-    # Unpack system files
-    extract_app() {
-      tar -xf $ZIP_FILE/aosp/sys/Messaging.tar.xz -C $TMP_SYS_AOSP
-      tar -xf $ZIP_FILE/aosp/core/Contacts.tar.xz -C $TMP_PRIV_AOSP
-      tar -xf $ZIP_FILE/aosp/core/Dialer.tar.xz -C $TMP_PRIV_AOSP
-      tar -xf $ZIP_FILE/aosp/core/ManagedProvisioning.tar.xz -C $TMP_PRIV_AOSP
-      tar -xf $ZIP_FILE/aosp/core/Provision.tar.xz -C $TMP_PRIV_AOSP
-      tar -xf $ZIP_FILE/aosp/Permissions.tar.xz -C $TMP_PERMISSION_AOSP
-    }
-
-    # Set selinux context
-    selinux_context() {
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
-      chcon -hR u:object_r:system_file:s0 "$SYSTEM_ETC_PERM"
-    }
-
-    # Execute functions
-    unpack_zip
-    extract_app
-    pkg_TMPSysAosp
-    pkg_TMPPrivAosp
-    pkg_TMPPermAosp
-    selinux_context
-  fi
+  # Set default packages
+  ZIP="zip/aosp/core/Contacts.tar.xz zip/aosp/core/Dialer.tar.xz zip/aosp/core/ManagedProvisioning.tar.xz
+       zip/aosp/core/Provision.tar.xz zip/aosp/sys/Messaging.tar.xz zip/aosp/Permissions.tar.xz"
+  # Unpack system files
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # Common packages
+  tar -xf $ZIP_FILE/aosp/sys/Messaging.tar.xz -C $TMP_SYS_AOSP
+  tar -xf $ZIP_FILE/aosp/core/Contacts.tar.xz -C $TMP_PRIV_AOSP
+  tar -xf $ZIP_FILE/aosp/core/Dialer.tar.xz -C $TMP_PRIV_AOSP
+  tar -xf $ZIP_FILE/aosp/core/ManagedProvisioning.tar.xz -C $TMP_PRIV_AOSP
+  tar -xf $ZIP_FILE/aosp/core/Provision.tar.xz -C $TMP_PRIV_AOSP
+  tar -xf $ZIP_FILE/aosp/Permissions.tar.xz -C $TMP_PERMISSION_AOSP
+  # Runtime functions
+  pkg_TMPSysAosp
+  pkg_TMPPrivAosp
+  pkg_TMPPermAosp
+  # Selinux context
+  for i in $SYSTEM_APP $SYSTEM_PRIV_APP $SYSTEM_ETC_PERM; do
+    chcon -hR u:object_r:system_file:s0 "$i"
+  done
 }
 
-# BiTGApps build property
+on_aosp_install() { if [ "$AOSP_PKG_INSTALL" == "true" ]; then aosp_pkg_install; fi; }
+
+# Build property
 build_prop_file() {
   if [ "$supported_module_config" == "false" ]; then
     rm -rf $SYSTEM/etc/g.prop
@@ -3722,16 +2065,14 @@ ota_prop_file() {
 backup_script() {
   if [ -d "$SYSTEM_ADDOND" ] && [ "$supported_module_config" == "false" ]; then
     ui_print "- Installing OTA survival script"
-    for f in 90-bitgapps.sh bitgapps.sh backup.sh restore.sh
-    do
+    for f in bitgapps.sh backup.sh restore.sh; do
       rm -rf $SYSTEM_ADDOND/$f
     done
     ZIP="zip/Addon.tar.xz"
     [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
     tar -xf $ZIP_FILE/Addon.tar.xz -C $TMP_ADDON
     pkg_TMPAddon
-    for f in bitgapps.sh backup.sh restore.sh
-    do
+    for f in bitgapps.sh backup.sh restore.sh; do
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ADDOND/$f"
     done
   else
@@ -3757,202 +2098,84 @@ print_title_setup() {
   fi
 }
 
-# Set installation functions for SetupWizard
+# Set installation functions
 set_setup_install() {
-  if [ "$setup_config" == "true" ]; then
-    # Remove SetupWizard components
-    pre_installed() {
-      if [ "$supported_module_config" == "false" ]; then
-        rm -rf $SYSTEM/app/AndroidMigratePrebuilt
-        rm -rf $SYSTEM/app/GoogleBackupTransport
-        rm -rf $SYSTEM/app/GoogleOneTimeInitializer
-        rm -rf $SYSTEM/app/OneTimeInitializer
-        rm -rf $SYSTEM/app/GoogleRestore
-        rm -rf $SYSTEM/app/ManagedProvisioning
-        rm -rf $SYSTEM/app/Provision
-        rm -rf $SYSTEM/app/SetupWizard
-        rm -rf $SYSTEM/app/SetupWizardPrebuilt
-        rm -rf $SYSTEM/app/LineageSetupWizard
-        rm -rf $SYSTEM/priv-app/AndroidMigratePrebuilt
-        rm -rf $SYSTEM/priv-app/GoogleBackupTransport
-        rm -rf $SYSTEM/priv-app/GoogleOneTimeInitializer
-        rm -rf $SYSTEM/priv-app/OneTimeInitializer
-        rm -rf $SYSTEM/priv-app/GoogleRestore
-        rm -rf $SYSTEM/priv-app/ManagedProvisioning
-        rm -rf $SYSTEM/priv-app/Provision
-        rm -rf $SYSTEM/priv-app/SetupWizard
-        rm -rf $SYSTEM/priv-app/SetupWizardPrebuilt
-        rm -rf $SYSTEM/priv-app/LineageSetupWizard
-        rm -rf $SYSTEM/product/app/AndroidMigratePrebuilt
-        rm -rf $SYSTEM/product/app/GoogleBackupTransport
-        rm -rf $SYSTEM/product/app/GoogleOneTimeInitializer
-        rm -rf $SYSTEM/product/app/OneTimeInitializer
-        rm -rf $SYSTEM/product/app/GoogleRestore
-        rm -rf $SYSTEM/product/app/ManagedProvisioning
-        rm -rf $SYSTEM/product/app/Provision
-        rm -rf $SYSTEM/product/app/SetupWizard
-        rm -rf $SYSTEM/product/app/SetupWizardPrebuilt
-        rm -rf $SYSTEM/product/app/LineageSetupWizard
-        rm -rf $SYSTEM/product/priv-app/AndroidMigratePrebuilt
-        rm -rf $SYSTEM/product/priv-app/GoogleBackupTransport
-        rm -rf $SYSTEM/product/priv-app/GoogleOneTimeInitializer
-        rm -rf $SYSTEM/product/priv-app/OneTimeInitializer
-        rm -rf $SYSTEM/product/priv-app/GoogleRestore
-        rm -rf $SYSTEM/product/priv-app/ManagedProvisioning
-        rm -rf $SYSTEM/product/priv-app/Provision
-        rm -rf $SYSTEM/product/priv-app/SetupWizard
-        rm -rf $SYSTEM/product/priv-app/SetupWizardPrebuilt
-        rm -rf $SYSTEM/product/priv-app/LineageSetupWizard
-        rm -rf $SYSTEM/system_ext/app/AndroidMigratePrebuilt
-        rm -rf $SYSTEM/system_ext/app/GoogleBackupTransport
-        rm -rf $SYSTEM/system_ext/app/GoogleOneTimeInitializer
-        rm -rf $SYSTEM/system_ext/app/OneTimeInitializer
-        rm -rf $SYSTEM/system_ext/app/GoogleRestore
-        rm -rf $SYSTEM/system_ext/app/ManagedProvisioning
-        rm -rf $SYSTEM/system_ext/app/Provision
-        rm -rf $SYSTEM/system_ext/app/SetupWizard
-        rm -rf $SYSTEM/system_ext/app/SetupWizardPrebuilt
-        rm -rf $SYSTEM/system_ext/app/LineageSetupWizard
-        rm -rf $SYSTEM/system_ext/priv-app/AndroidMigratePrebuilt
-        rm -rf $SYSTEM/system_ext/priv-app/GoogleBackupTransport
-        rm -rf $SYSTEM/system_ext/priv-app/GoogleOneTimeInitializer
-        rm -rf $SYSTEM/system_ext/priv-app/OneTimeInitializer
-        rm -rf $SYSTEM/system_ext/priv-app/GoogleRestore
-        rm -rf $SYSTEM/system_ext/priv-app/ManagedProvisioning
-        rm -rf $SYSTEM/system_ext/priv-app/Provision
-        rm -rf $SYSTEM/system_ext/priv-app/SetupWizard
-        rm -rf $SYSTEM/system_ext/priv-app/SetupWizardPrebuilt
-        rm -rf $SYSTEM/system_ext/priv-app/LineageSetupWizard
-        rm -rf $SYSTEM/etc/permissions/com.android.managedprovisioning.xml
-        rm -rf $SYSTEM/etc/permissions/com.android.provision.xml
-        rm -rf $SYSTEM/product/etc/permissions/com.android.managedprovisioning.xml
-        rm -rf $SYSTEM/product/etc/permissions/com.android.provision.xml
-        rm -rf $SYSTEM/system_ext/etc/permissions/com.android.managedprovisioning.xml
-        rm -rf $SYSTEM/system_ext/etc/permissions/com.android.provision.xml
-      fi
-      if [ "$supported_module_config" == "true" ]; then
-        mkdir $SYSTEM_SYSTEM/app/OneTimeInitializer
-        mkdir $SYSTEM_SYSTEM/app/ManagedProvisioning
-        mkdir $SYSTEM_SYSTEM/app/Provision
-        mkdir $SYSTEM_SYSTEM/app/LineageSetupWizard
-        mkdir $SYSTEM_SYSTEM/priv-app/OneTimeInitializer
-        mkdir $SYSTEM_SYSTEM/priv-app/ManagedProvisioning
-        mkdir $SYSTEM_SYSTEM/priv-app/Provision
-        mkdir $SYSTEM_SYSTEM/priv-app/LineageSetupWizard
-        mkdir $SYSTEM_SYSTEM/product/app/OneTimeInitializer
-        mkdir $SYSTEM_SYSTEM/product/app/ManagedProvisioning
-        mkdir $SYSTEM_SYSTEM/product/app/Provision
-        mkdir $SYSTEM_SYSTEM/product/app/LineageSetupWizard
-        mkdir $SYSTEM_SYSTEM/product/priv-app/OneTimeInitializer
-        mkdir $SYSTEM_SYSTEM/product/priv-app/ManagedProvisioning
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Provision
-        mkdir $SYSTEM_SYSTEM/product/priv-app/LineageSetupWizard
-        mkdir $SYSTEM_SYSTEM/system_ext/app/OneTimeInitializer
-        mkdir $SYSTEM_SYSTEM/system_ext/app/ManagedProvisioning
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Provision
-        mkdir $SYSTEM_SYSTEM/system_ext/app/LineageSetupWizard
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/OneTimeInitializer
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/ManagedProvisioning
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Provision
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/LineageSetupWizard
-        touch $SYSTEM_SYSTEM/app/OneTimeInitializer/.replace
-        touch $SYSTEM_SYSTEM/app/ManagedProvisioning/.replace
-        touch $SYSTEM_SYSTEM/app/Provision/.replace
-        touch $SYSTEM_SYSTEM/app/LineageSetupWizard/.replace
-        touch $SYSTEM_SYSTEM/priv-app/OneTimeInitializer/.replace
-        touch $SYSTEM_SYSTEM/priv-app/ManagedProvisioning/.replace
-        touch $SYSTEM_SYSTEM/priv-app/Provision/.replace
-        touch $SYSTEM_SYSTEM/priv-app/LineageSetupWizard/.replace
-        touch $SYSTEM_SYSTEM/product/app/OneTimeInitializer/.replace
-        touch $SYSTEM_SYSTEM/product/app/ManagedProvisioning/.replace
-        touch $SYSTEM_SYSTEM/product/app/Provision/.replace
-        touch $SYSTEM_SYSTEM/product/app/LineageSetupWizard/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/OneTimeInitializer/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/ManagedProvisioning/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Provision/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/LineageSetupWizard/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/OneTimeInitializer/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/ManagedProvisioning/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Provision/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/LineageSetupWizard/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/OneTimeInitializer/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/ManagedProvisioning/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/Provision/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/LineageSetupWizard/.replace
-        touch $SYSTEM_SYSTEM/etc/permissions/com.android.managedprovisioning.xml
-        touch $SYSTEM_SYSTEM/etc/permissions/com.android.provision.xml
-        touch $SYSTEM_SYSTEM/product/etc/permissions/com.android.managedprovisioning.xml
-        touch $SYSTEM_SYSTEM/product/etc/permissions/com.android.provision.xml
-        touch $SYSTEM_SYSTEM/system_ext/etc/permissions/com.android.managedprovisioning.xml
-        touch $SYSTEM_SYSTEM/system_ext/etc/permissions/com.android.provision.xml
-      fi
-    }
-
-    # Set default packages and unpack
-    if [ "$android_sdk" -le "27" ]; then
-      ZIP="zip/core/GoogleBackupTransport.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"
-    fi
-    if [ "$android_sdk" == "28" ] && [ "$ARMEABI" == "true" ]; then
-      ZIP="zip/core/GoogleBackupTransport.tar.xz zip/core/GoogleRestore.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"
-    fi
-    if [ "$android_sdk" == "28" ] && [ "$AARCH64" == "true" ]; then
-      ZIP="zip/core/AndroidMigratePrebuilt.tar.xz zip/core/GoogleBackupTransport.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"
-    fi
-    if [ "$android_sdk" == "29" ] && [ "$ARMEABI" == "true" ]; then
-      ZIP="zip/core/GoogleRestore.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"
-    fi
-    if [ "$android_sdk" == "29" ] && [ "$AARCH64" == "true" ]; then
-      ZIP="zip/core/AndroidMigratePrebuilt.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"
-    fi
-    if [ "$android_sdk" -ge "30" ]; then
-      ZIP="zip/core/AndroidMigratePrebuilt.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"
-    fi
-
-    unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
-
-    # Unpack system files
-    extract_app() {
-      if [ "$android_sdk" -le "27" ]; then
-        tar -xf $ZIP_FILE/core/GoogleBackupTransport.tar.xz -C $TMP_PRIV_SETUP
-        tar -xf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz -C $TMP_PRIV_SETUP
-      fi
-      if [ "$android_sdk" == "28" ] && [ "$ARMEABI" == "true" ]; then
-        tar -xf $ZIP_FILE/core/GoogleBackupTransport.tar.xz -C $TMP_PRIV_SETUP
-        tar -xf $ZIP_FILE/core/GoogleRestore.tar.xz -C $TMP_PRIV_SETUP
-        tar -xf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz -C $TMP_PRIV_SETUP
-      fi
-      if [ "$android_sdk" == "28" ] && [ "$AARCH64" == "true" ]; then
-        tar -xf $ZIP_FILE/core/AndroidMigratePrebuilt.tar.xz -C $TMP_PRIV_SETUP
-        tar -xf $ZIP_FILE/core/GoogleBackupTransport.tar.xz -C $TMP_PRIV_SETUP
-        tar -xf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz -C $TMP_PRIV_SETUP
-      fi
-      if [ "$android_sdk" == "29" ] && [ "$ARMEABI" == "true" ]; then
-        tar -xf $ZIP_FILE/core/GoogleRestore.tar.xz -C $TMP_PRIV_SETUP
-        tar -xf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz -C $TMP_PRIV_SETUP
-      fi
-      if [ "$android_sdk" == "29" ] && [ "$AARCH64" == "true" ]; then
-        tar -xf $ZIP_FILE/core/AndroidMigratePrebuilt.tar.xz -C $TMP_PRIV_SETUP
-        tar -xf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz -C $TMP_PRIV_SETUP
-      fi
-      if [ "$android_sdk" -ge "30" ]; then
-        tar -xf $ZIP_FILE/core/AndroidMigratePrebuilt.tar.xz -C $TMP_PRIV_SETUP
-        tar -xf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz -C $TMP_PRIV_SETUP
-      fi
-    }
-
-    # Set selinux context
-    selinux_context() { chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"; }
-
-    # Execute functions
-    pre_installed
-    unpack_zip
-    extract_app
-    pkg_TMPSetup
-    selinux_context
+  # Remove SetupWizard components
+  if [ "$supported_module_config" == "false" ]; then
+    for i in \
+      AndroidMigratePrebuilt \
+      GoogleBackupTransport \
+      GoogleOneTimeInitializer \
+      OneTimeInitializer \
+      GoogleRestore \
+      ManagedProvisioning \
+      Provision \
+      SetupWizard \
+      SetupWizardPrebuilt \
+      LineageSetupWizard; do
+      rm -rf $SYSTEM/app/$i $SYSTEM/priv-app/$i
+      rm -rf $SYSTEM/product/app/$i $SYSTEM/product/priv-app/$i
+      rm -rf $SYSTEM/system_ext/app/$i $SYSTEM/system_ext/priv-app/$i
+    done
+    for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
+      rm -rf $i/com.android.managedprovisioning.xml $i/com.android.provision.xml
+    done
   fi
+  if [ "$supported_module_config" == "true" ]; then
+    for i in OneTimeInitializer ManagedProvisioning Provision LineageSetupWizard; do
+      mkdir $SYSTEM_SYSTEM/app/$i $SYSTEM_SYSTEM/priv-app/$i
+      mkdir $SYSTEM_SYSTEM/product/app/$i $SYSTEM_SYSTEM/product/priv-app/$i
+      mkdir $SYSTEM_SYSTEM/system_ext/app/$i $SYSTEM_SYSTEM/system_ext/priv-app/$i
+      touch $SYSTEM_SYSTEM/app/$i/.replace $SYSTEM_SYSTEM/priv-app/$i/.replace
+      touch $SYSTEM_SYSTEM/product/app/$i/.replace $SYSTEM_SYSTEM/product/priv-app/$i/.replace
+      touch $SYSTEM_SYSTEM/system_ext/app/$i/.replace $SYSTEM_SYSTEM/system_ext/priv-app/$i/.replace
+    done
+    for i in $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/permissions; do
+      touch $i/com.android.managedprovisioning.xml $i/com.android.provision.xml
+    done
+  fi
+  # Set default packages
+  if [ "$android_sdk" -le "27" ]; then ZIP="zip/core/GoogleBackupTransport.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"; fi
+  if [ "$android_sdk" == "28" ] && [ "$ARMEABI" == "true" ]; then ZIP="zip/core/GoogleBackupTransport.tar.xz zip/core/GoogleRestore.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"; fi
+  if [ "$android_sdk" == "28" ] && [ "$AARCH64" == "true" ]; then ZIP="zip/core/AndroidMigratePrebuilt.tar.xz zip/core/GoogleBackupTransport.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"; fi
+  if [ "$android_sdk" == "29" ] && [ "$ARMEABI" == "true" ]; then ZIP="zip/core/GoogleRestore.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"; fi
+  if [ "$android_sdk" == "29" ] && [ "$AARCH64" == "true" ]; then ZIP="zip/core/AndroidMigratePrebuilt.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"; fi
+  if [ "$android_sdk" -ge "30" ]; then ZIP="zip/core/AndroidMigratePrebuilt.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"; fi
+  # Unpack system files
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # API Specific
+  if [ "$android_sdk" -le "27" ]; then
+    tar -xf $ZIP_FILE/core/GoogleBackupTransport.tar.xz -C $TMP_PRIV_SETUP
+    tar -xf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz -C $TMP_PRIV_SETUP
+  fi
+  if [ "$android_sdk" == "28" ] && [ "$ARMEABI" == "true" ]; then
+    tar -xf $ZIP_FILE/core/GoogleBackupTransport.tar.xz -C $TMP_PRIV_SETUP
+    tar -xf $ZIP_FILE/core/GoogleRestore.tar.xz -C $TMP_PRIV_SETUP
+    tar -xf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz -C $TMP_PRIV_SETUP
+  fi
+  if [ "$android_sdk" == "28" ] && [ "$AARCH64" == "true" ]; then
+    tar -xf $ZIP_FILE/core/AndroidMigratePrebuilt.tar.xz -C $TMP_PRIV_SETUP
+    tar -xf $ZIP_FILE/core/GoogleBackupTransport.tar.xz -C $TMP_PRIV_SETUP
+    tar -xf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz -C $TMP_PRIV_SETUP
+  fi
+  if [ "$android_sdk" == "29" ] && [ "$ARMEABI" == "true" ]; then
+    tar -xf $ZIP_FILE/core/GoogleRestore.tar.xz -C $TMP_PRIV_SETUP
+    tar -xf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz -C $TMP_PRIV_SETUP
+  fi
+  if [ "$android_sdk" == "29" ] && [ "$AARCH64" == "true" ]; then
+    tar -xf $ZIP_FILE/core/AndroidMigratePrebuilt.tar.xz -C $TMP_PRIV_SETUP
+    tar -xf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz -C $TMP_PRIV_SETUP
+  fi
+  if [ "$android_sdk" -ge "30" ]; then
+    tar -xf $ZIP_FILE/core/AndroidMigratePrebuilt.tar.xz -C $TMP_PRIV_SETUP
+    tar -xf $ZIP_FILE/core/SetupWizardPrebuilt.tar.xz -C $TMP_PRIV_SETUP
+  fi
+  # Runtime function
+  pkg_TMPSetup
+  # Selinux context
+  chcon -hR u:object_r:system_file:s0 "$SYSTEM_PRIV_APP"
 }
 
-# Install config dependent packages
 on_setup_install() {
   if [ "$setup_config" == "true" ]; then
     set_setup_install
@@ -3987,260 +2210,42 @@ print_title_addon() {
 
 pre_installed_pkg() {
   if [ "$supported_module_config" == "false" ]; then
-    # Velvet
-    rm -rf $SYSTEM/priv-app/Velvet
-    rm -rf $SYSTEM/product/priv-app/Velvet
-    rm -rf $SYSTEM/system_ext/priv-app/Velvet
-    # BromitePrebuilt
-    rm -rf $SYSTEM/app/BromitePrebuilt
-    rm -rf $SYSTEM/app/WebViewBromite
-    rm -rf $SYSTEM/product/app/BromitePrebuilt
-    rm -rf $SYSTEM/product/app/WebViewBromite
-    rm -rf $SYSTEM/system_ext/app/BromitePrebuilt
-    rm -rf $SYSTEM/system_ext/app/WebViewBromite
-    # CalculatorGooglePrebuilt
-    rm -rf $SYSTEM/app/CalculatorGooglePrebuilt
-    rm -rf $SYSTEM/product/app/CalculatorGooglePrebuilt
-    rm -rf $SYSTEM/system_ext/app/CalculatorGooglePrebuilt
-    # CalendarGooglePrebuilt
-    rm -rf $SYSTEM/app/CalendarGooglePrebuilt
-    rm -rf $SYSTEM/product/app/CalendarGooglePrebuilt
-    rm -rf $SYSTEM/system_ext/app/CalendarGooglePrebuilt
-    # ChromeGooglePrebuilt
-    rm -rf $SYSTEM/app/ChromeGooglePrebuilt
-    rm -rf $SYSTEM/app/TrichromeLibrary
-    rm -rf $SYSTEM/app/WebViewGoogle
-    rm -rf $SYSTEM/product/app/ChromeGooglePrebuilt
-    rm -rf $SYSTEM/product/app/TrichromeLibrary
-    rm -rf $SYSTEM/product/app/WebViewGoogle
-    rm -rf $SYSTEM/system_ext/app/ChromeGooglePrebuilt
-    rm -rf $SYSTEM/system_ext/app/TrichromeLibrary
-    rm -rf $SYSTEM/system_ext/app/WebViewGoogle
-    # ContactsGooglePrebuilt
-    rm -rf $SYSTEM/priv-app/ContactsGooglePrebuilt
-    rm -rf $SYSTEM/product/priv-app/ContactsGooglePrebuilt
-    rm -rf $SYSTEM/system_ext/priv-app/ContactsGooglePrebuilt
-    # DeskClockGooglePrebuilt
-    rm -rf $SYSTEM/app/DeskClockGooglePrebuilt
-    rm -rf $SYSTEM/product/app/DeskClockGooglePrebuilt
-    rm -rf $SYSTEM/system_ext/app/DeskClockGooglePrebuilt
-    # DialerGooglePrebuilt
-    rm -rf $SYSTEM/priv-app/DialerGooglePrebuilt
-    rm -rf $SYSTEM/product/priv-app/DialerGooglePrebuilt
-    rm -rf $SYSTEM/system_ext/priv-app/DialerGooglePrebuilt
-    rm -rf $SYSTEM/etc/permissions/com.google.android.dialer.framework.xml
-    rm -rf $SYSTEM/product/etc/permissions/com.google.android.dialer.framework.xml
-    rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.dialer.framework.xml
-    rm -rf $SYSTEM/etc/permissions/com.google.android.dialer.support.xml
-    rm -rf $SYSTEM/product/etc/permissions/com.google.android.dialer.support.xml
-    rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.dialer.support.xml
-    rm -rf $SYSTEM/framework/com.google.android.dialer.support.jar
-    rm -rf $SYSTEM/product/framework/com.google.android.dialer.support.jar
-    rm -rf $SYSTEM/system_ext/framework/com.google.android.dialer.support.jar
-    # DPSGooglePrebuilt
-    rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt
-    rm -rf $SYSTEM/product/priv-app/DPSGooglePrebuilt
-    rm -rf $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
-    rm -rf $SYSTEM/system_ext/overlay/DPSOverlay
-    rm -rf $SYSTEM/etc/permissions/com.google.android.as.xml
-    rm -rf $SYSTEM/product/etc/permissions/com.google.android.as.xml
-    rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
-    # GboardGooglePrebuilt
-    rm -rf $SYSTEM/app/GboardGooglePrebuilt
-    rm -rf $SYSTEM/product/app/GboardGooglePrebuilt
-    rm -rf $SYSTEM/system_ext/app/GboardGooglePrebuilt
-    # GearheadGooglePrebuilt
-    rm -rf $SYSTEM/priv-app/GearheadGooglePrebuilt
-    rm -rf $SYSTEM/product/priv-app/GearheadGooglePrebuilt
-    rm -rf $SYSTEM/system_ext/priv-app/GearheadGooglePrebuilt
-    # NexusLauncherPrebuilt
-    rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt
-    rm -rf $SYSTEM/product/priv-app/NexusLauncherPrebuilt
-    rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
-    rm -rf $SYSTEM/priv-app/NexusQuickAccessWallet
-    rm -rf $SYSTEM/product/priv-app/NexusQuickAccessWallet
-    rm -rf $SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
-    rm -rf $SYSTEM/system_ext/overlay/NexusLauncherOverlay
-    rm -rf $SYSTEM/etc/permissions/com.google.android.apps.nexuslauncher.xml
-    rm -rf $SYSTEM/product/etc/permissions/com.google.android.apps.nexuslauncher.xml
-    rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.apps.nexuslauncher.xml
-    rm -rf $SYSTEM/etc/sysconfig/com.google.android.apps.nexuslauncher.xml
-    rm -rf $SYSTEM/product/etc/sysconfig/com.google.android.apps.nexuslauncher.xml
-    rm -rf $SYSTEM/system_ext/etc/sysconfig/com.google.android.apps.nexuslauncher.xml
-    # MapsGooglePrebuilt
-    rm -rf $SYSTEM/app/MapsGooglePrebuilt
-    rm -rf $SYSTEM/product/app/MapsGooglePrebuilt
-    rm -rf $SYSTEM/system_ext/app/MapsGooglePrebuilt
-    rm -rf $SYSTEM/etc/permissions/com.google.android.maps.xml
-    rm -rf $SYSTEM/product/etc/permissions/com.google.android.maps.xml
-    rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.maps.xml
-    rm -rf $SYSTEM/framework/com.google.android.maps.jar
-    rm -rf $SYSTEM/product/framework/com.google.android.maps.jar
-    rm -rf $SYSTEM/system_ext/framework/com.google.android.maps.jar
-    # MarkupGooglePrebuilt
-    rm -rf $SYSTEM/app/MarkupGooglePrebuilt
-    rm -rf $SYSTEM/product/app/MarkupGooglePrebuilt
-    rm -rf $SYSTEM/system_ext/app/MarkupGooglePrebuilt
-    # MessagesGooglePrebuilt
-    rm -rf $SYSTEM/app/MessagesGooglePrebuilt
-    rm -rf $SYSTEM/product/app/MessagesGooglePrebuilt
-    rm -rf $SYSTEM/system_ext/app/MessagesGooglePrebuilt
-    # CarrierServices
-    rm -rf $SYSTEM/priv-app/CarrierServices
-    rm -rf $SYSTEM/product/priv-app/CarrierServices
-    rm -rf $SYSTEM/system_ext/priv-app/CarrierServices
-    # PhotosGooglePrebuilt
-    rm -rf $SYSTEM/app/PhotosGooglePrebuilt
-    rm -rf $SYSTEM/product/app/PhotosGooglePrebuilt
-    rm -rf $SYSTEM/system_ext/app/PhotosGooglePrebuilt
-    # SoundPickerPrebuilt
-    rm -rf $SYSTEM/app/SoundPickerPrebuilt
-    rm -rf $SYSTEM/product/app/SoundPickerPrebuilt
-    rm -rf $SYSTEM/system_ext/app/SoundPickerPrebuilt
-    # GoogleTTSPrebuilt
-    rm -rf $SYSTEM/app/GoogleTTSPrebuilt
-    rm -rf $SYSTEM/product/app/GoogleTTSPrebuilt
-    rm -rf $SYSTEM/system_ext/app/GoogleTTSPrebuilt
-    # YouTube
-    rm -rf $SYSTEM/app/YouTube
-    rm -rf $SYSTEM/product/app/YouTube
-    rm -rf $SYSTEM/system_ext/app/YouTube
-    # MicroGGMSCore
-    rm -rf $SYSTEM/app/MicroGGMSCore
-    rm -rf $SYSTEM/product/app/MicroGGMSCore
-    rm -rf $SYSTEM/system_ext/app/MicroGGMSCore
-    # WellbeingPrebuilt
-    rm -rf $SYSTEM/priv-app/WellbeingPrebuilt
-    rm -rf $SYSTEM/product/priv-app/WellbeingPrebuilt
-    rm -rf $SYSTEM/system_ext/priv-app/WellbeingPrebuilt
+    for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+      rm -rf $i/Velvet $i/BromitePrebuilt $i/WebViewBromite $i/CalculatorGooglePrebuilt $i/CalendarGooglePrebuilt
+      rm -rf $i/ChromeGooglePrebuilt $i/TrichromeLibrary $i/WebViewGoogle $i/ContactsGooglePrebuilt $i/DeskClockGooglePrebuilt
+      rm -rf $i/DialerGooglePrebuilt $i/DPSGooglePrebuilt $i/GboardGooglePrebuilt $i/GearheadGooglePrebuilt $i/NexusLauncherPrebuilt $i/NexusQuickAccessWallet
+      rm -rf $i/MapsGooglePrebuilt $i/MarkupGooglePrebuilt $i/MessagesGooglePrebuilt $i/CarrierServices $i/PhotosGooglePrebuilt $i/SoundPickerPrebuilt
+      rm -rf $i/GoogleTTSPrebuilt $i/YouTube $i/MicroGGMSCore $i/WellbeingPrebuilt
+    done
+    for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
+      rm -rf $i/com.google.android.dialer.framework.xml $i/com.google.android.dialer.support.xml
+      rm -rf $i/com.google.android.as.xml $i/com.google.android.apps.nexuslauncher.xml $i/com.google.android.maps.xml
+    done
+    for i in $SYSTEM/framework $SYSTEM/product/framework $SYSTEM/system_ext/framework; do
+      rm -rf $i/com.google.android.dialer.support.jar $i/com.google.android.maps.jar
+    done
+    for i in $SYSTEM/overlay $SYSTEM/product/overlay $SYSTEM/system_ext/overlay; do
+      rm -rf $i/DPSOverlay $i/NexusLauncherOverlay
+    done
   fi
   if [ "$supported_module_config" == "true" ]; then
-    # Velvet
-    rm -rf $SYSTEM_SYSTEM/priv-app/Velvet
-    rm -rf $SYSTEM_SYSTEM/product/priv-app/Velvet
-    rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Velvet
-    # BromitePrebuilt
-    rm -rf $SYSTEM_SYSTEM/app/BromitePrebuilt
-    rm -rf $SYSTEM_SYSTEM/app/WebViewBromite
-    rm -rf $SYSTEM_SYSTEM/product/app/BromitePrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/app/WebViewBromite
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/BromitePrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/WebViewBromite
-    # CalculatorGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/app/CalculatorGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/app/CalculatorGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/CalculatorGooglePrebuilt
-    # CalendarGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/app/CalendarGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/app/CalendarGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/CalendarGooglePrebuilt
-    # ChromeGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/app/ChromeGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/app/TrichromeLibrary
-    rm -rf $SYSTEM_SYSTEM/app/WebViewGoogle
-    rm -rf $SYSTEM_SYSTEM/product/app/ChromeGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/app/TrichromeLibrary
-    rm -rf $SYSTEM_SYSTEM/product/app/WebViewGoogle
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/ChromeGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/TrichromeLibrary
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/WebViewGoogle
-    # ContactsGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/priv-app/ContactsGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/priv-app/ContactsGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/ContactsGooglePrebuilt
-    # DeskClockGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/app/DeskClockGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/app/DeskClockGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/DeskClockGooglePrebuilt
-    # DialerGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/priv-app/DialerGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/priv-app/DialerGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/DialerGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.dialer.framework.xml
-    rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.dialer.framework.xml
-    rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.dialer.framework.xml
-    rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.dialer.support.xml
-    rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.dialer.support.xml
-    rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.dialer.support.xml
-    rm -rf $SYSTEM_SYSTEM/framework/com.google.android.dialer.support.jar
-    rm -rf $SYSTEM_SYSTEM/product/framework/com.google.android.dialer.support.jar
-    rm -rf $SYSTEM_SYSTEM/system_ext/framework/com.google.android.dialer.support.jar
-    # DPSGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/priv-app/DPSGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/priv-app/DPSGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/overlay/DPSOverlay
-    rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.as.xml
-    rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.as.xml
-    rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
-    # GboardGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/app/GboardGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/app/GboardGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/GboardGooglePrebuilt
-    # GearheadGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/priv-app/GearheadGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/priv-app/GearheadGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/GearheadGooglePrebuilt
-    # NexusLauncherPrebuilt
-    rm -rf $SYSTEM_SYSTEM/priv-app/NexusLauncherPrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/priv-app/NexusLauncherPrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
-    rm -rf $SYSTEM_SYSTEM/priv-app/NexusQuickAccessWallet
-    rm -rf $SYSTEM_SYSTEM/product/priv-app/NexusQuickAccessWallet
-    rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
-    rm -rf $SYSTEM_SYSTEM/system_ext/overlay/NexusLauncherOverlay
-    rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.apps.nexuslauncher.xml
-    rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.apps.nexuslauncher.xml
-    rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.apps.nexuslauncher.xml
-    rm -rf $SYSTEM_SYSTEM/etc/sysconfig/com.google.android.apps.nexuslauncher.xml
-    rm -rf $SYSTEM_SYSTEM/product/etc/sysconfig/com.google.android.apps.nexuslauncher.xml
-    rm -rf $SYSTEM_SYSTEM/system_ext/etc/sysconfig/com.google.android.apps.nexuslauncher.xml
-    # MapsGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/app/MapsGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/app/MapsGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/MapsGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.maps.xml
-    rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.maps.xml
-    rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.maps.xml
-    rm -rf $SYSTEM_SYSTEM/framework/com.google.android.maps.jar
-    rm -rf $SYSTEM_SYSTEM/product/framework/com.google.android.maps.jar
-    rm -rf $SYSTEM_SYSTEM/system_ext/framework/com.google.android.maps.jar
-    # MarkupGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/app/MarkupGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/app/MarkupGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/MarkupGooglePrebuilt
-    # MessagesGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/app/MessagesGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/app/MessagesGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/MessagesGooglePrebuilt
-    # CarrierServices
-    rm -rf $SYSTEM_SYSTEM/priv-app/CarrierServices
-    rm -rf $SYSTEM_SYSTEM/product/priv-app/CarrierServices
-    rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/CarrierServices
-    # PhotosGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/app/PhotosGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/app/PhotosGooglePrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/PhotosGooglePrebuilt
-    # SoundPickerPrebuilt
-    rm -rf $SYSTEM_SYSTEM/app/SoundPickerPrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/app/SoundPickerPrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/SoundPickerPrebuilt
-    # GoogleTTSPrebuilt
-    rm -rf $SYSTEM_SYSTEM/app/GoogleTTSPrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/app/GoogleTTSPrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/GoogleTTSPrebuilt
-    # YouTube
-    rm -rf $SYSTEM_SYSTEM/app/YouTube
-    rm -rf $SYSTEM_SYSTEM/product/app/YouTube
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/YouTube
-    # MicroGGMSCore
-    rm -rf $SYSTEM_SYSTEM/app/MicroGGMSCore
-    rm -rf $SYSTEM_SYSTEM/product/app/MicroGGMSCore
-    rm -rf $SYSTEM_SYSTEM/system_ext/app/MicroGGMSCore
-    # WellbeingPrebuilt
-    rm -rf $SYSTEM_SYSTEM/priv-app/WellbeingPrebuilt
-    rm -rf $SYSTEM_SYSTEM/product/priv-app/WellbeingPrebuilt
-    rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/WellbeingPrebuilt
+    for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+      rm -rf $i/Velvet $i/BromitePrebuilt $i/WebViewBromite $i/CalculatorGooglePrebuilt $i/CalendarGooglePrebuilt
+      rm -rf $i/ChromeGooglePrebuilt $i/TrichromeLibrary $i/WebViewGoogle $i/ContactsGooglePrebuilt $i/DeskClockGooglePrebuilt
+      rm -rf $i/DialerGooglePrebuilt $i/DPSGooglePrebuilt $i/GboardGooglePrebuilt $i/GearheadGooglePrebuilt $i/NexusLauncherPrebuilt $i/NexusQuickAccessWallet
+      rm -rf $i/MapsGooglePrebuilt $i/MarkupGooglePrebuilt $i/MessagesGooglePrebuilt $i/CarrierServices $i/PhotosGooglePrebuilt $i/SoundPickerPrebuilt
+      rm -rf $i/GoogleTTSPrebuilt $i/YouTube $i/MicroGGMSCore $i/WellbeingPrebuilt
+    done
+    for i in $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/permissions; do
+      rm -rf $i/com.google.android.dialer.framework.xml $i/com.google.android.dialer.support.xml
+      rm -rf $i/com.google.android.as.xml $i/com.google.android.apps.nexuslauncher.xml $i/com.google.android.maps.xml
+    done
+    for i in $SYSTEM_SYSTEM/framework $SYSTEM_SYSTEM/product/framework $SYSTEM_SYSTEM/system_ext/framework; do
+      rm -rf $i/com.google.android.dialer.support.jar $i/com.google.android.maps.jar
+    done
+    for i in $SYSTEM_SYSTEM/overlay $SYSTEM_SYSTEM/product/overlay $SYSTEM_SYSTEM/system_ext/overlay; do
+      rm -rf $i/DPSOverlay $i/NexusLauncherOverlay
+    done
   fi
 }
 
@@ -4255,110 +2260,78 @@ pre_restore_pkg() {
   if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$supported_module_config" == "false" ]; then
     if [ "$supported_assistant_wipe" == "true" ] || [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Assistant Google"
-      rm -rf $SYSTEM/priv-app/Velvet
-      rm -rf $SYSTEM/product/priv-app/Velvet
-      rm -rf $SYSTEM/system_ext/priv-app/Velvet
+      rm -rf $SYSTEM/priv-app/Velvet $SYSTEM/product/priv-app/Velvet $SYSTEM/system_ext/priv-app/Velvet
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.assistant"
     fi
     if [ "$supported_bromite_wipe" == "true" ] || [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Bromite Browser"
-      rm -rf $SYSTEM/app/BromitePrebuilt
-      rm -rf $SYSTEM/app/WebViewBromite
-      rm -rf $SYSTEM/product/app/BromitePrebuilt
-      rm -rf $SYSTEM/product/app/WebViewBromite
-      rm -rf $SYSTEM/system_ext/app/BromitePrebuilt
-      rm -rf $SYSTEM/system_ext/app/WebViewBromite
+      rm -rf $SYSTEM/app/BromitePrebuilt $SYSTEM/app/WebViewBromite
+      rm -rf $SYSTEM/product/app/BromitePrebuilt $SYSTEM/product/app/WebViewBromite
+      rm -rf $SYSTEM/system_ext/app/BromitePrebuilt $SYSTEM/system_ext/app/WebViewBromite
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.bromite"
     fi
     if [ "$supported_calculator_wipe" == "true" ] || [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Calculator Google"
-      rm -rf $SYSTEM/app/CalculatorGooglePrebuilt
-      rm -rf $SYSTEM/product/app/CalculatorGooglePrebuilt
-      rm -rf $SYSTEM/system_ext/app/CalculatorGooglePrebuilt
+      rm -rf $SYSTEM/app/CalculatorGooglePrebuilt $SYSTEM/product/app/CalculatorGooglePrebuilt $SYSTEM/system_ext/app/CalculatorGooglePrebuilt 
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.calculator"
     fi
     if [ "$supported_calendar_wipe" == "true" ] || [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Calendar Google"
-      rm -rf $SYSTEM/app/CalendarGooglePrebuilt
-      rm -rf $SYSTEM/product/app/CalendarGooglePrebuilt
-      rm -rf $SYSTEM/system_ext/app/CalendarGooglePrebuilt
+      rm -rf $SYSTEM/app/CalendarGooglePrebuilt $SYSTEM/product/app/CalendarGooglePrebuilt $SYSTEM/system_ext/app/CalendarGooglePrebuilt
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.calendar"
     fi
     if [ "$supported_chrome_wipe" == "true" ] || [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Chrome Google"
-      rm -rf $SYSTEM/app/ChromeGooglePrebuilt
-      rm -rf $SYSTEM/app/TrichromeLibrary
-      rm -rf $SYSTEM/app/WebViewGoogle
-      rm -rf $SYSTEM/product/app/ChromeGooglePrebuilt
-      rm -rf $SYSTEM/product/app/TrichromeLibrary
-      rm -rf $SYSTEM/product/app/WebViewGoogle
-      rm -rf $SYSTEM/system_ext/app/ChromeGooglePrebuilt
-      rm -rf $SYSTEM/system_ext/app/TrichromeLibrary
-      rm -rf $SYSTEM/system_ext/app/WebViewGoogle
+      rm -rf $SYSTEM/app/ChromeGooglePrebuilt $SYSTEM/app/TrichromeLibrary $SYSTEM/app/WebViewGoogle
+      rm -rf $SYSTEM/product/app/ChromeGooglePrebuilt $SYSTEM/product/app/TrichromeLibrary $SYSTEM/product/app/WebViewGoogle
+      rm -rf $SYSTEM/system_ext/app/ChromeGooglePrebuilt $SYSTEM/system_ext/app/TrichromeLibrary $SYSTEM/system_ext/app/WebViewGoogle
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.chrome"
     fi
     if [ "$supported_contacts_wipe" == "true" ] || [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Contacts Google"
-      rm -rf $SYSTEM/priv-app/ContactsGooglePrebuilt
-      rm -rf $SYSTEM/product/priv-app/ContactsGooglePrebuilt
-      rm -rf $SYSTEM/system_ext/priv-app/ContactsGooglePrebuilt
+      rm -rf $SYSTEM/priv-app/ContactsGooglePrebuilt $SYSTEM/product/priv-app/ContactsGooglePrebuilt $SYSTEM/system_ext/priv-app/ContactsGooglePrebuilt
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.contacts"
     fi
     if [ "$supported_deskclock_wipe" == "true" ] || [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Deskclock Google"
-      rm -rf $SYSTEM/app/DeskClockGooglePrebuilt
-      rm -rf $SYSTEM/product/app/DeskClockGooglePrebuilt
-      rm -rf $SYSTEM/system_ext/app/DeskClockGooglePrebuilt
+      rm -rf $SYSTEM/app/DeskClockGooglePrebuilt $SYSTEM/product/app/DeskClockGooglePrebuilt $SYSTEM/system_ext/app/DeskClockGooglePrebuilt
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.deskclock"
     fi
     if [ "$supported_dialer_wipe" == "true" ] || [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Dialer Google"
-      rm -rf $SYSTEM/priv-app/DialerGooglePrebuilt
-      rm -rf $SYSTEM/product/priv-app/DialerGooglePrebuilt
-      rm -rf $SYSTEM/system_ext/priv-app/DialerGooglePrebuilt
-      rm -rf $SYSTEM/etc/permissions/com.google.android.dialer.framework.xml
-      rm -rf $SYSTEM/product/etc/permissions/com.google.android.dialer.framework.xml
-      rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.dialer.framework.xml
-      rm -rf $SYSTEM/etc/permissions/com.google.android.dialer.support.xml
-      rm -rf $SYSTEM/product/etc/permissions/com.google.android.dialer.support.xml
-      rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.dialer.support.xml
-      rm -rf $SYSTEM/framework/com.google.android.dialer.support.jar
-      rm -rf $SYSTEM/product/framework/com.google.android.dialer.support.jar
-      rm -rf $SYSTEM/system_ext/framework/com.google.android.dialer.support.jar
+      rm -rf $SYSTEM/priv-app/DialerGooglePrebuilt $SYSTEM/product/priv-app/DialerGooglePrebuilt $SYSTEM/system_ext/priv-app/DialerGooglePrebuilt
+      for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
+        rm -rf $i/com.google.android.dialer.framework.xml $i/com.google.android.dialer.support.xml
+      done
+      for i in $SYSTEM/framework $SYSTEM/product/framework $SYSTEM/system_ext/framework; do
+        rm -rf $i/com.google.android.dialer.support.jar
+      done
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.dialer"
     fi
     if [ "$supported_dps_wipe" == "true" ] || [ "$TARGET_DPS_GOOGLE" == "true" ]; then
       ui_print "- Uninstall DPS Google"
-      rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt
-      rm -rf $SYSTEM/product/priv-app/DPSGooglePrebuilt
-      rm -rf $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
-      rm -rf $SYSTEM/system_ext/overlay/DPSOverlay
-      rm -rf $SYSTEM/etc/permissions/com.google.android.as.xml
-      rm -rf $SYSTEM/product/etc/permissions/com.google.android.as.xml
-      rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
-      rm -rf $SYSTEM/etc/firmware/music_detector.descriptor
-      rm -rf $SYSTEM/etc/firmware/music_detector.sound_model
+      rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt $SYSTEM/product/priv-app/DPSGooglePrebuilt $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
+      for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
+        rm -rf $i/com.google.android.as.xml
+      done
+      rm -rf $SYSTEM/etc/firmware/music_detector.descriptor $SYSTEM/etc/firmware/music_detector.sound_model $SYSTEM/overlay/DPSOverlay
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.dps"
     fi
     if [ "$supported_gboard_wipe" == "true" ] || [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Keyboard Google"
-      rm -rf $SYSTEM/app/GboardGooglePrebuilt
-      rm -rf $SYSTEM/product/app/GboardGooglePrebuilt
-      rm -rf $SYSTEM/system_ext/app/GboardGooglePrebuilt
+      rm -rf $SYSTEM/app/GboardGooglePrebuilt $SYSTEM/product/app/GboardGooglePrebuilt $SYSTEM/system_ext/app/GboardGooglePrebuilt
       # Wipe Gboard components
-      for f in $SYSTEM/usr $SYSTEM/product/usr $SYSTEM/system_ext/usr
-      do
-        rm -rf $f/share/ime
-        rm -rf $f/srec
+      for f in $SYSTEM/usr $SYSTEM/product/usr $SYSTEM/system_ext/usr; do
+        rm -rf $f/share/ime $f/srec
       done
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.gboard"
@@ -4366,105 +2339,78 @@ pre_restore_pkg() {
     fi
     if [ "$supported_gearhead_wipe" == "true" ] || [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Android Auto"
-      rm -rf $SYSTEM/priv-app/GearheadGooglePrebuilt
-      rm -rf $SYSTEM/product/priv-app/GearheadGooglePrebuilt
-      rm -rf $SYSTEM/system_ext/priv-app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM/priv-app/GearheadGooglePrebuilt $SYSTEM/product/priv-app/GearheadGooglePrebuilt $SYSTEM/system_ext/priv-app/GearheadGooglePrebuilt
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.gearhead"
     fi
     if [ "$supported_launcher_wipe" == "true" ] || [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Pixel Launcher"
-      rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt
-      rm -rf $SYSTEM/product/priv-app/NexusLauncherPrebuilt
-      rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
-      rm -rf $SYSTEM/priv-app/NexusQuickAccessWallet
-      rm -rf $SYSTEM/product/priv-app/NexusQuickAccessWallet
-      rm -rf $SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
-      rm -rf $SYSTEM/system_ext/overlay/NexusLauncherOverlay
-      rm -rf $SYSTEM/etc/permissions/com.google.android.apps.nexuslauncher.xml
-      rm -rf $SYSTEM/product/etc/permissions/com.google.android.apps.nexuslauncher.xml
-      rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.apps.nexuslauncher.xml
-      rm -rf $SYSTEM/etc/sysconfig/com.google.android.apps.nexuslauncher.xml
-      rm -rf $SYSTEM/product/etc/sysconfig/com.google.android.apps.nexuslauncher.xml
-      rm -rf $SYSTEM/system_ext/etc/sysconfig/com.google.android.apps.nexuslauncher.xml
+      rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt $SYSTEM/product/priv-app/NexusLauncherPrebuilt $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
+      rm -rf $SYSTEM/priv-app/NexusQuickAccessWallet $SYSTEM/product/priv-app/NexusQuickAccessWallet $SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
+      for i in \
+        $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions \
+        $SYSTEM/etc/sysconfig $SYSTEM/product/etc/sysconfig $SYSTEM/system_ext/etc/sysconfig; do
+        rm -rf $i/com.google.android.apps.nexuslauncher.xml
+      done
+      rm -rf $SYSTEM/overlay/NexusLauncherOverlay
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.launcher"
     fi
     if [ "$supported_maps_wipe" == "true" ] || [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Maps Google"
-      rm -rf $SYSTEM/app/MapsGooglePrebuilt
-      rm -rf $SYSTEM/product/app/MapsGooglePrebuilt
-      rm -rf $SYSTEM/system_ext/app/MapsGooglePrebuilt
-      rm -rf $SYSTEM/etc/permissions/com.google.android.maps.xml
-      rm -rf $SYSTEM/product/etc/permissions/com.google.android.maps.xml
-      rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.maps.xml
-      rm -rf $SYSTEM/framework/com.google.android.maps.jar
-      rm -rf $SYSTEM/product/framework/com.google.android.maps.jar
-      rm -rf $SYSTEM/system_ext/framework/com.google.android.maps.jar
+      rm -rf $SYSTEM/app/MapsGooglePrebuilt $SYSTEM/product/app/MapsGooglePrebuilt $SYSTEM/system_ext/app/MapsGooglePrebuilt
+      for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
+        rm -rf $i/com.google.android.maps.xml
+      done
+      for i in $SYSTEM/framework $SYSTEM/product/framework $SYSTEM/system_ext/framework; do
+        rm -rf $i/com.google.android.maps.jar
+      done
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.maps"
     fi
     if [ "$supported_markup_wipe" == "true" ] || [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Markup Google"
-      rm -rf $SYSTEM/app/MarkupGooglePrebuilt
-      rm -rf $SYSTEM/product/app/MarkupGooglePrebuilt
-      rm -rf $SYSTEM/system_ext/app/MarkupGooglePrebuilt
+      rm -rf $SYSTEM/app/MarkupGooglePrebuilt $SYSTEM/product/app/MarkupGooglePrebuilt $SYSTEM/system_ext/app/MarkupGooglePrebuilt
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.markup"
     fi
     if [ "$supported_messages_wipe" == "true" ] || [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Messages Google"
-      rm -rf $SYSTEM/app/MessagesGooglePrebuilt
-      rm -rf $SYSTEM/product/app/MessagesGooglePrebuilt
-      rm -rf $SYSTEM/system_ext/app/MessagesGooglePrebuilt
-      rm -rf $SYSTEM/priv-app/CarrierServices
-      rm -rf $SYSTEM/product/priv-app/CarrierServices
-      rm -rf $SYSTEM/system_ext/priv-app/CarrierServices
+      rm -rf $SYSTEM/app/MessagesGooglePrebuilt $SYSTEM/product/app/MessagesGooglePrebuilt $SYSTEM/system_ext/app/MessagesGooglePrebuilt
+      rm -rf $SYSTEM/priv-app/CarrierServices $SYSTEM/product/priv-app/CarrierServices $SYSTEM/system_ext/priv-app/CarrierServices
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.messages"
     fi
     if [ "$supported_photos_wipe" == "true" ] || [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Photos Google"
-      rm -rf $SYSTEM/app/PhotosGooglePrebuilt
-      rm -rf $SYSTEM/product/app/PhotosGooglePrebuilt
-      rm -rf $SYSTEM/system_ext/app/PhotosGooglePrebuilt
+      rm -rf $SYSTEM/app/PhotosGooglePrebuilt $SYSTEM/product/app/PhotosGooglePrebuilt $SYSTEM/system_ext/app/PhotosGooglePrebuilt
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.photos"
     fi
     if [ "$supported_soundpicker_wipe" == "true" ] || [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
       ui_print "- Uninstall SoundPicker Google"
-      rm -rf $SYSTEM/app/SoundPickerPrebuilt
-      rm -rf $SYSTEM/product/app/SoundPickerPrebuilt
-      rm -rf $SYSTEM/system_ext/app/SoundPickerPrebuilt
+      rm -rf $SYSTEM/app/SoundPickerPrebuilt $SYSTEM/product/app/SoundPickerPrebuilt $SYSTEM/system_ext/app/SoundPickerPrebuilt
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.soundpicker"
     fi
     if [ "$supported_tts_wipe" == "true" ] || [ "$TARGET_TTS_GOOGLE" == "true" ]; then
       ui_print "- Uninstall TTS Google"
-      rm -rf $SYSTEM/app/GoogleTTSPrebuilt
-      rm -rf $SYSTEM/product/app/GoogleTTSPrebuilt
-      rm -rf $SYSTEM/system_ext/app/GoogleTTSPrebuilt
+      rm -rf $SYSTEM/app/GoogleTTSPrebuilt $SYSTEM/product/app/GoogleTTSPrebuilt $SYSTEM/system_ext/app/GoogleTTSPrebuilt
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.tts"
     fi
     if [ "$supported_vanced_wipe" == "true" ] || [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
       ui_print "- Uninstall YouTube Vanced"
-      rm -rf $SYSTEM/app/YouTube
-      rm -rf $SYSTEM/product/app/YouTube
-      rm -rf $SYSTEM/system_ext/app/YouTube
+      rm -rf $SYSTEM/app/YouTube $SYSTEM/product/app/YouTube $SYSTEM/system_ext/app/YouTube
       ui_print "- Uninstall Vanced MicroG"
-      rm -rf $SYSTEM/app/MicroGGMSCore
-      rm -rf $SYSTEM/product/app/MicroGGMSCore
-      rm -rf $SYSTEM/system_ext/app/MicroGGMSCore
+      rm -rf $SYSTEM/app/MicroGGMSCore $SYSTEM/product/app/MicroGGMSCore $SYSTEM/system_ext/app/MicroGGMSCore
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.vanced"
       remove_line $SYSTEM/config.prop "ro.config.vancedmicrog"
     fi
     if [ "$supported_wellbeing_wipe" == "true" ] || [ "$TARGET_WELLBEING_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Wellbeing Google"
-      rm -rf $SYSTEM/priv-app/WellbeingPrebuilt
-      rm -rf $SYSTEM/product/priv-app/WellbeingPrebuilt
-      rm -rf $SYSTEM/system_ext/priv-app/WellbeingPrebuilt
+      rm -rf $SYSTEM/priv-app/WellbeingPrebuilt $SYSTEM/product/priv-app/WellbeingPrebuilt $SYSTEM/system_ext/priv-app/WellbeingPrebuilt
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.wellbeing"
     fi
@@ -4473,176 +2419,117 @@ pre_restore_pkg() {
   if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$supported_module_config" == "true" ]; then
     if [ "$supported_assistant_wipe" == "true" ] || [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Assistant Google"
-      rm -rf $SYSTEM_SYSTEM/priv-app/Velvet
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/Velvet
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Velvet
+      rm -rf $SYSTEM_SYSTEM/priv-app/Velvet $SYSTEM_SYSTEM/product/priv-app/Velvet $SYSTEM_SYSTEM/system_ext/priv-app/Velvet
     fi
     if [ "$supported_bromite_wipe" == "true" ] || [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Bromite Browser"
-      rm -rf $SYSTEM_SYSTEM/app/BromitePrebuilt
-      rm -rf $SYSTEM_SYSTEM/app/WebViewBromite
-      rm -rf $SYSTEM_SYSTEM/product/app/BromitePrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/app/WebViewBromite
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/BromitePrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/WebViewBromite
+      rm -rf $SYSTEM_SYSTEM/app/BromitePrebuilt $SYSTEM_SYSTEM/app/WebViewBromite
+      rm -rf $SYSTEM_SYSTEM/product/app/BromitePrebuilt $SYSTEM_SYSTEM/product/app/WebViewBromite
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/BromitePrebuilt $SYSTEM_SYSTEM/system_ext/app/WebViewBromite
     fi
     if [ "$supported_calculator_wipe" == "true" ] || [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Calculator Google"
-      rm -rf $SYSTEM_SYSTEM/app/CalculatorGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/app/CalculatorGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/CalculatorGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/app/CalculatorGooglePrebuilt $SYSTEM_SYSTEM/product/app/CalculatorGooglePrebuilt $SYSTEM_SYSTEM/system_ext/app/CalculatorGooglePrebuilt 
     fi
     if [ "$supported_calendar_wipe" == "true" ] || [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Calendar Google"
-      rm -rf $SYSTEM_SYSTEM/app/CalendarGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/app/CalendarGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/CalendarGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/app/CalendarGooglePrebuilt $SYSTEM_SYSTEM/product/app/CalendarGooglePrebuilt $SYSTEM_SYSTEM/system_ext/app/CalendarGooglePrebuilt
     fi
     if [ "$supported_chrome_wipe" == "true" ] || [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Chrome Google"
-      rm -rf $SYSTEM_SYSTEM/app/ChromeGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/app/TrichromeLibrary
-      rm -rf $SYSTEM_SYSTEM/app/WebViewGoogle
-      rm -rf $SYSTEM_SYSTEM/product/app/ChromeGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/app/TrichromeLibrary
-      rm -rf $SYSTEM_SYSTEM/product/app/WebViewGoogle
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/ChromeGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/TrichromeLibrary
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/WebViewGoogle
+      rm -rf $SYSTEM_SYSTEM/app/ChromeGooglePrebuilt $SYSTEM_SYSTEM/app/TrichromeLibrary $SYSTEM_SYSTEM/app/WebViewGoogle
+      rm -rf $SYSTEM_SYSTEM/product/app/ChromeGooglePrebuilt $SYSTEM_SYSTEM/product/app/TrichromeLibrary $SYSTEM_SYSTEM/product/app/WebViewGoogle
+      rm -rf $SYSTEM_SYSTEM/system_ext/app/ChromeGooglePrebuilt $SYSTEM_SYSTEM/system_ext/app/TrichromeLibrary $SYSTEM_SYSTEM/system_ext/app/WebViewGoogle
     fi
     if [ "$supported_contacts_wipe" == "true" ] || [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Contacts Google"
-      rm -rf $SYSTEM_SYSTEM/priv-app/ContactsGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/ContactsGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/ContactsGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/priv-app/ContactsGooglePrebuilt $SYSTEM_SYSTEM/product/priv-app/ContactsGooglePrebuilt $SYSTEM_SYSTEM/system_ext/priv-app/ContactsGooglePrebuilt
     fi
     if [ "$supported_deskclock_wipe" == "true" ] || [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Deskclock Google"
-      rm -rf $SYSTEM_SYSTEM/app/DeskClockGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/app/DeskClockGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/DeskClockGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/app/DeskClockGooglePrebuilt $SYSTEM_SYSTEM/product/app/DeskClockGooglePrebuilt $SYSTEM_SYSTEM/system_ext/app/DeskClockGooglePrebuilt
     fi
     if [ "$supported_dialer_wipe" == "true" ] || [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Dialer Google"
-      rm -rf $SYSTEM_SYSTEM/priv-app/DialerGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/DialerGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/DialerGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.dialer.framework.xml
-      rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.dialer.framework.xml
-      rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.dialer.framework.xml
-      rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.dialer.support.xml
-      rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.dialer.support.xml
-      rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.dialer.support.xml
-      rm -rf $SYSTEM_SYSTEM/framework/com.google.android.dialer.support.jar
-      rm -rf $SYSTEM_SYSTEM/product/framework/com.google.android.dialer.support.jar
-      rm -rf $SYSTEM_SYSTEM/system_ext/framework/com.google.android.dialer.support.jar
+      rm -rf $SYSTEM_SYSTEM/priv-app/DialerGooglePrebuilt $SYSTEM_SYSTEM/product/priv-app/DialerGooglePrebuilt $SYSTEM_SYSTEM/system_ext/priv-app/DialerGooglePrebuilt
+      for i in $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/permissions; do
+        rm -rf $i/com.google.android.dialer.framework.xml $i/com.google.android.dialer.support.xml
+      done
+      for i in $SYSTEM_SYSTEM/framework $SYSTEM_SYSTEM/product/framework $SYSTEM_SYSTEM/system_ext/framework; do
+        rm -rf $i/com.google.android.dialer.support.jar
+      done
     fi
     if [ "$supported_dps_wipe" == "true" ] || [ "$TARGET_DPS_GOOGLE" == "true" ]; then
       ui_print "- Uninstall DPS Google"
-      rm -rf $SYSTEM_SYSTEM/priv-app/DPSGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/DPSGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/overlay/DPSOverlay
-      rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.as.xml
-      rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.as.xml
-      rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
-      rm -rf $SYSTEM_SYSTEM/etc/firmware/music_detector.descriptor
-      rm -rf $SYSTEM_SYSTEM/etc/firmware/music_detector.sound_model
+      rm -rf $SYSTEM_SYSTEM/priv-app/DPSGooglePrebuilt $SYSTEM_SYSTEM/product/priv-app/DPSGooglePrebuilt $SYSTEM_SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
+      for i in $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/permissions; do
+        rm -rf $i/com.google.android.as.xml
+      done
+      rm -rf $SYSTEM_SYSTEM/etc/firmware/music_detector.descriptor $SYSTEM_SYSTEM/etc/firmware/music_detector.sound_model $SYSTEM_SYSTEM/overlay/DPSOverlay
     fi
     if [ "$supported_gboard_wipe" == "true" ] || [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Keyboard Google"
-      rm -rf $SYSTEM_SYSTEM/app/GboardGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/app/GboardGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/GboardGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/app/GboardGooglePrebuilt $SYSTEM_SYSTEM/product/app/GboardGooglePrebuilt $SYSTEM_SYSTEM/system_ext/app/GboardGooglePrebuilt
       # Wipe Gboard components
-      for f in $SYSTEM_SYSTEM/usr $SYSTEM_SYSTEM/product/usr $SYSTEM_SYSTEM/system_ext/usr
-      do
+      for f in $SYSTEM_SYSTEM/usr $SYSTEM_SYSTEM/product/usr $SYSTEM_SYSTEM/system_ext/usr; do
         rm -rf $f/share/ime
         rm -rf $f/srec
       done
     fi
     if [ "$supported_gearhead_wipe" == "true" ] || [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Android Auto"
-      rm -rf $SYSTEM_SYSTEM/priv-app/GearheadGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/GearheadGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/GearheadGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/priv-app/GearheadGooglePrebuilt $SYSTEM_SYSTEM/product/priv-app/GearheadGooglePrebuilt $SYSTEM_SYSTEM/system_ext/priv-app/GearheadGooglePrebuilt
     fi
     if [ "$supported_launcher_wipe" == "true" ] || [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Pixel Launcher"
-      rm -rf $SYSTEM_SYSTEM/priv-app/NexusLauncherPrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/NexusLauncherPrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
-      rm -rf $SYSTEM_SYSTEM/priv-app/NexusQuickAccessWallet
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/NexusQuickAccessWallet
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
-      rm -rf $SYSTEM_SYSTEM/system_ext/overlay/NexusLauncherOverlay
-      rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.apps.nexuslauncher.xml
-      rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.apps.nexuslauncher.xml
-      rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.apps.nexuslauncher.xml
-      rm -rf $SYSTEM_SYSTEM/etc/sysconfig/com.google.android.apps.nexuslauncher.xml
-      rm -rf $SYSTEM_SYSTEM/product/etc/sysconfig/com.google.android.apps.nexuslauncher.xml
-      rm -rf $SYSTEM_SYSTEM/system_ext/etc/sysconfig/com.google.android.apps.nexuslauncher.xml
+      rm -rf $SYSTEM_SYSTEM/priv-app/NexusLauncherPrebuilt $SYSTEM_SYSTEM/product/priv-app/NexusLauncherPrebuilt $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
+      rm -rf $SYSTEM_SYSTEM/priv-app/NexusQuickAccessWallet $SYSTEM_SYSTEM/product/priv-app/NexusQuickAccessWallet $SYSTEM_SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
+      for i in \
+        $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/permissions \
+        $SYSTEM_SYSTEM/etc/sysconfig $SYSTEM_SYSTEM/product/etc/sysconfig $SYSTEM_SYSTEM/system_ext/etc/sysconfig; do
+        rm -rf $i/com.google.android.apps.nexuslauncher.xml
+      done
     fi
     if [ "$supported_maps_wipe" == "true" ] || [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Maps Google"
-      rm -rf $SYSTEM_SYSTEM/app/MapsGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/app/MapsGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/MapsGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/etc/permissions/com.google.android.maps.xml
-      rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.google.android.maps.xml
-      rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.google.android.maps.xml
-      rm -rf $SYSTEM_SYSTEM/framework/com.google.android.maps.jar
-      rm -rf $SYSTEM_SYSTEM/product/framework/com.google.android.maps.jar
-      rm -rf $SYSTEM_SYSTEM/system_ext/framework/com.google.android.maps.jar
+      rm -rf $SYSTEM_SYSTEM/app/MapsGooglePrebuilt $SYSTEM_SYSTEM/product/app/MapsGooglePrebuilt $SYSTEM_SYSTEM/system_ext/app/MapsGooglePrebuilt
+      for i in $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/permissions; do
+        rm -rf $i/com.google.android.maps.xml
+      done
+      for i in $SYSTEM_SYSTEM/framework $SYSTEM_SYSTEM/product/framework $SYSTEM_SYSTEM/system_ext/framework; do
+        rm -rf $i/com.google.android.maps.jar
+      done
     fi
     if [ "$supported_markup_wipe" == "true" ] || [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Markup Google"
-      rm -rf $SYSTEM_SYSTEM/app/MarkupGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/app/MarkupGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/MarkupGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/app/MarkupGooglePrebuilt $SYSTEM_SYSTEM/product/app/MarkupGooglePrebuilt $SYSTEM_SYSTEM/system_ext/app/MarkupGooglePrebuilt
     fi
     if [ "$supported_messages_wipe" == "true" ] || [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Messages Google"
-      rm -rf $SYSTEM_SYSTEM/app/MessagesGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/app/MessagesGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/MessagesGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/priv-app/CarrierServices
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/CarrierServices
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/CarrierServices
+      rm -rf $SYSTEM_SYSTEM/app/MessagesGooglePrebuilt $SYSTEM_SYSTEM/product/app/MessagesGooglePrebuilt $SYSTEM_SYSTEM/system_ext/app/MessagesGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/priv-app/CarrierServices $SYSTEM_SYSTEM/product/priv-app/CarrierServices $SYSTEM_SYSTEM/system_ext/priv-app/CarrierServices
     fi
     if [ "$supported_photos_wipe" == "true" ] || [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Photos Google"
-      rm -rf $SYSTEM_SYSTEM/app/PhotosGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/app/PhotosGooglePrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/PhotosGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/app/PhotosGooglePrebuilt $SYSTEM_SYSTEM/product/app/PhotosGooglePrebuilt $SYSTEM_SYSTEM/system_ext/app/PhotosGooglePrebuilt
     fi
     if [ "$supported_soundpicker_wipe" == "true" ] || [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
       ui_print "- Uninstall SoundPicker Google"
-      rm -rf $SYSTEM_SYSTEM/app/SoundPickerPrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/app/SoundPickerPrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/SoundPickerPrebuilt
+      rm -rf $SYSTEM_SYSTEM/app/SoundPickerPrebuilt $SYSTEM_SYSTEM/product/app/SoundPickerPrebuilt $SYSTEM_SYSTEM/system_ext/app/SoundPickerPrebuilt
     fi
     if [ "$supported_tts_wipe" == "true" ] || [ "$TARGET_TTS_GOOGLE" == "true" ]; then
       ui_print "- Uninstall TTS Google"
-      rm -rf $SYSTEM_SYSTEM/app/GoogleTTSPrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/app/GoogleTTSPrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/GoogleTTSPrebuilt
+      rm -rf $SYSTEM_SYSTEM/app/GoogleTTSPrebuilt $SYSTEM_SYSTEM/product/app/GoogleTTSPrebuilt $SYSTEM_SYSTEM/system_ext/app/GoogleTTSPrebuilt
     fi
     if [ "$supported_vanced_wipe" == "true" ] || [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
       ui_print "- Uninstall YouTube Vanced"
-      rm -rf $SYSTEM_SYSTEM/app/YouTube
-      rm -rf $SYSTEM_SYSTEM/product/app/YouTube
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/YouTube
+      rm -rf $SYSTEM_SYSTEM/app/YouTube $SYSTEM_SYSTEM/product/app/YouTube $SYSTEM_SYSTEM/system_ext/app/YouTube
       ui_print "- Uninstall Vanced MicroG"
-      rm -rf $SYSTEM_SYSTEM/app/MicroGGMSCore
-      rm -rf $SYSTEM_SYSTEM/product/app/MicroGGMSCore
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/MicroGGMSCore
+      rm -rf $SYSTEM_SYSTEM/app/MicroGGMSCore $SYSTEM_SYSTEM/product/app/MicroGGMSCore $SYSTEM_SYSTEM/system_ext/app/MicroGGMSCore
     fi
     if [ "$supported_wellbeing_wipe" == "true" ] || [ "$TARGET_WELLBEING_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Wellbeing Google"
-      rm -rf $SYSTEM_SYSTEM/priv-app/WellbeingPrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/WellbeingPrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/WellbeingPrebuilt
+      rm -rf $SYSTEM_SYSTEM/priv-app/WellbeingPrebuilt $SYSTEM_SYSTEM/product/priv-app/WellbeingPrebuilt $SYSTEM_SYSTEM/system_ext/priv-app/WellbeingPrebuilt
     fi
   fi
 }
@@ -4688,128 +2575,62 @@ post_restore_pkg() {
   fi
   if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$supported_module_config" == "true" ]; then
     if [ "$supported_bromite_wipe" == "true" ] || [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
-      rm -rf $SYSTEM_SYSTEM/app/Jelly
-      rm -rf $SYSTEM_SYSTEM/priv-app/Jelly
-      rm -rf $SYSTEM_SYSTEM/product/app/Jelly
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/Jelly
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/Jelly
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
+      for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+        rm -rf $i/Jelly $i/webview
+      done
     fi
     if [ "$supported_calculator_wipe" == "true" ] || [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
-      rm -rf $SYSTEM_SYSTEM/app/ExactCalculator
-      rm -rf $SYSTEM_SYSTEM/priv-app/ExactCalculator
-      rm -rf $SYSTEM_SYSTEM/product/app/ExactCalculator
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/ExactCalculator
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/ExactCalculator
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/ExactCalculator
+      for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+        rm -rf $i/ExactCalculator
+      done
     fi
     if [ "$supported_calendar_wipe" == "true" ] || [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
-      rm -rf $SYSTEM_SYSTEM/app/Calendar
-      rm -rf $SYSTEM_SYSTEM/app/Etar
-      rm -rf $SYSTEM_SYSTEM/priv-app/Calendar
-      rm -rf $SYSTEM_SYSTEM/priv-app/Etar
-      rm -rf $SYSTEM_SYSTEM/product/app/Calendar
-      rm -rf $SYSTEM_SYSTEM/product/app/Etar
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/Calendar
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/Etar
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/Calendar
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/Etar
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Calendar
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Etar
+      for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+        rm -rf $i/Calendar $i/Etar
+      done
     fi
     if [ "$supported_chrome_wipe" == "true" ] || [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
-      rm -rf $SYSTEM_SYSTEM/app/Jelly
-      rm -rf $SYSTEM_SYSTEM/priv-app/Jelly
-      rm -rf $SYSTEM_SYSTEM/product/app/Jelly
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/Jelly
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/Jelly
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
-      rm -rf $SYSTEM_SYSTEM/app/webview
-      rm -rf $SYSTEM_SYSTEM/priv-app/webview
-      rm -rf $SYSTEM_SYSTEM/product/app/webview
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/webview
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/webview
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/webview
+      for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+        rm -rf $i/Jelly $i/webview
+      done
     fi
     if [ "$supported_contacts_wipe" == "true" ] || [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
-      rm -rf $SYSTEM_SYSTEM/app/Contacts
-      rm -rf $SYSTEM_SYSTEM/priv-app/Contacts
-      rm -rf $SYSTEM_SYSTEM/product/app/Contacts
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/Contacts
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/Contacts
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Contacts
+      for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+        rm -rf $i/Contacts
+      done
     fi
     if [ "$supported_deskclock_wipe" == "true" ] || [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ]; then
-      rm -rf $SYSTEM_SYSTEM/app/DeskClock
-      rm -rf $SYSTEM_SYSTEM/priv-app/DeskClock
-      rm -rf $SYSTEM_SYSTEM/product/app/DeskClock
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/DeskClock
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/DeskClock
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/DeskClock
+      for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+        rm -rf $i/DeskClock
+      done
     fi
     if [ "$supported_dialer_wipe" == "true" ] || [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
-      rm -rf $SYSTEM_SYSTEM/app/Dialer
-      rm -rf $SYSTEM_SYSTEM/priv-app/Dialer
-      rm -rf $SYSTEM_SYSTEM/product/app/Dialer
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/Dialer
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/Dialer
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Dialer
-      rm -rf $SYSTEM_SYSTEM/etc/permissions/com.android.dialer.xml
-      rm -rf $SYSTEM_SYSTEM/product/etc/permissions/com.android.dialer.xml
-      rm -rf $SYSTEM_SYSTEM/system_ext/etc/permissions/com.android.dialer.xml
+      for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+        rm -rf $i/Dialer
+      done
+      for i in $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/permissions; do
+        rm -rf $i/com.android.dialer.xml
+      done
     fi
     if [ "$supported_gboard_wipe" == "true" ] || [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
-      rm -rf $SYSTEM_SYSTEM/app/LatinIME
-      rm -rf $SYSTEM_SYSTEM/priv-app/LatinIME
-      rm -rf $SYSTEM_SYSTEM/product/app/LatinIME
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/LatinIME
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/LatinIME
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/LatinIME
+      for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+        rm -rf $i/LatinIME
+      done
     fi
     if [ "$supported_launcher_wipe" == "true" ] || [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
-      rm -rf $SYSTEM_SYSTEM/priv-app/Launcher3
-      rm -rf $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep
-      rm -rf $SYSTEM_SYSTEM/priv-app/NexusLauncherPrebuilt
-      rm -rf $SYSTEM_SYSTEM/priv-app/NexusLauncherRelease
-      rm -rf $SYSTEM_SYSTEM/priv-app/NexusQuickAccessWallet
-      rm -rf $SYSTEM_SYSTEM/priv-app/QuickAccessWallet
-      rm -rf $SYSTEM_SYSTEM/priv-app/QuickStep
-      rm -rf $SYSTEM_SYSTEM/priv-app/QuickStepLauncher
-      rm -rf $SYSTEM_SYSTEM/priv-app/TrebuchetQuickStep
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/Launcher3
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/NexusLauncherPrebuilt
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/NexusLauncherRelease
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/NexusQuickAccessWallet
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/QuickStep
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/QuickStepLauncher
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/TrebuchetQuickStep
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherRelease
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/QuickStep
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/QuickStepLauncher
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/TrebuchetQuickStep
+      for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+        rm -rf $i/Launcher3 $i/Launcher3QuickStep $i/NexusLauncherRelease $i/QuickAccessWallet $i/QuickStep $i/QuickStepLauncher $i/TrebuchetQuickStep
+      done
     fi
     if [ "$supported_messages_wipe" == "true" ] || [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
-      rm -rf $SYSTEM_SYSTEM/app/messaging
-      rm -rf $SYSTEM_SYSTEM/priv-app/messaging
-      rm -rf $SYSTEM_SYSTEM/product/app/messaging
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/messaging
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/messaging
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/messaging
+      for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+        rm -rf $i/messaging
+      done
     fi
     if [ "$supported_photos_wipe" == "true" ] || [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
-      rm -rf $SYSTEM_SYSTEM/app/Gallery2
-      rm -rf $SYSTEM_SYSTEM/priv-app/Gallery2
-      rm -rf $SYSTEM_SYSTEM/product/app/Gallery2
-      rm -rf $SYSTEM_SYSTEM/product/priv-app/Gallery2
-      rm -rf $SYSTEM_SYSTEM/system_ext/app/Gallery2
-      rm -rf $SYSTEM_SYSTEM/system_ext/priv-app/Gallery2
+      for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+        rm -rf $i/Gallery2
+      done
     fi
   fi
 }
@@ -4827,8 +2648,37 @@ target_sys() {
   chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/$PKG_SYS"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_APP/$PKG_SYS/$PKG_SYS.apk"
   # Wipe temporary packages
-  rm -rf zip/sys/$ADDON_SYS
-  rm -rf $TMP_SYS/$PKG_SYS
+  rm -rf $ZIP $TMP_SYS/$PKG_SYS
+}
+
+target_sys_adb() {
+  # Set default packages and unpack
+  ZIP="zip/sys/$ADDON_SYS"
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # Unpack system files
+  tar -xf $ZIP_FILE/sys/$ADDON_SYS -C $TMP_SYS
+  # Install package
+  pkg_TMPSysAdb
+  # Set selinux context
+  chcon -h u:object_r:system_file:s0 "$SYSTEM_ADB_APP/$PKG_SYS"
+  chcon -h u:object_r:system_file:s0 "$SYSTEM_ADB_APP/$PKG_SYS/$PKG_SYS.apk"
+  # Wipe temporary packages
+  rm -rf $ZIP $TMP_SYS/$PKG_SYS
+}
+
+target_sys_data() {
+  # Set default packages and unpack
+  ZIP="zip/sys/$ADDON_SYS"
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # Unpack system files
+  tar -xf $ZIP_FILE/sys/$ADDON_SYS --exclude='lib' -C $TMP_SYS
+  # Install package
+  pkg_TMPSysData
+  # Set selinux context
+  chcon -h u:object_r:adb_data_file:s0 "$ANDROID_DATA/adb/$PKG_SYS"
+  chcon -h u:object_r:apk_data_file:s0 "$ANDROID_DATA/adb/$PKG_SYS/$PKG_SYS.apk"
+  # Wipe temporary packages
+  rm -rf $ZIP $TMP_SYS/$PKG_SYS
 }
 
 target_core() {
@@ -4843,48 +2693,24 @@ target_core() {
   chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/$PKG_CORE"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_PRIV_APP/$PKG_CORE/$PKG_CORE.apk"
   # Wipe temporary packages
-  rm -rf zip/core/$ADDON_CORE
-  rm -rf $TMP_PRIV/$PKG_CORE
+  rm -rf $ZIP $TMP_PRIV/$PKG_CORE
 }
 
 dialer_config() {
-  # Set default packages and unpack
+  # Set default package and unpack
   ZIP="zip/DialerPermissions.tar.xz"
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
   tar -xf $ZIP_FILE/DialerPermissions.tar.xz -C $TMP_PERMISSION
   # Install package
   pkg_TMPPerm
-  # Keep API based config
-  if [ "$android_sdk" -le "25" ]; then
-    mv -f $SYSTEM_ETC_PERM/com.google.android.dialer.framework.25.xml $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.29.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.30.xml
-  fi
-  if [ "$android_sdk" == "29" ]; then
-    mv -f $SYSTEM_ETC_PERM/com.google.android.dialer.framework.29.xml $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.25.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.30.xml
-  fi
-  if [ "$android_sdk" -ge "30" ] && { [ ! "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
-                                      [ ! "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
-    mv -f $SYSTEM_ETC_PERM/com.google.android.dialer.framework.30.xml $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.25.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.29.xml
-  fi
-  if [ "$android_sdk" -ge "30" ] && { [ "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
-                                      [ "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
-    mv -f $SYSTEM_ETC_PERM/com.google.android.dialer.framework.29.xml $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.25.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.30.xml
-  fi
   # Set selinux context
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml"
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.dialer.support.xml"
 }
 
 dialer_framework() {
-  # Set default packages and unpack
+  # Set default package and unpack
   ZIP="zip/DialerFramework.tar.xz"
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
@@ -4911,7 +2737,7 @@ launcher_config() {
 }
 
 launcher_overlay() {
-  # Set default packages and unpack
+  # Set default package and unpack
   ZIP="zip/overlay/NexusLauncherOverlay.tar.xz"
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
@@ -4923,7 +2749,7 @@ launcher_overlay() {
 }
 
 dps_config() {
-  # Set default packages and unpack
+  # Set default package and unpack
   ZIP="zip/DPSPermissions.tar.xz"
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
@@ -4936,7 +2762,7 @@ dps_config() {
 }
 
 dps_overlay() {
-  # Set default packages and unpack
+  # Set default package and unpack
   ZIP="zip/overlay/DPSOverlay.tar.xz"
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
@@ -4948,7 +2774,7 @@ dps_overlay() {
 }
 
 dps_sound_model() {
-  # Set default packages and unpack
+  # Set default package and unpack
   ZIP="zip/DPSFirmware.tar.xz"
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
@@ -4962,6 +2788,7 @@ dps_sound_model() {
     # Install firmware
     cp -f $TMP_FIRMWARE/music_detector.descriptor $SYSTEM_AS_SYSTEM/etc/firmware/music_detector.descriptor
     cp -f $TMP_FIRMWARE/music_detector.sound_model $SYSTEM_AS_SYSTEM/etc/firmware/music_detector.sound_model
+    # Set permission
     chmod 0644 $SYSTEM_AS_SYSTEM/etc/firmware/music_detector.descriptor
     chmod 0644 $SYSTEM_AS_SYSTEM/etc/firmware/music_detector.sound_model
     # Set selinux context
@@ -4977,6 +2804,7 @@ dps_sound_model() {
     # Install firmware
     cp -f $TMP_FIRMWARE/music_detector.descriptor $SYSTEM_SYSTEM/etc/firmware/music_detector.descriptor
     cp -f $TMP_FIRMWARE/music_detector.sound_model $SYSTEM_SYSTEM/etc/firmware/music_detector.sound_model
+    # Set permission
     chmod 0644 $SYSTEM_SYSTEM/etc/firmware/music_detector.descriptor
     chmod 0644 $SYSTEM_SYSTEM/etc/firmware/music_detector.sound_model
     # Set selinux context
@@ -4993,169 +2821,51 @@ gboard_usr() {
   tar -xf $ZIP_FILE/usr_share.tar.xz -C $TMP_USR_SHARE
   tar -xf $ZIP_FILE/usr_srec.tar.xz -C $TMP_USR_SREC
   if [ "$supported_module_config" == "false" ]; then
-    if [ "$android_sdk" -le "28" ]; then
-      # Create components
-      test -d $SYSTEM_AS_SYSTEM/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_AS_SYSTEM/usr/share/ime/google/d3_lms
-      test -d $SYSTEM_AS_SYSTEM/usr/srec/en-US || mkdir -p $SYSTEM_AS_SYSTEM/usr/srec/en-US
-      # Install package
-      for share in $TMP_USR_SHARE/*; do
-        cp -f $share $SYSTEM_AS_SYSTEM/usr/share/ime/google/d3_lms
-      done
-      for srec in $TMP_USR_SREC/*; do
-        cp -f $srec $SYSTEM_AS_SYSTEM/usr/srec/en-US
-      done
-      # Recursively set folder permission
-      find $SYSTEM_AS_SYSTEM/usr -type d | xargs chmod 0755
-    fi
-    if [ "$android_sdk" == "29" ]; then
-      # Create components
-      test -d $SYSTEM_AS_SYSTEM/product/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_AS_SYSTEM/product/usr/share/ime/google/d3_lms
-      test -d $SYSTEM_AS_SYSTEM/product/usr/srec/en-US || mkdir -p $SYSTEM_AS_SYSTEM/product/usr/srec/en-US
-      # Install package
-      for share in $TMP_USR_SHARE/*; do
-        cp -f $share $SYSTEM_AS_SYSTEM/product/usr/share/ime/google/d3_lms
-      done
-      for srec in $TMP_USR_SREC/*; do
-        cp -f $srec $SYSTEM_AS_SYSTEM/product/usr/srec/en-US
-      done
-      # Recursively set folder permission
-      find $SYSTEM_AS_SYSTEM/product/usr -type d | xargs chmod 0755
-    fi
-    if [ "$android_sdk" -ge "30" ] && { [ ! "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
-                                        [ ! "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
-      # Create components
-      test -d $SYSTEM_AS_SYSTEM/system_ext/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_AS_SYSTEM/system_ext/usr/share/ime/google/d3_lms
-      test -d $SYSTEM_AS_SYSTEM/system_ext/usr/srec/en-US || mkdir -p $SYSTEM_AS_SYSTEM/system_ext/usr/srec/en-US
-      # Install package
-      for share in $TMP_USR_SHARE/*; do
-        cp -f $share $SYSTEM_AS_SYSTEM/system_ext/usr/share/ime/google/d3_lms
-      done
-      for srec in $TMP_USR_SREC/*; do
-        cp -f $srec $SYSTEM_AS_SYSTEM/system_ext/usr/srec/en-US
-      done
-      # Recursively set folder permission
-      find $SYSTEM_AS_SYSTEM/system_ext/usr -type d | xargs chmod 0755
-    fi
-    if [ "$android_sdk" -ge "30" ] && { [ "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
-                                        [ "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
-      # Create components
-      test -d $SYSTEM_AS_SYSTEM/product/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_AS_SYSTEM/product/usr/share/ime/google/d3_lms
-      test -d $SYSTEM_AS_SYSTEM/product/usr/srec/en-US || mkdir -p $SYSTEM_AS_SYSTEM/product/usr/srec/en-US
-      # Install package
-      for share in $TMP_USR_SHARE/*; do
-        cp -f $share $SYSTEM_AS_SYSTEM/product/usr/share/ime/google/d3_lms
-      done
-      for srec in $TMP_USR_SREC/*; do
-        cp -f $srec $SYSTEM_AS_SYSTEM/product/usr/srec/en-US
-      done
-      # Recursively set folder permission
-      find $SYSTEM_AS_SYSTEM/product/usr -type d | xargs chmod 0755
-    fi
+    # Create components
+    test -d $SYSTEM_AS_SYSTEM/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_AS_SYSTEM/usr/share/ime/google/d3_lms
+    test -d $SYSTEM_AS_SYSTEM/usr/srec/en-US || mkdir -p $SYSTEM_AS_SYSTEM/usr/srec/en-US
+    # Install packages
+    for share in $TMP_USR_SHARE/*; do
+      cp -f $share $SYSTEM_AS_SYSTEM/usr/share/ime/google/d3_lms
+    done
+    for srec in $TMP_USR_SREC/*; do
+      cp -f $srec $SYSTEM_AS_SYSTEM/usr/srec/en-US
+    done
+    # Recursively set folder permission
+    find $SYSTEM_AS_SYSTEM/usr -type d | xargs chmod 0755
   fi
   if [ "$supported_module_config" == "true" ]; then
-    if [ "$android_sdk" -le "28" ]; then
-      # Create components
-      test -d $SYSTEM_SYSTEM/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_SYSTEM/usr/share/ime/google/d3_lms
-      test -d $SYSTEM_SYSTEM/usr/srec/en-US || mkdir -p $SYSTEM_SYSTEM/usr/srec/en-US
-      # Install package
-      for share in $TMP_USR_SHARE/*; do
-        cp -f $share $SYSTEM_SYSTEM/usr/share/ime/google/d3_lms
-      done
-      for srec in $TMP_USR_SREC/*; do
-        cp -f $srec $SYSTEM_SYSTEM/usr/srec/en-US
-      done
-      # Recursively set folder permission
-      find $SYSTEM_SYSTEM/usr -type d | xargs chmod 0755
-    fi
-    if [ "$android_sdk" == "29" ]; then
-      # Create components
-      test -d $SYSTEM_SYSTEM/product/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_SYSTEM/product/usr/share/ime/google/d3_lms
-      test -d $SYSTEM_SYSTEM/product/usr/srec/en-US || mkdir -p $SYSTEM_SYSTEM/product/usr/srec/en-US
-      # Install package
-      for share in $TMP_USR_SHARE/*; do
-        cp -f $share $SYSTEM_SYSTEM/product/usr/share/ime/google/d3_lms
-      done
-      for srec in $TMP_USR_SREC/*; do
-        cp -f $srec $SYSTEM_SYSTEM/product/usr/srec/en-US
-      done
-      # Recursively set folder permission
-      find $SYSTEM_SYSTEM/product/usr -type d | xargs chmod 0755
-    fi
-    if [ "$android_sdk" -ge "30" ] && { [ ! "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
-                                        [ ! "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
-      # Create components
-      test -d $SYSTEM_SYSTEM/system_ext/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_SYSTEM/system_ext/usr/share/ime/google/d3_lms
-      test -d $SYSTEM_SYSTEM/system_ext/usr/srec/en-US || mkdir -p $SYSTEM_SYSTEM/system_ext/usr/srec/en-US
-      # Install package
-      for share in $TMP_USR_SHARE/*; do
-        cp -f $share $SYSTEM_SYSTEM/system_ext/usr/share/ime/google/d3_lms
-      done
-      for srec in $TMP_USR_SREC/*; do
-        cp -f $srec $SYSTEM_SYSTEM/system_ext/usr/srec/en-US
-      done
-      # Recursively set folder permission
-      find $SYSTEM_SYSTEM/system_ext/usr -type d | xargs chmod 0755
-    fi
-    if [ "$android_sdk" -ge "30" ] && { [ "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
-                                        [ "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
-      # Create components
-      test -d $SYSTEM_SYSTEM/product/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_SYSTEM/product/usr/share/ime/google/d3_lms
-      test -d $SYSTEM_SYSTEM/product/usr/srec/en-US || mkdir -p $SYSTEM_SYSTEM/product/usr/srec/en-US
-      # Install package
-      for share in $TMP_USR_SHARE/*; do
-        cp -f $share $SYSTEM_SYSTEM/product/usr/share/ime/google/d3_lms
-      done
-      for srec in $TMP_USR_SREC/*; do
-        cp -f $srec $SYSTEM_SYSTEM/product/usr/srec/en-US
-      done
-      # Recursively set folder permission
-      find $SYSTEM_SYSTEM/product/usr -type d | xargs chmod 0755
-    fi
+    # Create components
+    test -d $SYSTEM_SYSTEM/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_SYSTEM/usr/share/ime/google/d3_lms
+    test -d $SYSTEM_SYSTEM/usr/srec/en-US || mkdir -p $SYSTEM_SYSTEM/usr/srec/en-US
+    # Install packages
+    for share in $TMP_USR_SHARE/*; do
+      cp -f $share $SYSTEM_SYSTEM/usr/share/ime/google/d3_lms
+    done
+    for srec in $TMP_USR_SREC/*; do
+      cp -f $srec $SYSTEM_SYSTEM/usr/srec/en-US
+    done
+    # Recursively set folder permission
+    find $SYSTEM_SYSTEM/usr -type d | xargs chmod 0755
   fi
   # Wipe temporary components
-  rm -rf zip/usr_share.tar.xz
-  rm -rf zip/usr_srec.tar.xz
-  rm -rf $TMP_USR_SHARE
-  rm -rf $TMP_USR_SREC
+  rm -rf $ZIP $TMP_USR_SHARE $TMP_USR_SREC
 }
 
 maps_config() {
-  # Set default packages and unpack
+  # Set default package and unpack
   ZIP="zip/MapsPermissions.tar.xz"
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
   tar -xf $ZIP_FILE/MapsPermissions.tar.xz -C $TMP_PERMISSION
   # Install package
   pkg_TMPPerm
-  # Keep API based config
-  if [ "$android_sdk" -le "25" ]; then
-    mv -f $SYSTEM_ETC_PERM/com.google.android.maps.25.xml $SYSTEM_ETC_PERM/com.google.android.maps.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.29.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.30.xml
-  fi
-  if [ "$android_sdk" == "29" ]; then
-    mv -f $SYSTEM_ETC_PERM/com.google.android.maps.29.xml $SYSTEM_ETC_PERM/com.google.android.maps.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.25.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.30.xml
-  fi
-  if [ "$android_sdk" -ge "30" ] && { [ ! "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
-                                      [ ! "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
-    mv -f $SYSTEM_ETC_PERM/com.google.android.maps.30.xml $SYSTEM_ETC_PERM/com.google.android.maps.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.25.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.29.xml
-  fi
-  if [ "$android_sdk" -ge "30" ] && { [ "$BOARD_USES_PRODUCT_PARTITION" == "true" ] &&
-                                      [ "$BOARD_USES_SYSTEMEXT_PARTITION" == "true" ]; }; then
-    mv -f $SYSTEM_ETC_PERM/com.google.android.maps.29.xml $SYSTEM_ETC_PERM/com.google.android.maps.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.25.xml
-    rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.30.xml
-  fi
   # Set selinux context
   chcon -h u:object_r:system_file:s0 "$SYSTEM_ETC_PERM/com.google.android.maps.xml"
 }
 
 maps_framework() {
-  # Set default packages and unpack
+  # Set default package and unpack
   ZIP="zip/MapsFramework.tar.xz"
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
@@ -5169,7 +2879,6 @@ maps_framework() {
 # Set Google Assistant as default
 set_google_assistant_default() {
   if [ "$supported_assistant_config" == "true" ] || [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
-    # Secure settings only exits in Android 9 and lower
     if [ "$android_sdk" -le "28" ]; then
       setver="122" # lowest version in MM, tagged at 6.0.0
       setsec="/data/system/users/0/settings_secure.xml"
@@ -5204,7 +2913,6 @@ set_google_assistant_default() {
       chown 1000:1000 "$setsec"
       chmod 600 "$setsec"
     fi
-    # Roles settings only exits in Android 10 and above
     if [ "$android_sdk" == "29" ]; then
       roles="/data/system/users/0/roles.xml"
       if [ -f "$roles" ]; then
@@ -5286,7 +2994,6 @@ set_google_assistant_default() {
 # Set Google Dialer as default
 set_google_dialer_default() {
   if [ "$supported_dialer_config" == "true" ] || [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
-    # Secure settings only exits in Android 9 and lower
     if [ "$android_sdk" -le "28" ]; then
       setver="122" # lowest version in MM, tagged at 6.0.0
       setsec="/data/system/users/0/settings_secure.xml"
@@ -5321,7 +3028,6 @@ set_google_dialer_default() {
       chown 1000:1000 "$setsec"
       chmod 600 "$setsec"
     fi
-    # Roles settings only exits in Android 10 and above
     if [ "$android_sdk" == "29" ]; then
       roles="/data/system/users/0/roles.xml"
       if [ -f "$roles" ]; then
@@ -5391,7 +3097,6 @@ set_google_dialer_default() {
 # Set Google Messages as default
 set_google_messages_default() {
   if [ "$supported_messages_config" == "true" ] || [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
-    # Secure settings only exits in Android 9 and lower
     if [ "$android_sdk" -le "28" ]; then
       setver="122" # lowest version in MM, tagged at 6.0.0
       setsec="/data/system/users/0/settings_secure.xml"
@@ -5426,7 +3131,6 @@ set_google_messages_default() {
       chown 1000:1000 "$setsec"
       chmod 600 "$setsec"
     fi
-    # Roles settings only exits in Android 10 and above
     if [ "$android_sdk" == "29" ]; then
       roles="/data/system/users/0/roles.xml"
       if [ -f "$roles" ]; then
@@ -5493,28 +3197,141 @@ set_google_messages_default() {
   fi
 }
 
+vanced_config() {
+  ZIP="zip/Vanced.tar.xz"
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  if [ "$supported_data_config" == "false" ]; then
+    # Unpack vanced files
+    tar -xf $ZIP_FILE/Vanced.tar.xz --exclude='vanced-root.sh' -C $TMP
+    cp -f $TMP/vanced.sh $SYSTEM_ADB_XBIN/vanced.sh
+    # Set file permission
+    chmod 0755 $SYSTEM_ADB_XBIN/vanced.sh
+  fi
+  if [ "$supported_data_config" == "true" ]; then
+    # Unpack vanced files
+    tar -xf $ZIP_FILE/Vanced.tar.xz --exclude='vanced.sh' --exclude='init.vanced.rc' -C $TMP
+    cp -f $TMP/vanced-root.sh $ANDROID_DATA/adb/service.d/vanced.sh
+    # Set file permission
+    chmod 0755 $ANDROID_DATA/adb/service.d/vanced.sh
+  fi
+}
+
+vanced_boot_patch() {
+  boot_image_editor
+  # Switch path to AIK
+  cd $TMP_AIK
+  # Lets see what fstab tells me
+  if [ "$BOOTMODE" == "false" ]; then
+    block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
+    dd if="$block" of="boot.img" > /dev/null 2>&1
+  fi
+  # Extract using block device
+  if [ "$BOOTMODE" == "true" ]; then
+    block=`find /dev/block \( -type b -o -type c -o -type l \) -iname boot | head -n 1`
+    dd if="$block" of="boot.img" > /dev/null 2>&1
+  fi
+  # Set CHROMEOS status
+  CHROMEOS=false
+  # Unpack boot image
+  ./magiskboot unpack -h boot.img > /dev/null 2>&1
+  case $? in
+    0 ) ;;
+    1 )
+      continue
+      ;;
+    2 )
+      CHROMEOS=true
+      ;;
+    * )
+      continue
+      ;;
+  esac
+  if [ -f "header" ]; then
+    # Change selinux state to permissive, without this bootlog script failed to execute
+    sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
+  fi
+  if [ -f "ramdisk.cpio" ]; then
+    mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk
+  fi
+  if [ -f "ramdisk/init.rc" ]; then
+    if [ ! -n "$(cat ramdisk/init.rc | grep init.vanced.rc)" ]; then
+      sed -i '/init.${ro.zygote}.rc/a\\import /init.vanced.rc' ramdisk/init.rc
+      cp -f $TMP/init.vanced.rc ramdisk/init.vanced.rc
+      chmod 0750 ramdisk/init.vanced.rc
+      chcon -h u:object_r:rootfs:s0 "ramdisk/init.vanced.rc"
+    fi
+    if [ -n "$(cat ramdisk/init.rc | grep init.vanced.rc)" ]; then
+      rm -rf ramdisk/init.vanced.rc
+      cp -f $TMP/init.vanced.rc ramdisk/init.vanced.rc
+      chmod 0750 ramdisk/init.vanced.rc
+      chcon -h u:object_r:rootfs:s0 "ramdisk/init.vanced.rc"
+    fi
+    rm -rf ramdisk.cpio && cd $TMP_AIK/ramdisk
+    find $TMP_AIK/ramdisk | $TMP_AIK/cpio -ov > $TMP_AIK/ramdisk.cpio
+    # Checkout ramdisk path
+    cd ../
+    ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    # Sign ChromeOS boot image
+    [ "$CHROMEOS" == "true" ] && sign_chromeos
+    dd if="mboot.img" of="$block" > /dev/null 2>&1
+    # Wipe boot dump
+    rm -rf boot.img mboot.img ramdisk
+    ./magiskboot cleanup > /dev/null 2>&1
+    cd ../../..
+  fi
+  if [ ! -f "ramdisk/init.rc" ]; then
+    ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    # Sign ChromeOS boot image
+    [ "$CHROMEOS" == "true" ] && sign_chromeos
+    dd if="mboot.img" of="$block" > /dev/null 2>&1
+    # Wipe boot dump
+    rm -rf boot.img mboot.img
+    ./magiskboot cleanup > /dev/null 2>&1
+    cd ../../..
+  fi
+  # Wipe ramdisk dump
+  rm -rf $TMP_AIK/ramdisk
+  # Patch root file system component
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/init.rc" ] && [ -n "$(cat /system_root/init.rc | grep ro.zygote)" ]; }; then
+    if [ ! -n "$(cat /system_root/init.rc | grep init.vanced.rc)" ]; then
+      sed -i '/init.${ro.zygote}.rc/a\\import /init.vanced.rc' /system_root/init.rc
+      cp -f $TMP/init.vanced.rc /system_root/init.vanced.rc
+      chmod 0750 /system_root/init.vanced.rc
+      chcon -h u:object_r:rootfs:s0 "/system_root/init.vanced.rc"
+    fi
+    if [ -n "$(cat /system_root/init.rc | grep init.vanced.rc)" ]; then
+      rm -rf /system_root/init.vanced.rc
+      cp -f $TMP/init.vanced.rc /system_root/init.vanced.rc
+      chmod 0750 /system_root/init.vanced.rc
+      chcon -h u:object_r:rootfs:s0 "/system_root/init.vanced.rc"
+    fi
+  fi
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+    if [ ! -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.vanced.rc)" ]; then
+      sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.vanced.rc' /system_root/system/etc/init/hw/init.rc
+      cp -f $TMP/init.vanced.rc /system_root/system/etc/init/hw/init.vanced.rc
+      chmod 0644 /system_root/system/etc/init/hw/init.vanced.rc
+      chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.vanced.rc"
+    fi
+    if [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.vanced.rc)" ]; then
+      rm -rf /system_root/system/etc/init/hw/init.vanced.rc
+      cp -f $TMP/init.vanced.rc /system_root/system/etc/init/hw/init.vanced.rc
+      chmod 0644 /system_root/system/etc/init/hw/init.vanced.rc
+      chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.vanced.rc"
+    fi
+  fi
+}
+
 set_addon_zip_conf() {
-  # Config based and combined packages
   if [ "$ADDON" == "conf" ]; then
     if [ "$supported_assistant_config" == "true" ]; then
       ui_print "- Installing Assistant Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.assistant" after '# Begin addon properties' "ro.config.assistant"
-        # Remove pre-install Assistant
-        rm -rf $SYSTEM/app/Velvet*
-        rm -rf $SYSTEM/app/velvet*
-        rm -rf $SYSTEM/priv-app/Velvet*
-        rm -rf $SYSTEM/priv-app/velvet*
-        rm -rf $SYSTEM/product/app/Velvet*
-        rm -rf $SYSTEM/product/app/velvet*
-        rm -rf $SYSTEM/product/priv-app/Velvet*
-        rm -rf $SYSTEM/product/priv-app/velvet*
-        rm -rf $SYSTEM/system_ext/app/Velvet*
-        rm -rf $SYSTEM/system_ext/app/velvet*
-        rm -rf $SYSTEM/system_ext/priv-app/Velvet*
-        rm -rf $SYSTEM/system_ext/priv-app/velvet*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Velvet* $i/velvet*
+        done
       fi
-      # Install
       ADDON_CORE="Velvet.tar.xz"
       PKG_CORE="Velvet"
       target_core
@@ -5528,94 +3345,15 @@ set_addon_zip_conf() {
       ui_print "- Installing Bromite Browser"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.bromite" after '# Begin addon properties' "ro.config.bromite"
-        # Remove AOSP Browser
-        rm -rf $SYSTEM/app/Browser
-        rm -rf $SYSTEM/app/Jelly
-        rm -rf $SYSTEM/priv-app/Browser
-        rm -rf $SYSTEM/priv-app/Jelly
-        rm -rf $SYSTEM/product/app/Browser
-        rm -rf $SYSTEM/product/app/Jelly
-        rm -rf $SYSTEM/product/priv-app/Browser
-        rm -rf $SYSTEM/product/priv-app/Jelly
-        rm -rf $SYSTEM/system_ext/app/Browser
-        rm -rf $SYSTEM/system_ext/app/Jelly
-        rm -rf $SYSTEM/system_ext/priv-app/Browser
-        rm -rf $SYSTEM/system_ext/priv-app/Jelly
-        # Remove pre-install Chrome and library
-        rm -rf $SYSTEM/app/Chrome*
-        rm -rf $SYSTEM/app/GoogleChrome
-        rm -rf $SYSTEM/app/TrichromeLibrary
-        rm -rf $SYSTEM/app/WebViewGoogle
-        rm -rf $SYSTEM/priv-app/Chrome*
-        rm -rf $SYSTEM/priv-app/GoogleChrome
-        rm -rf $SYSTEM/priv-app/TrichromeLibrary
-        rm -rf $SYSTEM/priv-app/WebViewGoogle
-        rm -rf $SYSTEM/product/app/Chrome*
-        rm -rf $SYSTEM/product/app/GoogleChrome
-        rm -rf $SYSTEM/product/app/TrichromeLibrary
-        rm -rf $SYSTEM/product/app/WebViewGoogle
-        rm -rf $SYSTEM/product/priv-app/Chrome*
-        rm -rf $SYSTEM/product/priv-app/GoogleChrome
-        rm -rf $SYSTEM/product/priv-app/TrichromeLibrary
-        rm -rf $SYSTEM/product/priv-app/WebViewGoogle
-        rm -rf $SYSTEM/system_ext/app/Chrome*
-        rm -rf $SYSTEM/system_ext/app/GoogleChrome
-        rm -rf $SYSTEM/system_ext/app/TrichromeLibrary
-        rm -rf $SYSTEM/system_ext/app/WebViewGoogle
-        rm -rf $SYSTEM/system_ext/priv-app/Chrome*
-        rm -rf $SYSTEM/system_ext/priv-app/GoogleChrome
-        rm -rf $SYSTEM/system_ext/priv-app/TrichromeLibrary
-        rm -rf $SYSTEM/system_ext/priv-app/WebViewGoogle
-        # Remove pre-install Bromite and library
-        rm -rf $SYSTEM/app/BromitePrebuilt
-        rm -rf $SYSTEM/app/WebViewBromite
-        rm -rf $SYSTEM/priv-app/BromitePrebuilt
-        rm -rf $SYSTEM/priv-app/WebViewBromite
-        rm -rf $SYSTEM/product/app/BromitePrebuilt
-        rm -rf $SYSTEM/product/app/WebViewBromite
-        rm -rf $SYSTEM/product/priv-app/BromitePrebuilt
-        rm -rf $SYSTEM/product/priv-app/WebViewBromite
-        rm -rf $SYSTEM/system_ext/app/BromitePrebuilt
-        rm -rf $SYSTEM/system_ext/app/WebViewBromite
-        rm -rf $SYSTEM/system_ext/priv-app/BromitePrebuilt
-        rm -rf $SYSTEM/system_ext/priv-app/WebViewBromite
-        # Remove AOSP WebView
-        rm -rf $SYSTEM/app/webview
-        rm -rf $SYSTEM/priv-app/webview
-        rm -rf $SYSTEM/product/app/webview
-        rm -rf $SYSTEM/product/priv-app/webview
-        rm -rf $SYSTEM/system_ext/app/webview
-        rm -rf $SYSTEM/system_ext/priv-app/webview
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle $i/BromitePrebuilt $i/WebViewBromite $i/webview
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Browser
-        (mkdir $SYSTEM_SYSTEM/app/Jelly
-         mkdir $SYSTEM_SYSTEM/priv-app/Jelly
-         mkdir $SYSTEM_SYSTEM/product/app/Jelly
-         mkdir $SYSTEM_SYSTEM/product/priv-app/Jelly
-         mkdir $SYSTEM_SYSTEM/system_ext/app/Jelly
-         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
-         touch $SYSTEM_SYSTEM/app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/priv-app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/product/app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/product/priv-app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/system_ext/app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/system_ext/priv-app/Jelly/.replace) 2>/dev/null
-        # Remove AOSP WebView
-        (mkdir $SYSTEM_SYSTEM/app/webview
-         mkdir $SYSTEM_SYSTEM/priv-app/webview
-         mkdir $SYSTEM_SYSTEM/product/app/webview
-         mkdir $SYSTEM_SYSTEM/product/priv-app/webview
-         mkdir $SYSTEM_SYSTEM/system_ext/app/webview
-         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/webview
-         touch $SYSTEM_SYSTEM/app/webview/.replace
-         touch $SYSTEM_SYSTEM/priv-app/webview/.replace
-         touch $SYSTEM_SYSTEM/product/app/webview/.replace
-         touch $SYSTEM_SYSTEM/product/priv-app/webview/.replace
-         touch $SYSTEM_SYSTEM/system_ext/app/webview/.replace
-         touch $SYSTEM_SYSTEM/system_ext/priv-app/webview/.replace) 2>/dev/null
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/Jelly $i/webview && touch $i/Jelly/.replace $i/webview/.replace) 2>/dev/null
+        done
       fi
-      # Install
       ADDON_SYS="BromitePrebuilt.tar.xz"
       PKG_SYS="BromitePrebuilt"
       target_sys
@@ -5629,48 +3367,15 @@ set_addon_zip_conf() {
       ui_print "- Installing Calculator Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.calculator" after '# Begin addon properties' "ro.config.calculator"
-        # Remove AOSP Calculator
-        rm -rf $SYSTEM/app/Calculator*
-        rm -rf $SYSTEM/app/calculator*
-        rm -rf $SYSTEM/app/ExactCalculator
-        rm -rf $SYSTEM/app/Exactcalculator
-        rm -rf $SYSTEM/priv-app/Calculator*
-        rm -rf $SYSTEM/priv-app/calculator*
-        rm -rf $SYSTEM/priv-app/ExactCalculator
-        rm -rf $SYSTEM/priv-app/Exactcalculator
-        rm -rf $SYSTEM/product/app/Calculator*
-        rm -rf $SYSTEM/product/app/calculator*
-        rm -rf $SYSTEM/product/app/ExactCalculator
-        rm -rf $SYSTEM/product/app/Exactcalculator
-        rm -rf $SYSTEM/product/priv-app/Calculator*
-        rm -rf $SYSTEM/product/priv-app/calculator*
-        rm -rf $SYSTEM/product/priv-app/ExactCalculator
-        rm -rf $SYSTEM/product/priv-app/Exactcalculator
-        rm -rf $SYSTEM/system_ext/app/Calculator*
-        rm -rf $SYSTEM/system_ext/app/calculator*
-        rm -rf $SYSTEM/system_ext/app/ExactCalculator
-        rm -rf $SYSTEM/system_ext/app/Exactcalculator
-        rm -rf $SYSTEM/system_ext/priv-app/Calculator*
-        rm -rf $SYSTEM/system_ext/priv-app/calculator*
-        rm -rf $SYSTEM/system_ext/priv-app/ExactCalculator
-        rm -rf $SYSTEM/system_ext/priv-app/Exactcalculator
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Calculator* $i/calculator* $i/ExactCalculator $i/Exactcalculator
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Calculator
-        mkdir $SYSTEM_SYSTEM/app/ExactCalculator
-        mkdir $SYSTEM_SYSTEM/priv-app/ExactCalculator
-        mkdir $SYSTEM_SYSTEM/product/app/ExactCalculator
-        mkdir $SYSTEM_SYSTEM/product/priv-app/ExactCalculator
-        mkdir $SYSTEM_SYSTEM/system_ext/app/ExactCalculator
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/ExactCalculator
-        touch $SYSTEM_SYSTEM/app/ExactCalculator/.replace
-        touch $SYSTEM_SYSTEM/priv-app/ExactCalculator/.replace
-        touch $SYSTEM_SYSTEM/product/app/ExactCalculator/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/ExactCalculator/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/ExactCalculator/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/ExactCalculator/.replace
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/ExactCalculator && touch $i/ExactCalculator/.replace) 2>/dev/null
+        done
       fi
-      # Install
       ADDON_SYS="CalculatorGooglePrebuilt.tar.xz"
       PKG_SYS="CalculatorGooglePrebuilt"
       target_sys
@@ -5681,103 +3386,18 @@ set_addon_zip_conf() {
       ui_print "- Installing Calendar Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.calendar" after '# Begin addon properties' "ro.config.calendar"
-        # Backup
-        test -d $SYSTEM/app/CalendarProvider && SYS_APP_CP="true" || SYS_APP_CP="false"
-        test -d $SYSTEM/priv-app/CalendarProvider && SYS_PRIV_CP="true" || SYS_PRIV_CP="false"
-        test -d $SYSTEM/product/app/CalendarProvider && PRO_APP_CP="true" || PRO_APP_CP="false"
-        test -d $SYSTEM/product/priv-app/CalendarProvider && PRO_PRIV_CP="true" || PRO_PRIV_CP="false"
-        test -d $SYSTEM/system_ext/app/CalendarProvider && SYS_APP_EXT_CP="true" || SYS_APP_EXT_CP="false"
-        test -d $SYSTEM/system_ext/priv-app/CalendarProvider && SYS_PRIV_EXT_CP="true" || SYS_PRIV_EXT_CP="false"
-        if [ "$SYS_APP_CP" == "true" ]; then
-          mv $SYSTEM/app/CalendarProvider $TMP/out/CalendarProvider
-        fi
-        if [ "$SYS_PRIV_CP" == "true" ]; then
-          mv $SYSTEM/priv-app/CalendarProvider $TMP/out/CalendarProvider
-        fi
-        if [ "$PRO_APP_CP" == "true" ]; then
-          mv $SYSTEM/product/app/CalendarProvider $TMP/out/CalendarProvider
-        fi
-        if [ "$PRO_PRIV_CP" == "true" ]; then
-          mv $SYSTEM/product/priv-app/CalendarProvider $TMP/out/CalendarProvider
-        fi
-        if [ "$SYS_APP_EXT_CP" == "true" ]; then
-          mv $SYSTEM/system_ext/app/CalendarProvider $TMP/out/CalendarProvider
-        fi
-        if [ "$SYS_PRIV_EXT_CP" == "true" ]; then
-          mv $SYSTEM/system_ext/priv-app/CalendarProvider $TMP/out/CalendarProvider
-        fi
-        # Remove AOSP Calendar
-        rm -rf $SYSTEM/app/Calendar*
-        rm -rf $SYSTEM/app/calendar*
-        rm -rf $SYSTEM/app/Etar
-        rm -rf $SYSTEM/priv-app/Calendar*
-        rm -rf $SYSTEM/priv-app/calendar*
-        rm -rf $SYSTEM/priv-app/Etar
-        rm -rf $SYSTEM/product/app/Calendar*
-        rm -rf $SYSTEM/product/app/calendar*
-        rm -rf $SYSTEM/product/app/Etar
-        rm -rf $SYSTEM/product/priv-app/Calendar*
-        rm -rf $SYSTEM/product/priv-app/calendar*
-        rm -rf $SYSTEM/product/priv-app/Etar
-        rm -rf $SYSTEM/system_ext/app/Calendar*
-        rm -rf $SYSTEM/system_ext/app/calendar*
-        rm -rf $SYSTEM/system_ext/app/Etar
-        rm -rf $SYSTEM/system_ext/priv-app/Calendar*
-        rm -rf $SYSTEM/system_ext/priv-app/calendar*
-        rm -rf $SYSTEM/system_ext/priv-app/Etar
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          (find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'CalendarProvider' -exec rm -rf $i/Calendar $i/calendar $i/Etar \;)
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Calendar
-        mkdir $SYSTEM_SYSTEM/app/Calendar
-        mkdir $SYSTEM_SYSTEM/app/Etar
-        mkdir $SYSTEM_SYSTEM/priv-app/Calendar
-        mkdir $SYSTEM_SYSTEM/priv-app/Etar
-        mkdir $SYSTEM_SYSTEM/product/app/Calendar
-        mkdir $SYSTEM_SYSTEM/product/app/Etar
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Calendar
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Etar
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Calendar
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Etar
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Calendar
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Etar
-        touch $SYSTEM_SYSTEM/app/Calendar/.replace
-        touch $SYSTEM_SYSTEM/app/Etar/.replace
-        touch $SYSTEM_SYSTEM/priv-app/Calendar/.replace
-        touch $SYSTEM_SYSTEM/priv-app/Etar/.replace
-        touch $SYSTEM_SYSTEM/product/app/Calendar/.replace
-        touch $SYSTEM_SYSTEM/product/app/Etar/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Calendar/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Etar/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Calendar/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Etar/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/Calendar/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/Etar/.replace
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/Calendar $i/Etar && touch $i/Calendar/.replace $i/Etar/.replace) 2>/dev/null
+        done
       fi
-      # Install
       ADDON_SYS="CalendarGooglePrebuilt.tar.xz"
       PKG_SYS="CalendarGooglePrebuilt"
       target_sys
-      # Restore
-      if [ "$supported_module_config" == "false" ]; then
-        if [ "$SYS_APP_CP" == "true" ]; then
-          mv $TMP/out/CalendarProvider $SYSTEM/app/CalendarProvider
-        fi
-        if [ "$SYS_PRIV_CP" == "true" ]; then
-          mv $TMP/out/CalendarProvider $SYSTEM/priv-app/CalendarProvider
-        fi
-        if [ "$PRO_APP_CP" == "true" ]; then
-          mv $TMP/out/CalendarProvider $SYSTEM/product/app/CalendarProvider
-        fi
-        if [ "$PRO_PRIV_CP" == "true" ]; then
-          mv $TMP/out/CalendarProvider $SYSTEM/product/priv-app/CalendarProvider
-        fi
-        if [ "$SYS_APP_EXT_CP" == "true" ]; then
-          mv $TMP/out/CalendarProvider $SYSTEM/system_ext/app/CalendarProvider
-        fi
-        if [ "$SYS_PRIV_EXT_CP" == "true" ]; then
-          mv $TMP/out/CalendarProvider $SYSTEM/system_ext/priv-app/CalendarProvider
-        fi
-      fi
     else
       ui_print "! Skip installing Calendar Google"
     fi
@@ -5785,81 +3405,15 @@ set_addon_zip_conf() {
       ui_print "- Installing Chrome Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.chrome" after '# Begin addon properties' "ro.config.chrome"
-        # Remove AOSP Browser
-        rm -rf $SYSTEM/app/Browser
-        rm -rf $SYSTEM/app/Jelly
-        rm -rf $SYSTEM/priv-app/Browser
-        rm -rf $SYSTEM/priv-app/Jelly
-        rm -rf $SYSTEM/product/app/Browser
-        rm -rf $SYSTEM/product/app/Jelly
-        rm -rf $SYSTEM/product/priv-app/Browser
-        rm -rf $SYSTEM/product/priv-app/Jelly
-        rm -rf $SYSTEM/system_ext/app/Browser
-        rm -rf $SYSTEM/system_ext/app/Jelly
-        rm -rf $SYSTEM/system_ext/priv-app/Browser
-        rm -rf $SYSTEM/system_ext/priv-app/Jelly
-        # Remove pre-install Chrome and library
-        rm -rf $SYSTEM/app/Chrome*
-        rm -rf $SYSTEM/app/GoogleChrome
-        rm -rf $SYSTEM/app/TrichromeLibrary
-        rm -rf $SYSTEM/app/WebViewGoogle
-        rm -rf $SYSTEM/priv-app/Chrome*
-        rm -rf $SYSTEM/priv-app/GoogleChrome
-        rm -rf $SYSTEM/priv-app/TrichromeLibrary
-        rm -rf $SYSTEM/priv-app/WebViewGoogle
-        rm -rf $SYSTEM/product/app/Chrome*
-        rm -rf $SYSTEM/product/app/GoogleChrome
-        rm -rf $SYSTEM/product/app/TrichromeLibrary
-        rm -rf $SYSTEM/product/app/WebViewGoogle
-        rm -rf $SYSTEM/product/priv-app/Chrome*
-        rm -rf $SYSTEM/product/priv-app/GoogleChrome
-        rm -rf $SYSTEM/product/priv-app/TrichromeLibrary
-        rm -rf $SYSTEM/product/priv-app/WebViewGoogle
-        rm -rf $SYSTEM/system_ext/app/Chrome*
-        rm -rf $SYSTEM/system_ext/app/GoogleChrome
-        rm -rf $SYSTEM/system_ext/app/TrichromeLibrary
-        rm -rf $SYSTEM/system_ext/app/WebViewGoogle
-        rm -rf $SYSTEM/system_ext/priv-app/Chrome*
-        rm -rf $SYSTEM/system_ext/priv-app/GoogleChrome
-        rm -rf $SYSTEM/system_ext/priv-app/TrichromeLibrary
-        rm -rf $SYSTEM/system_ext/priv-app/WebViewGoogle
-        # Remove AOSP WebView
-        rm -rf $SYSTEM/app/webview
-        rm -rf $SYSTEM/priv-app/webview
-        rm -rf $SYSTEM/product/app/webview
-        rm -rf $SYSTEM/product/priv-app/webview
-        rm -rf $SYSTEM/system_ext/app/webview
-        rm -rf $SYSTEM/system_ext/priv-app/webview
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle $i/webview
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Browser
-        (mkdir $SYSTEM_SYSTEM/app/Jelly
-         mkdir $SYSTEM_SYSTEM/priv-app/Jelly
-         mkdir $SYSTEM_SYSTEM/product/app/Jelly
-         mkdir $SYSTEM_SYSTEM/product/priv-app/Jelly
-         mkdir $SYSTEM_SYSTEM/system_ext/app/Jelly
-         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
-         touch $SYSTEM_SYSTEM/app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/priv-app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/product/app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/product/priv-app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/system_ext/app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/system_ext/priv-app/Jelly/.replace) 2>/dev/null
-        # Remove AOSP WebView
-        (mkdir $SYSTEM_SYSTEM/app/webview
-         mkdir $SYSTEM_SYSTEM/priv-app/webview
-         mkdir $SYSTEM_SYSTEM/product/app/webview
-         mkdir $SYSTEM_SYSTEM/product/priv-app/webview
-         mkdir $SYSTEM_SYSTEM/system_ext/app/webview
-         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/webview
-         touch $SYSTEM_SYSTEM/app/webview/.replace
-         touch $SYSTEM_SYSTEM/priv-app/webview/.replace
-         touch $SYSTEM_SYSTEM/product/app/webview/.replace
-         touch $SYSTEM_SYSTEM/product/priv-app/webview/.replace
-         touch $SYSTEM_SYSTEM/system_ext/app/webview/.replace
-         touch $SYSTEM_SYSTEM/system_ext/priv-app/webview/.replace) 2>/dev/null
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/Jelly $i/webview && touch $i/Jelly/.replace $i/webview/.replace) 2>/dev/null
+        done
       fi
-      # Install
       ADDON_SYS="ChromeGooglePrebuilt.tar.xz"
       PKG_SYS="ChromeGooglePrebuilt"
       target_sys
@@ -5876,91 +3430,24 @@ set_addon_zip_conf() {
       ui_print "- Installing Contacts Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.contacts" after '# Begin addon properties' "ro.config.contacts"
-        # Backup
-        test -d $SYSTEM/app/ContactsProvider && SYS_APP_CTT="true" || SYS_APP_CTT="false"
-        test -d $SYSTEM/priv-app/ContactsProvider && SYS_PRIV_CTT="true" || SYS_PRIV_CTT="false"
-        test -d $SYSTEM/product/app/ContactsProvider && PRO_APP_CTT="true" || PRO_APP_CTT="false"
-        test -d $SYSTEM/product/priv-app/ContactsProvider && PRO_PRIV_CTT="true" || PRO_PRIV_CTT="false"
-        test -d $SYSTEM/system_ext/app/ContactsProvider && SYS_APP_EXT_CTT="true" || SYS_APP_EXT_CTT="false"
-        test -d $SYSTEM/system_ext/priv-app/ContactsProvider && SYS_PRIV_EXT_CTT="true" || SYS_PRIV_EXT_CTT="false"
-        if [ "$SYS_APP_CTT" == "true" ]; then
-          mv $SYSTEM/app/ContactsProvider $TMP/out/ContactsProvider
-        fi
-        if [ "$SYS_PRIV_CTT" == "true" ]; then
-          mv $SYSTEM/priv-app/ContactsProvider $TMP/out/ContactsProvider
-        fi
-        if [ "$PRO_APP_CTT" == "true" ]; then
-          mv $SYSTEM/product/app/ContactsProvider $TMP/out/ContactsProvider
-        fi
-        if [ "$PRO_PRIV_CTT" == "true" ]; then
-          mv $SYSTEM/product/priv-app/ContactsProvider $TMP/out/ContactsProvider
-        fi
-        if [ "$SYS_APP_EXT_CTT" == "true" ]; then
-          mv $SYSTEM/system_ext/app/ContactsProvider $TMP/out/ContactsProvider
-        fi
-        if [ "$SYS_PRIV_EXT_CTT" == "true" ]; then
-          mv $SYSTEM/system_ext/priv-app/ContactsProvider $TMP/out/ContactsProvider
-        fi
-        # Remove AOSP Contacts
-        rm -rf $SYSTEM/app/Contacts*
-        rm -rf $SYSTEM/app/contacts*
-        rm -rf $SYSTEM/priv-app/Contacts*
-        rm -rf $SYSTEM/priv-app/contacts*
-        rm -rf $SYSTEM/product/app/Contacts*
-        rm -rf $SYSTEM/product/app/contacts*
-        rm -rf $SYSTEM/product/priv-app/Contacts*
-        rm -rf $SYSTEM/product/priv-app/contacts*
-        rm -rf $SYSTEM/system_ext/app/Contacts*
-        rm -rf $SYSTEM/system_ext/app/contacts*
-        rm -rf $SYSTEM/system_ext/priv-app/Contacts*
-        rm -rf $SYSTEM/system_ext/priv-app/contacts*
-        rm -rf $SYSTEM/etc/permissions/com.android.contacts.xml
-        rm -rf $SYSTEM/product/etc/permissions/com.android.contacts.xml
-        rm -rf $SYSTEM/system_ext/etc/permissions/com.android.contacts.xml
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          (find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'ContactsProvider' -exec rm -rf $i/Contacts $i/contacts \;)
+        done
+        for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
+          rm -rf $i/com.android.contacts.xml
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Contacts
-        mkdir $SYSTEM_SYSTEM/app/Contacts
-        mkdir $SYSTEM_SYSTEM/priv-app/Contacts
-        mkdir $SYSTEM_SYSTEM/product/app/Contacts
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Contacts
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Contacts
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Contacts
-        touch $SYSTEM_SYSTEM/app/Contacts/.replace
-        touch $SYSTEM_SYSTEM/priv-app/Contacts/.replace
-        touch $SYSTEM_SYSTEM/product/app/Contacts/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Contacts/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Contacts/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/Contacts/.replace
-        touch $SYSTEM_SYSTEM/etc/permissions/com.android.contacts.xml
-        touch $SYSTEM_SYSTEM/product/etc/permissions/com.android.contacts.xml
-        touch $SYSTEM_SYSTEM/system_ext/etc/permissions/com.android.contacts.xml
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/Contacts $i/contacts && touch $i/contacts/.replace $i/contacts/.replace) 2>/dev/null
+        done
+        for i in $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/permissions; do
+          touch $i/com.android.contacts.xml
+        done
       fi
-      # Install
       ADDON_CORE="ContactsGooglePrebuilt.tar.xz"
       PKG_CORE="ContactsGooglePrebuilt"
       target_core
-      # Restore
-      if [ "$supported_module_config" == "false" ]; then
-        if [ "$SYS_APP_CTT" == "true" ]; then
-          mv $TMP/out/ContactsProvider $SYSTEM/app/ContactsProvider
-        fi
-        if [ "$SYS_PRIV_CTT" == "true" ]; then
-          mv $TMP/out/ContactsProvider $SYSTEM/priv-app/ContactsProvider
-        fi
-        if [ "$PRO_APP_CTT" == "true" ]; then
-          mv $TMP/out/ContactsProvider $SYSTEM/product/app/ContactsProvider
-        fi
-        if [ "$PRO_PRIV_CTT" == "true" ]; then
-          mv $TMP/out/ContactsProvider $SYSTEM/product/priv-app/ContactsProvider
-        fi
-        if [ "$SYS_APP_EXT_CTT" == "true" ]; then
-          mv $TMP/out/ContactsProvider $SYSTEM/system_ext/app/ContactsProvider
-        fi
-        if [ "$SYS_PRIV_EXT_CTT" == "true" ]; then
-          mv $TMP/out/ContactsProvider $SYSTEM/system_ext/priv-app/ContactsProvider
-        fi
-      fi
     else
       ui_print "! Skip installing Contacts Google"
     fi
@@ -5968,36 +3455,15 @@ set_addon_zip_conf() {
       ui_print "- Installing Deskclock Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.deskclock" after '# Begin addon properties' "ro.config.deskclock"
-        # Remove AOSP DeskClock
-        rm -rf $SYSTEM/app/DeskClock*
-        rm -rf $SYSTEM/app/Clock*
-        rm -rf $SYSTEM/priv-app/DeskClock*
-        rm -rf $SYSTEM/priv-app/Clock*
-        rm -rf $SYSTEM/product/app/DeskClock*
-        rm -rf $SYSTEM/product/app/Clock*
-        rm -rf $SYSTEM/product/priv-app/DeskClock*
-        rm -rf $SYSTEM/product/priv-app/Clock*
-        rm -rf $SYSTEM/system_ext/app/DeskClock*
-        rm -rf $SYSTEM/system_ext/app/Clock*
-        rm -rf $SYSTEM/system_ext/priv-app/DeskClock*
-        rm -rf $SYSTEM/system_ext/priv-app/Clock*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/DeskClock* $i/Clock*
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP DeskClock
-        mkdir $SYSTEM_SYSTEM/app/DeskClock
-        mkdir $SYSTEM_SYSTEM/priv-app/DeskClock
-        mkdir $SYSTEM_SYSTEM/product/app/DeskClock
-        mkdir $SYSTEM_SYSTEM/product/priv-app/DeskClock
-        mkdir $SYSTEM_SYSTEM/system_ext/app/DeskClock
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/DeskClock
-        touch $SYSTEM_SYSTEM/app/DeskClock/.replace
-        touch $SYSTEM_SYSTEM/priv-app/DeskClock/.replace
-        touch $SYSTEM_SYSTEM/product/app/DeskClock/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/DeskClock/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/DeskClock/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/DeskClock/.replace
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/DeskClock && touch $i/DeskClock/.replace) 2>/dev/null
+        done
       fi
-      # Install
       ADDON_SYS="DeskClockGooglePrebuilt.tar.xz"
       PKG_SYS="DeskClockGooglePrebuilt"
       target_sys
@@ -6008,42 +3474,21 @@ set_addon_zip_conf() {
       ui_print "- Installing Dialer Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.dialer" after '# Begin addon properties' "ro.config.dialer"
-        # Remove AOSP Dialer
-        rm -rf $SYSTEM/app/Dialer*
-        rm -rf $SYSTEM/app/dialer*
-        rm -rf $SYSTEM/priv-app/Dialer*
-        rm -rf $SYSTEM/priv-app/dialer*
-        rm -rf $SYSTEM/product/app/Dialer*
-        rm -rf $SYSTEM/product/app/dialer*
-        rm -rf $SYSTEM/product/priv-app/Dialer*
-        rm -rf $SYSTEM/product/priv-app/dialer*
-        rm -rf $SYSTEM/system_ext/app/Dialer*
-        rm -rf $SYSTEM/system_ext/app/dialer*
-        rm -rf $SYSTEM/system_ext/priv-app/Dialer*
-        rm -rf $SYSTEM/system_ext/priv-app/dialer*
-        rm -rf $SYSTEM/etc/permissions/com.android.dialer.xml
-        rm -rf $SYSTEM/product/etc/permissions/com.android.dialer.xml
-        rm -rf $SYSTEM/system_ext/etc/permissions/com.android.dialer.xml
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Dialer* $i/dialer*
+        done
+        for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
+          rm -rf $i/com.android.dialer.xml
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Dialer
-        mkdir $SYSTEM_SYSTEM/app/Dialer
-        mkdir $SYSTEM_SYSTEM/priv-app/Dialer
-        mkdir $SYSTEM_SYSTEM/product/app/Dialer
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Dialer
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Dialer
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Dialer
-        touch $SYSTEM_SYSTEM/app/Dialer/.replace
-        touch $SYSTEM_SYSTEM/priv-app/Dialer/.replace
-        touch $SYSTEM_SYSTEM/product/app/Dialer/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Dialer/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Dialer/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/Dialer/.replace
-        touch $SYSTEM_SYSTEM/etc/permissions/com.android.dialer.xml
-        touch $SYSTEM_SYSTEM/product/etc/permissions/com.android.dialer.xml
-        touch $SYSTEM_SYSTEM/system_ext/etc/permissions/com.android.dialer.xml
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/Dialer && touch $i/Dialer/.replace) 2>/dev/null
+        done
+        for i in $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/permissions; do
+          touch $i/com.android.dialer.xml
+        done
       fi
-      # Install
       ADDON_CORE="DialerGooglePrebuilt.tar.xz"
       PKG_CORE="DialerGooglePrebuilt"
       target_core
@@ -6053,94 +3498,53 @@ set_addon_zip_conf() {
     else
       ui_print "! Skip installing Dialer Google"
     fi
-    if [ "$supported_dps_config" == "true" ]; then
-      if [ "$android_sdk" == "30" ]; then
-        ui_print "- Installing DPS Google"
-        if [ "$supported_module_config" == "false" ]; then
-          insert_line $SYSTEM/config.prop "ro.config.dps" after '# Begin addon properties' "ro.config.dps"
-          # Remove pre-install DPS
-          rm -rf $SYSTEM/app/DPSGooglePrebuilt
-          rm -rf $SYSTEM/app/Matchmaker*
-          rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt
-          rm -rf $SYSTEM/priv-app/Matchmaker*
-          rm -rf $SYSTEM/product/app/DPSGooglePrebuilt
-          rm -rf $SYSTEM/product/app/Matchmaker*
-          rm -rf $SYSTEM/product/priv-app/DPSGooglePrebuilt
-          rm -rf $SYSTEM/product/priv-app/Matchmaker*
-          rm -rf $SYSTEM/system_ext/app/DPSGooglePrebuilt
-          rm -rf $SYSTEM/system_ext/app/Matchmaker*
-          rm -rf $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
-          rm -rf $SYSTEM/system_ext/priv-app/Matchmaker*
-          rm -rf $SYSTEM/etc/permissions/com.google.android.as.xml
-          rm -rf $SYSTEM/product/etc/permissions/com.google.android.as.xml
-          rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
-        fi
-        # Install
-        ADDON_CORE="DPSGooglePrebuilt.tar.xz"
-        PKG_CORE="DPSGooglePrebuilt"
-        target_core
-        dps_config
-        dps_overlay
-        dps_sound_model
-      else
-        ui_print "! Cannot install DPS Google"
+    if [ "$supported_dps_config" == "true" ] && [ "$android_sdk" == "30" ]; then
+      ui_print "- Installing DPS Google"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.dps" after '# Begin addon properties' "ro.config.dps"
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/DPSGooglePrebuilt $i/Matchmaker*
+        done
+        for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
+          rm -rf $i/com.google.android.as.xml
+        done
       fi
-    else
+      if [ "$supported_module_config" == "true" ]; then
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/MatchmakerPrebuilt && touch $i/MatchmakerPrebuilt/.replace) 2>/dev/null
+        done
+      fi
+      ADDON_CORE="DPSGooglePrebuilt.tar.xz"
+      PKG_CORE="DPSGooglePrebuilt"
+      target_core
+      dps_config
+      dps_overlay
+      dps_sound_model
+    elif [ "$supported_dps_config" == "false" ] && [ "$android_sdk" == "30" ]; then
       ui_print "! Skip installing DPS Google"
+    else
+      ui_print "! Cannot install DPS Google"
     fi
     if [ "$supported_gboard_config" == "true" ]; then
       ui_print "- Installing Keyboard Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.gboard" after '# Begin addon properties' "ro.config.gboard"
-        # Remove pre-install Gboard
-        rm -rf $SYSTEM/app/Gboard*
-        rm -rf $SYSTEM/app/gboard*
-        rm -rf $SYSTEM/app/LatinIMEGooglePrebuilt
-        rm -rf $SYSTEM/priv-app/Gboard*
-        rm -rf $SYSTEM/priv-app/gboard*
-        rm -rf $SYSTEM/priv-app/LatinIMEGooglePrebuilt
-        rm -rf $SYSTEM/product/app/Gboard*
-        rm -rf $SYSTEM/product/app/gboard*
-        rm -rf $SYSTEM/product/app/LatinIMEGooglePrebuilt
-        rm -rf $SYSTEM/product/priv-app/Gboard*
-        rm -rf $SYSTEM/product/priv-app/gboard*
-        rm -rf $SYSTEM/product/priv-app/LatinIMEGooglePrebuilt
-        rm -rf $SYSTEM/system_ext/app/Gboard*
-        rm -rf $SYSTEM/system_ext/app/gboard*
-        rm -rf $SYSTEM/system_ext/app/LatinIMEGooglePrebuilt
-        rm -rf $SYSTEM/system_ext/priv-app/Gboard*
-        rm -rf $SYSTEM/system_ext/priv-app/gboard*
-        rm -rf $SYSTEM/system_ext/priv-app/LatinIMEGooglePrebuilt
-        # Remove AOSP keyboard
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Gboard* $i/gboard* $i/LatinIMEGooglePrebuilt
+        done
         if [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
-          rm -rf $SYSTEM/app/LatinIME
-          rm -rf $SYSTEM/priv-app/LatinIME
-          rm -rf $SYSTEM/product/app/LatinIME
-          rm -rf $SYSTEM/product/priv-app/LatinIME
-          rm -rf $SYSTEM/system_ext/app/LatinIME
-          rm -rf $SYSTEM/system_ext/priv-app/LatinIME
+          for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+            rm -rf $i/LatinIME
+          done
           # Enable wiping of AOSP Keyboard during OTA upgrade
           insert_line $SYSTEM/config.prop "ro.config.keyboard" after '# Begin addon properties' "ro.config.keyboard"
         fi
       fi
-      if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP keyboard
-        if [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
-          mkdir $SYSTEM_SYSTEM/app/LatinIME
-          mkdir $SYSTEM_SYSTEM/priv-app/LatinIME
-          mkdir $SYSTEM_SYSTEM/product/app/LatinIME
-          mkdir $SYSTEM_SYSTEM/product/priv-app/LatinIME
-          mkdir $SYSTEM_SYSTEM/system_ext/app/LatinIME
-          mkdir $SYSTEM_SYSTEM/system_ext/priv-app/LatinIME
-          touch $SYSTEM_SYSTEM/app/LatinIME/.replace
-          touch $SYSTEM_SYSTEM/priv-app/LatinIME/.replace
-          touch $SYSTEM_SYSTEM/product/app/LatinIME/.replace
-          touch $SYSTEM_SYSTEM/product/priv-app/LatinIME/.replace
-          touch $SYSTEM_SYSTEM/system_ext/app/LatinIME/.replace
-          touch $SYSTEM_SYSTEM/system_ext/priv-app/LatinIME/.replace
-        fi
+      if [ "$supported_module_config" == "true" ] && [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          mkdir $i/LatinIME && touch $i/LatinIME/.replace
+        done
       fi
-      # Install
       ADDON_SYS="GboardGooglePrebuilt.tar.xz"
       PKG_SYS="GboardGooglePrebuilt"
       target_sys
@@ -6152,146 +3556,54 @@ set_addon_zip_conf() {
       ui_print "- Installing Android Auto"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.gearhead" after '# Begin addon properties' "ro.config.gearhead"
-        # Remove pre-install AndroidAuto
-        rm -rf $SYSTEM/app/AndroidAuto*
-        rm -rf $SYSTEM/app/GearheadGooglePrebuilt
-        rm -rf $SYSTEM/priv-app/AndroidAuto*
-        rm -rf $SYSTEM/priv-app/GearheadGooglePrebuilt
-        rm -rf $SYSTEM/product/app/AndroidAuto*
-        rm -rf $SYSTEM/product/app/GearheadGooglePrebuilt
-        rm -rf $SYSTEM/product/priv-app/AndroidAuto*
-        rm -rf $SYSTEM/product/priv-app/GearheadGooglePrebuilt
-        rm -rf $SYSTEM/system_ext/app/AndroidAuto*
-        rm -rf $SYSTEM/system_ext/app/GearheadGooglePrebuilt
-        rm -rf $SYSTEM/system_ext/priv-app/AndroidAuto*
-        rm -rf $SYSTEM/system_ext/priv-app/GearheadGooglePrebuilt
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/AndroidAuto* $i/GearheadGooglePrebuilt
+        done
       fi
-      # Install
       ADDON_CORE="GearheadGooglePrebuilt.tar.xz"
       PKG_CORE="GearheadGooglePrebuilt"
       target_core
     else
       ui_print "! Skip installing Android Auto"
     fi
-    if [ "$supported_launcher_config" == "true" ]; then
-      if [ "$android_sdk" == "30" ]; then
-        ui_print "- Installing Pixel Launcher"
-        if [ "$supported_module_config" == "false" ]; then
-          insert_line $SYSTEM/config.prop "ro.config.launcher" after '# Begin addon properties' "ro.config.launcher"
-          # Remove pre-install Launcher
-          rm -rf $SYSTEM/priv-app/Launcher3
-          rm -rf $SYSTEM/priv-app/Launcher3QuickStep
-          rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt
-          rm -rf $SYSTEM/priv-app/NexusLauncherRelease
-          rm -rf $SYSTEM/priv-app/NexusQuickAccessWallet
-          rm -rf $SYSTEM/priv-app/QuickAccessWallet
-          rm -rf $SYSTEM/priv-app/QuickStep
-          rm -rf $SYSTEM/priv-app/QuickStepLauncher
-          rm -rf $SYSTEM/priv-app/TrebuchetQuickStep
-          rm -rf $SYSTEM/product/priv-app/Launcher3
-          rm -rf $SYSTEM/product/priv-app/Launcher3QuickStep
-          rm -rf $SYSTEM/product/priv-app/NexusLauncherPrebuilt
-          rm -rf $SYSTEM/product/priv-app/NexusLauncherRelease
-          rm -rf $SYSTEM/product/priv-app/NexusQuickAccessWallet
-          rm -rf $SYSTEM/product/priv-app/QuickAccessWallet
-          rm -rf $SYSTEM/product/priv-app/QuickStep
-          rm -rf $SYSTEM/product/priv-app/QuickStepLauncher
-          rm -rf $SYSTEM/product/priv-app/TrebuchetQuickStep
-          rm -rf $SYSTEM/system_ext/priv-app/Launcher3
-          rm -rf $SYSTEM/system_ext/priv-app/Launcher3QuickStep
-          rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
-          rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherRelease
-          rm -rf $SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
-          rm -rf $SYSTEM/system_ext/priv-app/QuickAccessWallet
-          rm -rf $SYSTEM/system_ext/priv-app/QuickStep
-          rm -rf $SYSTEM/system_ext/priv-app/QuickStepLauncher
-          rm -rf $SYSTEM/system_ext/priv-app/TrebuchetQuickStep
-        fi
-        if [ "$supported_module_config" == "true" ]; then
-          # Remove AOSP Launcher
-          (mkdir $SYSTEM_SYSTEM/priv-app/Launcher3
-           mkdir $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep
-           mkdir $SYSTEM_SYSTEM/priv-app/NexusLauncherPrebuilt
-           mkdir $SYSTEM_SYSTEM/priv-app/NexusLauncherRelease
-           mkdir $SYSTEM_SYSTEM/priv-app/NexusQuickAccessWallet
-           mkdir $SYSTEM_SYSTEM/priv-app/QuickAccessWallet
-           mkdir $SYSTEM_SYSTEM/priv-app/QuickStep
-           mkdir $SYSTEM_SYSTEM/priv-app/QuickStepLauncher
-           mkdir $SYSTEM_SYSTEM/priv-app/TrebuchetQuickStep
-           mkdir $SYSTEM_SYSTEM/product/priv-app/Launcher3
-           mkdir $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep
-           mkdir $SYSTEM_SYSTEM/product/priv-app/NexusLauncherPrebuilt
-           mkdir $SYSTEM_SYSTEM/product/priv-app/NexusLauncherRelease
-           mkdir $SYSTEM_SYSTEM/product/priv-app/NexusQuickAccessWallet
-           mkdir $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet
-           mkdir $SYSTEM_SYSTEM/product/priv-app/QuickStep
-           mkdir $SYSTEM_SYSTEM/product/priv-app/QuickStepLauncher
-           mkdir $SYSTEM_SYSTEM/product/priv-app/TrebuchetQuickStep
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherRelease
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/QuickStep
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/QuickStepLauncher
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/TrebuchetQuickStep
-           touch $SYSTEM_SYSTEM/priv-app/Launcher3/.replace
-           touch $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep/.replace
-           touch $SYSTEM_SYSTEM/priv-app/NexusLauncherPrebuilt/.replace
-           touch $SYSTEM_SYSTEM/priv-app/NexusLauncherRelease/.replace
-           touch $SYSTEM_SYSTEM/priv-app/NexusQuickAccessWallet/.replace
-           touch $SYSTEM_SYSTEM/priv-app/QuickAccessWallet/.replace
-           touch $SYSTEM_SYSTEM/priv-app/QuickStep/.replace
-           touch $SYSTEM_SYSTEM/priv-app/QuickStepLauncher/.replace
-           touch $SYSTEM_SYSTEM/priv-app/TrebuchetQuickStep/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/Launcher3/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/NexusLauncherPrebuilt/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/NexusLauncherRelease/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/NexusQuickAccessWallet/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/QuickStep/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/QuickStepLauncher/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/TrebuchetQuickStep/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherRelease/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/NexusQuickAccessWallet/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/QuickStep/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/QuickStepLauncher/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/TrebuchetQuickStep/.replace) 2>/dev/null
-        fi
-        # Install
-        ADDON_CORE="NexusLauncherPrebuilt.tar.xz"
-        PKG_CORE="NexusLauncherPrebuilt"
-        target_core
-        ADDON_CORE="NexusQuickAccessWallet.tar.xz"
-        PKG_CORE="NexusQuickAccessWallet"
-        target_core
-        launcher_overlay
-        launcher_config
-      else
-        ui_print "! Cannot install Pixel Launcher"
+    if [ "$supported_launcher_config" == "true" ] && [ "$android_sdk" == "30" ]; then
+      ui_print "- Installing Pixel Launcher"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.launcher" after '# Begin addon properties' "ro.config.launcher"
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Launcher3 $i/Launcher3QuickStep $i/NexusLauncherPrebuilt $i/NexusLauncherRelease $i/NexusQuickAccessWallet $i/QuickAccessWallet $i/QuickStep $i/QuickStepLauncher $i/TrebuchetQuickStep
+        done
       fi
-    else
+      if [ "$supported_module_config" == "true" ]; then
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/Launcher3 $i/Launcher3QuickStep $i/NexusLauncherRelease $i/QuickAccessWallet $i/QuickStep $i/QuickStepLauncher $i/TrebuchetQuickStep) 2>/dev/null
+          (touch $i/Launcher3/.replace $i/Launcher3QuickStep/.replace $i/NexusLauncherRelease/.replace $i/QuickAccessWallet/.replace $i/QuickStep/.replace $i/QuickStepLauncher/.replace $i/TrebuchetQuickStep/.replace) 2>/dev/null
+        done
+      fi
+      ADDON_CORE="NexusLauncherPrebuilt.tar.xz"
+      PKG_CORE="NexusLauncherPrebuilt"
+      target_core
+      ADDON_CORE="NexusQuickAccessWallet.tar.xz"
+      PKG_CORE="NexusQuickAccessWallet"
+      target_core
+      launcher_overlay
+      launcher_config
+    elif [ "$supported_launcher_config" == "false" ] && [ "$android_sdk" == "30" ]; then
       ui_print "! Skip installing Pixel Launcher"
+    else
+      ui_print "! Cannot install Pixel Launcher"
     fi
     if [ "$supported_maps_config" == "true" ]; then
       ui_print "- Installing Maps Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.maps" after '# Begin addon properties' "ro.config.maps"
-        # Remove pre-install Maps
-        rm -rf $SYSTEM/app/Maps*
-        rm -rf $SYSTEM/product/app/Maps*
-        rm -rf $SYSTEM/system_ext/app/Maps*
-        rm -rf $SYSTEM/etc/permissions/com.google.android.maps.xml
-        rm -rf $SYSTEM/product/etc/permissions/com.google.android.maps.xml
-        rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.maps.xml
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Maps*
+        done
+        for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
+          rm -rf $i/com.google.android.maps.xml
+        done
       fi
-      # Install
       ADDON_SYS="MapsGooglePrebuilt.tar.xz"
       PKG_SYS="MapsGooglePrebuilt"
       target_sys
@@ -6304,15 +3616,10 @@ set_addon_zip_conf() {
       ui_print "- Installing Markup Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.markup" after '# Begin addon properties' "ro.config.markup"
-        # Remove pre-install Markup
-        rm -rf $SYSTEM/app/MarkupGoogle*
-        rm -rf $SYSTEM/priv-app/MarkupGoogle*
-        rm -rf $SYSTEM/product/app/MarkupGoogle*
-        rm -rf $SYSTEM/product/priv-app/MarkupGoogle*
-        rm -rf $SYSTEM/system_ext/app/MarkupGoogle*
-        rm -rf $SYSTEM/system_ext/priv-app/MarkupGoogle*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/MarkupGoogle*
+        done
       fi
-      # Install
       ADDON_SYS="MarkupGooglePrebuilt.tar.xz"
       PKG_SYS="MarkupGooglePrebuilt"
       target_sys
@@ -6323,48 +3630,15 @@ set_addon_zip_conf() {
       ui_print "- Installing Messages Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.messages" after '# Begin addon properties' "ro.config.messages"
-        # Remove AOSP Messages
-        rm -rf $SYSTEM/app/Messages*
-        rm -rf $SYSTEM/app/messages*
-        rm -rf $SYSTEM/app/Messaging*
-        rm -rf $SYSTEM/app/messaging*
-        rm -rf $SYSTEM/priv-app/Messages*
-        rm -rf $SYSTEM/priv-app/messages*
-        rm -rf $SYSTEM/priv-app/Messaging*
-        rm -rf $SYSTEM/priv-app/messaging*
-        rm -rf $SYSTEM/product/app/Messages*
-        rm -rf $SYSTEM/product/app/messages*
-        rm -rf $SYSTEM/product/app/Messaging*
-        rm -rf $SYSTEM/product/app/messaging*
-        rm -rf $SYSTEM/product/priv-app/Messages*
-        rm -rf $SYSTEM/product/priv-app/messages*
-        rm -rf $SYSTEM/product/priv-app/Messaging*
-        rm -rf $SYSTEM/product/priv-app/messaging*
-        rm -rf $SYSTEM/system_ext/app/Messages*
-        rm -rf $SYSTEM/system_ext/app/messages*
-        rm -rf $SYSTEM/system_ext/app/Messaging*
-        rm -rf $SYSTEM/system_ext/app/messaging*
-        rm -rf $SYSTEM/system_ext/priv-app/Messages*
-        rm -rf $SYSTEM/system_ext/priv-app/messages*
-        rm -rf $SYSTEM/system_ext/priv-app/Messaging*
-        rm -rf $SYSTEM/system_ext/priv-app/messaging*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Messages* $i/messages* $i/Messaging* $i/messaging*
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Messages
-        mkdir $SYSTEM_SYSTEM/app/messaging
-        mkdir $SYSTEM_SYSTEM/priv-app/messaging
-        mkdir $SYSTEM_SYSTEM/product/app/messaging
-        mkdir $SYSTEM_SYSTEM/product/priv-app/messaging
-        mkdir $SYSTEM_SYSTEM/system_ext/app/messaging
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/messaging
-        touch $SYSTEM_SYSTEM/app/messaging/.replace
-        touch $SYSTEM_SYSTEM/priv-app/messaging/.replace
-        touch $SYSTEM_SYSTEM/product/app/messaging/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/messaging/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/messaging/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/messaging/.replace
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/messaging && touch $i/messaging/.replace) 2>/dev/null
+        done
       fi
-      # Install
       ADDON_SYS="MessagesGooglePrebuilt.tar.xz"
       PKG_SYS="MessagesGooglePrebuilt"
       ADDON_CORE="CarrierServices.tar.xz"
@@ -6379,42 +3653,15 @@ set_addon_zip_conf() {
       ui_print "- Installing Photos Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.photos" after '# Begin addon properties' "ro.config.photos"
-        # Remove pre-install Photos
-        rm -rf $SYSTEM/app/Photos*
-        rm -rf $SYSTEM/app/photos*
-        rm -rf $SYSTEM/app/Gallery*
-        rm -rf $SYSTEM/priv-app/Photos*
-        rm -rf $SYSTEM/priv-app/photos*
-        rm -rf $SYSTEM/priv-app/Gallery*
-        rm -rf $SYSTEM/product/app/Photos*
-        rm -rf $SYSTEM/product/app/photos*
-        rm -rf $SYSTEM/product/app/Gallery*
-        rm -rf $SYSTEM/product/priv-app/Photos*
-        rm -rf $SYSTEM/product/priv-app/photos*
-        rm -rf $SYSTEM/product/priv-app/Gallery*
-        rm -rf $SYSTEM/system_ext/app/Photos*
-        rm -rf $SYSTEM/system_ext/app/photos*
-        rm -rf $SYSTEM/system_ext/app/Gallery*
-        rm -rf $SYSTEM/system_ext/priv-app/Photos*
-        rm -rf $SYSTEM/system_ext/priv-app/photos*
-        rm -rf $SYSTEM/system_ext/priv-app/Gallery*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Photos* $i/photos* $i/Gallery*
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Gallery
-        mkdir $SYSTEM_SYSTEM/app/Gallery2
-        mkdir $SYSTEM_SYSTEM/priv-app/Gallery2
-        mkdir $SYSTEM_SYSTEM/product/app/Gallery2
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Gallery2
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Gallery2
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Gallery2
-        touch $SYSTEM_SYSTEM/app/Gallery2/.replace
-        touch $SYSTEM_SYSTEM/priv-app/Gallery2/.replace
-        touch $SYSTEM_SYSTEM/product/app/Gallery2/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Gallery2/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Gallery2/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/Gallery2/.replace
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/Gallery2 && touch $i/Gallery2/.replace) 2>/dev/null
+        done
       fi
-      # Install
       ADDON_SYS="PhotosGooglePrebuilt.tar.xz"
       PKG_SYS="PhotosGooglePrebuilt"
       target_sys
@@ -6425,15 +3672,10 @@ set_addon_zip_conf() {
       ui_print "- Installing SoundPicker Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.soundpicker" after '# Begin addon properties' "ro.config.soundpicker"
-        # Remove pre-install SoundPicker
-        rm -rf $SYSTEM/app/SoundPicker*
-        rm -rf $SYSTEM/priv-app/SoundPicker*
-        rm -rf $SYSTEM/product/app/SoundPicker*
-        rm -rf $SYSTEM/product/priv-app/SoundPicker*
-        rm -rf $SYSTEM/system_ext/app/SoundPicker*
-        rm -rf $SYSTEM/system_ext/priv-app/SoundPicker*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/SoundPicker*
+        done
       fi
-      # Install
       ADDON_SYS="SoundPickerPrebuilt.tar.xz"
       PKG_SYS="SoundPickerPrebuilt"
       target_sys
@@ -6444,40 +3686,27 @@ set_addon_zip_conf() {
       ui_print "- Installing TTS Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.tts" after '# Begin addon properties' "ro.config.tts"
-        # Remove pre-install TTS
-        rm -rf $SYSTEM/app/GoogleTTS*
-        rm -rf $SYSTEM/priv-app/GoogleTTS*
-        rm -rf $SYSTEM/product/app/GoogleTTS*
-        rm -rf $SYSTEM/product/priv-app/GoogleTTS*
-        rm -rf $SYSTEM/system_ext/app/GoogleTTS*
-        rm -rf $SYSTEM/system_ext/priv-app/GoogleTTS*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/GoogleTTS*
+        done
       fi
-      # Install
       ADDON_SYS="GoogleTTSPrebuilt.tar.xz"
       PKG_SYS="GoogleTTSPrebuilt"
       target_sys
     else
       ui_print "! Skip installing TTS Google"
     fi
-    if [ "$supported_vanced_config" == "true" ]; then
+    if [ "$supported_vanced_config" == "true" ] && [ "$supported_microg_config" == "true" ]; then
       ui_print "- Installing YouTube Vanced"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.vanced" after '# Begin addon properties' "ro.config.vanced"
-        # Remove pre-install YouTube
-        rm -rf $SYSTEM/app/YouTube*
-        rm -rf $SYSTEM/app/Youtube*
-        rm -rf $SYSTEM/priv-app/YouTube*
-        rm -rf $SYSTEM/priv-app/Youtube*
-        rm -rf $SYSTEM/product/app/YouTube*
-        rm -rf $SYSTEM/product/app/Youtube*
-        rm -rf $SYSTEM/product/priv-app/YouTube*
-        rm -rf $SYSTEM/product/priv-app/Youtube*
-        rm -rf $SYSTEM/system_ext/app/YouTube*
-        rm -rf $SYSTEM/system_ext/app/Youtube*
-        rm -rf $SYSTEM/system_ext/priv-app/YouTube*
-        rm -rf $SYSTEM/system_ext/priv-app/Youtube*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/YouTube* $i/Youtube*
+        done
       fi
-      # Install
+      # Wipe additional YouTube Vanced components
+      rm -rf $SYSTEM_AS_SYSTEM/adb $SYSTEM_AS_SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
+      rm -rf $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       ADDON_SYS="YouTube.tar.xz"
       PKG_SYS="YouTube"
       target_sys
@@ -6490,54 +3719,82 @@ set_addon_zip_conf() {
       ui_print "- Installing Vanced MicroG"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.vancedmicrog" after '# Begin addon properties' "ro.config.vancedmicrog"
-        # Remove pre-install MicroGGMSCore
-        rm -rf $SYSTEM/app/MicroG*
-        rm -rf $SYSTEM/app/microg*
-        rm -rf $SYSTEM/priv-app/MicroG*
-        rm -rf $SYSTEM/priv-app/microg*
-        rm -rf $SYSTEM/product/app/MicroG*
-        rm -rf $SYSTEM/product/app/microg*
-        rm -rf $SYSTEM/product/priv-app/MicroG*
-        rm -rf $SYSTEM/product/priv-app/microg*
-        rm -rf $SYSTEM/system_ext/app/MicroG*
-        rm -rf $SYSTEM/system_ext/app/microg*
-        rm -rf $SYSTEM/system_ext/priv-app/MicroG*
-        rm -rf $SYSTEM/system_ext/priv-app/microg*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/MicroG* $i/microg*
+        done
       fi
-      # Install
       ADDON_SYS="MicroGGMSCore.tar.xz"
       PKG_SYS="MicroGGMSCore"
       target_sys
     else
       ui_print "! Skip installing Vanced MicroG"
     fi
-    if [ "$supported_wellbeing_config" == "true" ]; then
-      # Android SDK 28 and above support Google's Wellbeing
-      if [ "$android_sdk" -ge "28" ]; then
-        ui_print "- Installing Wellbeing Google"
-        if [ "$supported_module_config" == "false" ]; then
-          insert_line $SYSTEM/config.prop "ro.config.wellbeing" after '# Begin addon properties' "ro.config.wellbeing"
-          # Remove pre-install Wellbeing
-          rm -rf $SYSTEM/app/Wellbeing*
-          rm -rf $SYSTEM/app/wellbeing*
-          rm -rf $SYSTEM/priv-app/Wellbeing*
-          rm -rf $SYSTEM/priv-app/wellbeing*
-          rm -rf $SYSTEM/product/app/Wellbeing*
-          rm -rf $SYSTEM/product/app/wellbeing*
-          rm -rf $SYSTEM/product/priv-app/Wellbeing*
-          rm -rf $SYSTEM/product/priv-app/wellbeing*
-          rm -rf $SYSTEM/system_ext/app/Wellbeing*
-          rm -rf $SYSTEM/system_ext/app/wellbeing*
-          rm -rf $SYSTEM/system_ext/priv-app/Wellbeing*
-          rm -rf $SYSTEM/system_ext/priv-app/wellbeing*
-        fi
-        # Install
-        ADDON_CORE="WellbeingPrebuilt.tar.xz"
-        PKG_CORE="WellbeingPrebuilt"
-        target_core
-      else
-        ui_print "! Skip installing Wellbeing Google"
+    if [ "$supported_vanced_config" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "false" ] && [ "$supported_module_config" == "false" ]; then
+      ui_print "- Installing YouTube Vanced"
+      for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
+        rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
+      done
+      for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+        rm -rf $i/YouTube* $i/Youtube*
+      done
+      # Wipe additional YouTube Vanced components
+      rm -rf $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
+      ADDON_SYS="YouTubeVanced.tar.xz"
+      PKG_SYS="YouTube"
+      target_sys_adb
+      vanced_config
+      ADDON_SYS="YouTubeStock.tar.xz"
+      PKG_SYS="YouTube"
+      target_sys
+      vanced_boot_patch
+    else
+      ui_print "! Cannot install YouTube Vanced"
+    fi
+    if [ "$supported_vanced_config" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "true" ] && [ "$supported_module_config" == "false" ]; then
+      ui_print "- Installing YouTube Vanced"
+      for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
+        rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
+      done
+      for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+        rm -rf $i/YouTube* $i/Youtube*
+      done
+      # Wipe additional YouTube Vanced components
+      rm -rf $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
+      # Temporarily enable systemless feature for magisk detection
+      supported_module_config="true"
+      # Check magisk
+      require_new_magisk
+      # Disable systemless feature
+      supported_module_config="false"
+      ADDON_SYS="YouTubeVanced.tar.xz"
+      PKG_SYS="YouTube"
+      target_sys_data
+      mv -f $ANDROID_DATA/adb/$PKG_SYS $ANDROID_DATA/adb/YouTubeVanced
+      mv -f $ANDROID_DATA/adb/YouTubeVanced/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeVanced/base.apk
+      ADDON_SYS="YouTubeStock.tar.xz"
+      PKG_SYS="YouTube"
+      target_sys_data
+      mv -f $ANDROID_DATA/adb/$PKG_SYS $ANDROID_DATA/adb/YouTubeStock && rm -rf $ANDROID_DATA/adb/YouTubeStock/lib
+      mv -f $ANDROID_DATA/adb/YouTubeStock/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeStock/base.apk
+      vanced_config
+    else
+      ui_print "! Cannot install YouTube Vanced"
+    fi
+    if [ "$supported_wellbeing_config" == "true" ] && [ "$android_sdk" -ge "28" ]; then
+      ui_print "- Installing Wellbeing Google"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.wellbeing" after '# Begin addon properties' "ro.config.wellbeing"
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Wellbeing* $i/wellbeing*
+        done
       fi
+      ADDON_CORE="WellbeingPrebuilt.tar.xz"
+      PKG_CORE="WellbeingPrebuilt"
+      target_core
+    elif [ "$supported_wellbeing_config" == "false" ] && [ "$android_sdk" -ge "28" ]; then
+      ui_print "! Skip installing Wellbeing Google"
+    else
+      ui_print "! Cannot install Wellbeing Google"
     fi
   fi
 }
@@ -6549,21 +3806,10 @@ set_addon_zip_sep() {
       ui_print "- Installing Assistant Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.assistant" after '# Begin addon properties' "ro.config.assistant"
-        # Remove pre-install Assistant
-        rm -rf $SYSTEM/app/Velvet*
-        rm -rf $SYSTEM/app/velvet*
-        rm -rf $SYSTEM/priv-app/Velvet*
-        rm -rf $SYSTEM/priv-app/velvet*
-        rm -rf $SYSTEM/product/app/Velvet*
-        rm -rf $SYSTEM/product/app/velvet*
-        rm -rf $SYSTEM/product/priv-app/Velvet*
-        rm -rf $SYSTEM/product/priv-app/velvet*
-        rm -rf $SYSTEM/system_ext/app/Velvet*
-        rm -rf $SYSTEM/system_ext/app/velvet*
-        rm -rf $SYSTEM/system_ext/priv-app/Velvet*
-        rm -rf $SYSTEM/system_ext/priv-app/velvet*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Velvet* $i/velvet*
+        done
       fi
-      # Install
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         ADDON_CORE="Velvet_arm.tar.xz"
         PKG_CORE="Velvet"
@@ -6581,94 +3827,15 @@ set_addon_zip_sep() {
       ui_print "- Installing Bromite Browser"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.bromite" after '# Begin addon properties' "ro.config.bromite"
-        # Remove AOSP Browser
-        rm -rf $SYSTEM/app/Browser
-        rm -rf $SYSTEM/app/Jelly
-        rm -rf $SYSTEM/priv-app/Browser
-        rm -rf $SYSTEM/priv-app/Jelly
-        rm -rf $SYSTEM/product/app/Browser
-        rm -rf $SYSTEM/product/app/Jelly
-        rm -rf $SYSTEM/product/priv-app/Browser
-        rm -rf $SYSTEM/product/priv-app/Jelly
-        rm -rf $SYSTEM/system_ext/app/Browser
-        rm -rf $SYSTEM/system_ext/app/Jelly
-        rm -rf $SYSTEM/system_ext/priv-app/Browser
-        rm -rf $SYSTEM/system_ext/priv-app/Jelly
-        # Remove pre-install Chrome and library
-        rm -rf $SYSTEM/app/Chrome*
-        rm -rf $SYSTEM/app/GoogleChrome
-        rm -rf $SYSTEM/app/TrichromeLibrary
-        rm -rf $SYSTEM/app/WebViewGoogle
-        rm -rf $SYSTEM/priv-app/Chrome*
-        rm -rf $SYSTEM/priv-app/GoogleChrome
-        rm -rf $SYSTEM/priv-app/TrichromeLibrary
-        rm -rf $SYSTEM/priv-app/WebViewGoogle
-        rm -rf $SYSTEM/product/app/Chrome*
-        rm -rf $SYSTEM/product/app/GoogleChrome
-        rm -rf $SYSTEM/product/app/TrichromeLibrary
-        rm -rf $SYSTEM/product/app/WebViewGoogle
-        rm -rf $SYSTEM/product/priv-app/Chrome*
-        rm -rf $SYSTEM/product/priv-app/GoogleChrome
-        rm -rf $SYSTEM/product/priv-app/TrichromeLibrary
-        rm -rf $SYSTEM/product/priv-app/WebViewGoogle
-        rm -rf $SYSTEM/system_ext/app/Chrome*
-        rm -rf $SYSTEM/system_ext/app/GoogleChrome
-        rm -rf $SYSTEM/system_ext/app/TrichromeLibrary
-        rm -rf $SYSTEM/system_ext/app/WebViewGoogle
-        rm -rf $SYSTEM/system_ext/priv-app/Chrome*
-        rm -rf $SYSTEM/system_ext/priv-app/GoogleChrome
-        rm -rf $SYSTEM/system_ext/priv-app/TrichromeLibrary
-        rm -rf $SYSTEM/system_ext/priv-app/WebViewGoogle
-        # Remove pre-install Bromite and library
-        rm -rf $SYSTEM/app/BromitePrebuilt
-        rm -rf $SYSTEM/app/WebViewBromite
-        rm -rf $SYSTEM/priv-app/BromitePrebuilt
-        rm -rf $SYSTEM/priv-app/WebViewBromite
-        rm -rf $SYSTEM/product/app/BromitePrebuilt
-        rm -rf $SYSTEM/product/app/WebViewBromite
-        rm -rf $SYSTEM/product/priv-app/BromitePrebuilt
-        rm -rf $SYSTEM/product/priv-app/WebViewBromite
-        rm -rf $SYSTEM/system_ext/app/BromitePrebuilt
-        rm -rf $SYSTEM/system_ext/app/WebViewBromite
-        rm -rf $SYSTEM/system_ext/priv-app/BromitePrebuilt
-        rm -rf $SYSTEM/system_ext/priv-app/WebViewBromite
-        # Remove AOSP WebView
-        rm -rf $SYSTEM/app/webview
-        rm -rf $SYSTEM/priv-app/webview
-        rm -rf $SYSTEM/product/app/webview
-        rm -rf $SYSTEM/product/priv-app/webview
-        rm -rf $SYSTEM/system_ext/app/webview
-        rm -rf $SYSTEM/system_ext/priv-app/webview
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle $i/BromitePrebuilt $i/WebViewBromite $i/webview
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Browser
-        (mkdir $SYSTEM_SYSTEM/app/Jelly
-         mkdir $SYSTEM_SYSTEM/priv-app/Jelly
-         mkdir $SYSTEM_SYSTEM/product/app/Jelly
-         mkdir $SYSTEM_SYSTEM/product/priv-app/Jelly
-         mkdir $SYSTEM_SYSTEM/system_ext/app/Jelly
-         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
-         touch $SYSTEM_SYSTEM/app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/priv-app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/product/app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/product/priv-app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/system_ext/app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/system_ext/priv-app/Jelly/.replace) 2>/dev/null
-        # Remove AOSP WebView
-        (mkdir $SYSTEM_SYSTEM/app/webview
-         mkdir $SYSTEM_SYSTEM/priv-app/webview
-         mkdir $SYSTEM_SYSTEM/product/app/webview
-         mkdir $SYSTEM_SYSTEM/product/priv-app/webview
-         mkdir $SYSTEM_SYSTEM/system_ext/app/webview
-         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/webview
-         touch $SYSTEM_SYSTEM/app/webview/.replace
-         touch $SYSTEM_SYSTEM/priv-app/webview/.replace
-         touch $SYSTEM_SYSTEM/product/app/webview/.replace
-         touch $SYSTEM_SYSTEM/product/priv-app/webview/.replace
-         touch $SYSTEM_SYSTEM/system_ext/app/webview/.replace
-         touch $SYSTEM_SYSTEM/system_ext/priv-app/webview/.replace) 2>/dev/null
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/Jelly $i/webview && touch $i/Jelly/.replace $i/webview/.replace) 2>/dev/null
+        done
       fi
-      # Install
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         ADDON_SYS="BromitePrebuilt_arm.tar.xz"
         PKG_SYS="BromitePrebuilt"
@@ -6685,53 +3852,31 @@ set_addon_zip_sep() {
         PKG_SYS="WebViewBromite"
         target_sys
       fi
+      if [ -d "$SYSTEM_ADDOND" ] && [ "$supported_module_config" == "false" ]; then
+        ui_print "- Installing Bromite OTA script"
+        rm -rf $SYSTEM_ADDOND/bromite.sh
+        ZIP="zip/Addon.tar.xz"
+        [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+        tar -xf $ZIP_FILE/Addon.tar.xz -C $TMP_ADDON
+        pkg_TMPAddon
+        chcon -h u:object_r:system_file:s0 "$SYSTEM_ADDOND/bromite.sh"
+      else
+        ui_print "! Skip installing OTA survival script"
+      fi
     fi
     if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
       ui_print "- Installing Calculator Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.calculator" after '# Begin addon properties' "ro.config.calculator"
-        # Remove AOSP Calculator
-        rm -rf $SYSTEM/app/Calculator*
-        rm -rf $SYSTEM/app/calculator*
-        rm -rf $SYSTEM/app/ExactCalculator
-        rm -rf $SYSTEM/app/Exactcalculator
-        rm -rf $SYSTEM/priv-app/Calculator*
-        rm -rf $SYSTEM/priv-app/calculator*
-        rm -rf $SYSTEM/priv-app/ExactCalculator
-        rm -rf $SYSTEM/priv-app/Exactcalculator
-        rm -rf $SYSTEM/product/app/Calculator*
-        rm -rf $SYSTEM/product/app/calculator*
-        rm -rf $SYSTEM/product/app/ExactCalculator
-        rm -rf $SYSTEM/product/app/Exactcalculator
-        rm -rf $SYSTEM/product/priv-app/Calculator*
-        rm -rf $SYSTEM/product/priv-app/calculator*
-        rm -rf $SYSTEM/product/priv-app/ExactCalculator
-        rm -rf $SYSTEM/product/priv-app/Exactcalculator
-        rm -rf $SYSTEM/system_ext/app/Calculator*
-        rm -rf $SYSTEM/system_ext/app/calculator*
-        rm -rf $SYSTEM/system_ext/app/ExactCalculator
-        rm -rf $SYSTEM/system_ext/app/Exactcalculator
-        rm -rf $SYSTEM/system_ext/priv-app/Calculator*
-        rm -rf $SYSTEM/system_ext/priv-app/calculator*
-        rm -rf $SYSTEM/system_ext/priv-app/ExactCalculator
-        rm -rf $SYSTEM/system_ext/priv-app/Exactcalculator
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Calculator* $i/calculator* $i/ExactCalculator $i/Exactcalculator
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Calculator
-        mkdir $SYSTEM_SYSTEM/app/ExactCalculator
-        mkdir $SYSTEM_SYSTEM/priv-app/ExactCalculator
-        mkdir $SYSTEM_SYSTEM/product/app/ExactCalculator
-        mkdir $SYSTEM_SYSTEM/product/priv-app/ExactCalculator
-        mkdir $SYSTEM_SYSTEM/system_ext/app/ExactCalculator
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/ExactCalculator
-        touch $SYSTEM_SYSTEM/app/ExactCalculator/.replace
-        touch $SYSTEM_SYSTEM/priv-app/ExactCalculator/.replace
-        touch $SYSTEM_SYSTEM/product/app/ExactCalculator/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/ExactCalculator/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/ExactCalculator/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/ExactCalculator/.replace
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/ExactCalculator && touch $i/ExactCalculator/.replace) 2>/dev/null
+        done
       fi
-      # Install
       ADDON_SYS="CalculatorGooglePrebuilt.tar.xz"
       PKG_SYS="CalculatorGooglePrebuilt"
       target_sys
@@ -6740,183 +3885,32 @@ set_addon_zip_sep() {
       ui_print "- Installing Calendar Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.calendar" after '# Begin addon properties' "ro.config.calendar"
-        # Backup
-        test -d $SYSTEM/app/CalendarProvider && SYS_APP_CP="true" || SYS_APP_CP="false"
-        test -d $SYSTEM/priv-app/CalendarProvider && SYS_PRIV_CP="true" || SYS_PRIV_CP="false"
-        test -d $SYSTEM/product/app/CalendarProvider && PRO_APP_CP="true" || PRO_APP_CP="false"
-        test -d $SYSTEM/product/priv-app/CalendarProvider && PRO_PRIV_CP="true" || PRO_PRIV_CP="false"
-        test -d $SYSTEM/system_ext/app/CalendarProvider && SYS_APP_EXT_CP="true" || SYS_APP_EXT_CP="false"
-        test -d $SYSTEM/system_ext/priv-app/CalendarProvider && SYS_PRIV_EXT_CP="true" || SYS_PRIV_EXT_CP="false"
-        if [ "$SYS_APP_CP" == "true" ]; then
-          mv $SYSTEM/app/CalendarProvider $TMP/out/CalendarProvider
-        fi
-        if [ "$SYS_PRIV_CP" == "true" ]; then
-          mv $SYSTEM/priv-app/CalendarProvider $TMP/out/CalendarProvider
-        fi
-        if [ "$PRO_APP_CP" == "true" ]; then
-          mv $SYSTEM/product/app/CalendarProvider $TMP/out/CalendarProvider
-        fi
-        if [ "$PRO_PRIV_CP" == "true" ]; then
-          mv $SYSTEM/product/priv-app/CalendarProvider $TMP/out/CalendarProvider
-        fi
-        if [ "$SYS_APP_EXT_CP" == "true" ]; then
-          mv $SYSTEM/system_ext/app/CalendarProvider $TMP/out/CalendarProvider
-        fi
-        if [ "$SYS_PRIV_EXT_CP" == "true" ]; then
-          mv $SYSTEM/system_ext/priv-app/CalendarProvider $TMP/out/CalendarProvider
-        fi
-        # Remove AOSP Calendar
-        rm -rf $SYSTEM/app/Calendar*
-        rm -rf $SYSTEM/app/calendar*
-        rm -rf $SYSTEM/app/Etar
-        rm -rf $SYSTEM/priv-app/Calendar*
-        rm -rf $SYSTEM/priv-app/calendar*
-        rm -rf $SYSTEM/priv-app/Etar
-        rm -rf $SYSTEM/product/app/Calendar*
-        rm -rf $SYSTEM/product/app/calendar*
-        rm -rf $SYSTEM/product/app/Etar
-        rm -rf $SYSTEM/product/priv-app/Calendar*
-        rm -rf $SYSTEM/product/priv-app/calendar*
-        rm -rf $SYSTEM/product/priv-app/Etar
-        rm -rf $SYSTEM/system_ext/app/Calendar*
-        rm -rf $SYSTEM/system_ext/app/calendar*
-        rm -rf $SYSTEM/system_ext/app/Etar
-        rm -rf $SYSTEM/system_ext/priv-app/Calendar*
-        rm -rf $SYSTEM/system_ext/priv-app/calendar*
-        rm -rf $SYSTEM/system_ext/priv-app/Etar
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          (find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'CalendarProvider' -exec rm -rf $i/Calendar $i/calendar $i/Etar \;)
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Calendar
-        mkdir $SYSTEM_SYSTEM/app/Calendar
-        mkdir $SYSTEM_SYSTEM/app/Etar
-        mkdir $SYSTEM_SYSTEM/priv-app/Calendar
-        mkdir $SYSTEM_SYSTEM/priv-app/Etar
-        mkdir $SYSTEM_SYSTEM/product/app/Calendar
-        mkdir $SYSTEM_SYSTEM/product/app/Etar
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Calendar
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Etar
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Calendar
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Etar
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Calendar
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Etar
-        touch $SYSTEM_SYSTEM/app/Calendar/.replace
-        touch $SYSTEM_SYSTEM/app/Etar/.replace
-        touch $SYSTEM_SYSTEM/priv-app/Calendar/.replace
-        touch $SYSTEM_SYSTEM/priv-app/Etar/.replace
-        touch $SYSTEM_SYSTEM/product/app/Calendar/.replace
-        touch $SYSTEM_SYSTEM/product/app/Etar/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Calendar/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Etar/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Calendar/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Etar/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/Calendar/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/Etar/.replace
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/Calendar $i/Etar && touch $i/Calendar/.replace $i/Etar/.replace) 2>/dev/null
+        done
       fi
-      # Install
       ADDON_SYS="CalendarGooglePrebuilt.tar.xz"
       PKG_SYS="CalendarGooglePrebuilt"
       target_sys
-      # Restore
-      if [ "$supported_module_config" == "false" ]; then
-        if [ "$SYS_APP_CP" == "true" ]; then
-          mv $TMP/out/CalendarProvider $SYSTEM/app/CalendarProvider
-        fi
-        if [ "$SYS_PRIV_CP" == "true" ]; then
-          mv $TMP/out/CalendarProvider $SYSTEM/priv-app/CalendarProvider
-        fi
-        if [ "$PRO_APP_CP" == "true" ]; then
-          mv $TMP/out/CalendarProvider $SYSTEM/product/app/CalendarProvider
-        fi
-        if [ "$PRO_PRIV_CP" == "true" ]; then
-          mv $TMP/out/CalendarProvider $SYSTEM/product/priv-app/CalendarProvider
-        fi
-        if [ "$SYS_APP_EXT_CP" == "true" ]; then
-          mv $TMP/out/CalendarProvider $SYSTEM/system_ext/app/CalendarProvider
-        fi
-        if [ "$SYS_PRIV_EXT_CP" == "true" ]; then
-          mv $TMP/out/CalendarProvider $SYSTEM/system_ext/priv-app/CalendarProvider
-        fi
-      fi
     fi
     if [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
       ui_print "- Installing Chrome Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.chrome" after '# Begin addon properties' "ro.config.chrome"
-        # Remove AOSP Browser
-        rm -rf $SYSTEM/app/Browser
-        rm -rf $SYSTEM/app/Jelly
-        rm -rf $SYSTEM/priv-app/Browser
-        rm -rf $SYSTEM/priv-app/Jelly
-        rm -rf $SYSTEM/product/app/Browser
-        rm -rf $SYSTEM/product/app/Jelly
-        rm -rf $SYSTEM/product/priv-app/Browser
-        rm -rf $SYSTEM/product/priv-app/Jelly
-        rm -rf $SYSTEM/system_ext/app/Browser
-        rm -rf $SYSTEM/system_ext/app/Jelly
-        rm -rf $SYSTEM/system_ext/priv-app/Browser
-        rm -rf $SYSTEM/system_ext/priv-app/Jelly
-        # Remove pre-install Chrome and library
-        rm -rf $SYSTEM/app/Chrome*
-        rm -rf $SYSTEM/app/GoogleChrome
-        rm -rf $SYSTEM/app/TrichromeLibrary
-        rm -rf $SYSTEM/app/WebViewGoogle
-        rm -rf $SYSTEM/priv-app/Chrome*
-        rm -rf $SYSTEM/priv-app/GoogleChrome
-        rm -rf $SYSTEM/priv-app/TrichromeLibrary
-        rm -rf $SYSTEM/priv-app/WebViewGoogle
-        rm -rf $SYSTEM/product/app/Chrome*
-        rm -rf $SYSTEM/product/app/GoogleChrome
-        rm -rf $SYSTEM/product/app/TrichromeLibrary
-        rm -rf $SYSTEM/product/app/WebViewGoogle
-        rm -rf $SYSTEM/product/priv-app/Chrome*
-        rm -rf $SYSTEM/product/priv-app/GoogleChrome
-        rm -rf $SYSTEM/product/priv-app/TrichromeLibrary
-        rm -rf $SYSTEM/product/priv-app/WebViewGoogle
-        rm -rf $SYSTEM/system_ext/app/Chrome*
-        rm -rf $SYSTEM/system_ext/app/GoogleChrome
-        rm -rf $SYSTEM/system_ext/app/TrichromeLibrary
-        rm -rf $SYSTEM/system_ext/app/WebViewGoogle
-        rm -rf $SYSTEM/system_ext/priv-app/Chrome*
-        rm -rf $SYSTEM/system_ext/priv-app/GoogleChrome
-        rm -rf $SYSTEM/system_ext/priv-app/TrichromeLibrary
-        rm -rf $SYSTEM/system_ext/priv-app/WebViewGoogle
-        # Remove AOSP WebView
-        rm -rf $SYSTEM/app/webview
-        rm -rf $SYSTEM/priv-app/webview
-        rm -rf $SYSTEM/product/app/webview
-        rm -rf $SYSTEM/product/priv-app/webview
-        rm -rf $SYSTEM/system_ext/app/webview
-        rm -rf $SYSTEM/system_ext/priv-app/webview
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle $i/webview
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Browser
-        (mkdir $SYSTEM_SYSTEM/app/Jelly
-         mkdir $SYSTEM_SYSTEM/priv-app/Jelly
-         mkdir $SYSTEM_SYSTEM/product/app/Jelly
-         mkdir $SYSTEM_SYSTEM/product/priv-app/Jelly
-         mkdir $SYSTEM_SYSTEM/system_ext/app/Jelly
-         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Jelly
-         touch $SYSTEM_SYSTEM/app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/priv-app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/product/app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/product/priv-app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/system_ext/app/Jelly/.replace
-         touch $SYSTEM_SYSTEM/system_ext/priv-app/Jelly/.replace) 2>/dev/null
-        # Remove AOSP WebView
-        (mkdir $SYSTEM_SYSTEM/app/webview
-         mkdir $SYSTEM_SYSTEM/priv-app/webview
-         mkdir $SYSTEM_SYSTEM/product/app/webview
-         mkdir $SYSTEM_SYSTEM/product/priv-app/webview
-         mkdir $SYSTEM_SYSTEM/system_ext/app/webview
-         mkdir $SYSTEM_SYSTEM/system_ext/priv-app/webview
-         touch $SYSTEM_SYSTEM/app/webview/.replace
-         touch $SYSTEM_SYSTEM/priv-app/webview/.replace
-         touch $SYSTEM_SYSTEM/product/app/webview/.replace
-         touch $SYSTEM_SYSTEM/product/priv-app/webview/.replace
-         touch $SYSTEM_SYSTEM/system_ext/app/webview/.replace
-         touch $SYSTEM_SYSTEM/system_ext/priv-app/webview/.replace) 2>/dev/null
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/Jelly $i/webview && touch $i/Jelly/.replace $i/webview/.replace) 2>/dev/null
+        done
       fi
-      # Install
       ADDON_SYS="ChromeGooglePrebuilt.tar.xz"
       PKG_SYS="ChromeGooglePrebuilt"
       target_sys
@@ -6931,126 +3925,38 @@ set_addon_zip_sep() {
       ui_print "- Installing Contacts Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.contacts" after '# Begin addon properties' "ro.config.contacts"
-        # Backup
-        test -d $SYSTEM/app/ContactsProvider && SYS_APP_CTT="true" || SYS_APP_CTT="false"
-        test -d $SYSTEM/priv-app/ContactsProvider && SYS_PRIV_CTT="true" || SYS_PRIV_CTT="false"
-        test -d $SYSTEM/product/app/ContactsProvider && PRO_APP_CTT="true" || PRO_APP_CTT="false"
-        test -d $SYSTEM/product/priv-app/ContactsProvider && PRO_PRIV_CTT="true" || PRO_PRIV_CTT="false"
-        test -d $SYSTEM/system_ext/app/ContactsProvider && SYS_APP_EXT_CTT="true" || SYS_APP_EXT_CTT="false"
-        test -d $SYSTEM/system_ext/priv-app/ContactsProvider && SYS_PRIV_EXT_CTT="true" || SYS_PRIV_EXT_CTT="false"
-        if [ "$SYS_APP_CTT" == "true" ]; then
-          mv $SYSTEM/app/ContactsProvider $TMP/out/ContactsProvider
-        fi
-        if [ "$SYS_PRIV_CTT" == "true" ]; then
-          mv $SYSTEM/priv-app/ContactsProvider $TMP/out/ContactsProvider
-        fi
-        if [ "$PRO_APP_CTT" == "true" ]; then
-          mv $SYSTEM/product/app/ContactsProvider $TMP/out/ContactsProvider
-        fi
-        if [ "$PRO_PRIV_CTT" == "true" ]; then
-          mv $SYSTEM/product/priv-app/ContactsProvider $TMP/out/ContactsProvider
-        fi
-        if [ "$SYS_APP_EXT_CTT" == "true" ]; then
-          mv $SYSTEM/system_ext/app/ContactsProvider $TMP/out/ContactsProvider
-        fi
-        if [ "$SYS_PRIV_EXT_CTT" == "true" ]; then
-          mv $SYSTEM/system_ext/priv-app/ContactsProvider $TMP/out/ContactsProvider
-        fi
-        # Remove AOSP Contacts
-        rm -rf $SYSTEM/app/Contacts*
-        rm -rf $SYSTEM/app/contacts*
-        rm -rf $SYSTEM/priv-app/Contacts*
-        rm -rf $SYSTEM/priv-app/contacts*
-        rm -rf $SYSTEM/product/app/Contacts*
-        rm -rf $SYSTEM/product/app/contacts*
-        rm -rf $SYSTEM/product/priv-app/Contacts*
-        rm -rf $SYSTEM/product/priv-app/contacts*
-        rm -rf $SYSTEM/system_ext/app/Contacts*
-        rm -rf $SYSTEM/system_ext/app/contacts*
-        rm -rf $SYSTEM/system_ext/priv-app/Contacts*
-        rm -rf $SYSTEM/system_ext/priv-app/contacts*
-        rm -rf $SYSTEM/etc/permissions/com.android.contacts.xml
-        rm -rf $SYSTEM/product/etc/permissions/com.android.contacts.xml
-        rm -rf $SYSTEM/system_ext/etc/permissions/com.android.contacts.xml
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          (find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'ContactsProvider' -exec rm -rf $i/Contacts $i/contacts \;)
+        done
+        for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
+          rm -rf $i/com.android.contacts.xml
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Contacts
-        mkdir $SYSTEM_SYSTEM/app/Contacts
-        mkdir $SYSTEM_SYSTEM/priv-app/Contacts
-        mkdir $SYSTEM_SYSTEM/product/app/Contacts
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Contacts
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Contacts
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Contacts
-        touch $SYSTEM_SYSTEM/app/Contacts/.replace
-        touch $SYSTEM_SYSTEM/priv-app/Contacts/.replace
-        touch $SYSTEM_SYSTEM/product/app/Contacts/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Contacts/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Contacts/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/Contacts/.replace
-        touch $SYSTEM_SYSTEM/etc/permissions/com.android.contacts.xml
-        touch $SYSTEM_SYSTEM/product/etc/permissions/com.android.contacts.xml
-        touch $SYSTEM_SYSTEM/system_ext/etc/permissions/com.android.contacts.xml
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/Contacts $i/contacts && touch $i/contacts/.replace $i/contacts/.replace) 2>/dev/null
+        done
+        for i in $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/permissions; do
+          touch $i/com.android.contacts.xml
+        done
       fi
-      # Install
       ADDON_CORE="ContactsGooglePrebuilt.tar.xz"
       PKG_CORE="ContactsGooglePrebuilt"
       target_core
-      # Restore
-      if [ "$supported_module_config" == "false" ]; then
-        if [ "$SYS_APP_CTT" == "true" ]; then
-          mv $TMP/out/ContactsProvider $SYSTEM/app/ContactsProvider
-        fi
-        if [ "$SYS_PRIV_CTT" == "true" ]; then
-          mv $TMP/out/ContactsProvider $SYSTEM/priv-app/ContactsProvider
-        fi
-        if [ "$PRO_APP_CTT" == "true" ]; then
-          mv $TMP/out/ContactsProvider $SYSTEM/product/app/ContactsProvider
-        fi
-        if [ "$PRO_PRIV_CTT" == "true" ]; then
-          mv $TMP/out/ContactsProvider $SYSTEM/product/priv-app/ContactsProvider
-        fi
-        if [ "$SYS_APP_EXT_CTT" == "true" ]; then
-          mv $TMP/out/ContactsProvider $SYSTEM/system_ext/app/ContactsProvider
-        fi
-        if [ "$SYS_PRIV_EXT_CTT" == "true" ]; then
-          mv $TMP/out/ContactsProvider $SYSTEM/system_ext/priv-app/ContactsProvider
-        fi
-      fi
     fi
     if [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ]; then
       ui_print "- Installing Deskclock Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.deskclock" after '# Begin addon properties' "ro.config.deskclock"
-        # Remove AOSP DeskClock
-        rm -rf $SYSTEM/app/DeskClock*
-        rm -rf $SYSTEM/app/Clock*
-        rm -rf $SYSTEM/priv-app/DeskClock*
-        rm -rf $SYSTEM/priv-app/Clock*
-        rm -rf $SYSTEM/product/app/DeskClock*
-        rm -rf $SYSTEM/product/app/Clock*
-        rm -rf $SYSTEM/product/priv-app/DeskClock*
-        rm -rf $SYSTEM/product/priv-app/Clock*
-        rm -rf $SYSTEM/system_ext/app/DeskClock*
-        rm -rf $SYSTEM/system_ext/app/Clock*
-        rm -rf $SYSTEM/system_ext/priv-app/DeskClock*
-        rm -rf $SYSTEM/system_ext/priv-app/Clock*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/DeskClock* $i/Clock*
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP DeskClock
-        mkdir $SYSTEM_SYSTEM/app/DeskClock
-        mkdir $SYSTEM_SYSTEM/priv-app/DeskClock
-        mkdir $SYSTEM_SYSTEM/product/app/DeskClock
-        mkdir $SYSTEM_SYSTEM/product/priv-app/DeskClock
-        mkdir $SYSTEM_SYSTEM/system_ext/app/DeskClock
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/DeskClock
-        touch $SYSTEM_SYSTEM/app/DeskClock/.replace
-        touch $SYSTEM_SYSTEM/priv-app/DeskClock/.replace
-        touch $SYSTEM_SYSTEM/product/app/DeskClock/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/DeskClock/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/DeskClock/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/DeskClock/.replace
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/DeskClock && touch $i/DeskClock/.replace) 2>/dev/null
+        done
       fi
-      # Install
       ADDON_SYS="DeskClockGooglePrebuilt.tar.xz"
       PKG_SYS="DeskClockGooglePrebuilt"
       target_sys
@@ -7059,42 +3965,21 @@ set_addon_zip_sep() {
       ui_print "- Installing Dialer Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.dialer" after '# Begin addon properties' "ro.config.dialer"
-        # Remove AOSP Dialer
-        rm -rf $SYSTEM/app/Dialer*
-        rm -rf $SYSTEM/app/dialer*
-        rm -rf $SYSTEM/priv-app/Dialer*
-        rm -rf $SYSTEM/priv-app/dialer*
-        rm -rf $SYSTEM/product/app/Dialer*
-        rm -rf $SYSTEM/product/app/dialer*
-        rm -rf $SYSTEM/product/priv-app/Dialer*
-        rm -rf $SYSTEM/product/priv-app/dialer*
-        rm -rf $SYSTEM/system_ext/app/Dialer*
-        rm -rf $SYSTEM/system_ext/app/dialer*
-        rm -rf $SYSTEM/system_ext/priv-app/Dialer*
-        rm -rf $SYSTEM/system_ext/priv-app/dialer*
-        rm -rf $SYSTEM/etc/permissions/com.android.dialer.xml
-        rm -rf $SYSTEM/product/etc/permissions/com.android.dialer.xml
-        rm -rf $SYSTEM/system_ext/etc/permissions/com.android.dialer.xml
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Dialer* $i/dialer*
+        done
+        for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
+          rm -rf $i/com.android.dialer.xml
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Dialer
-        mkdir $SYSTEM_SYSTEM/app/Dialer
-        mkdir $SYSTEM_SYSTEM/priv-app/Dialer
-        mkdir $SYSTEM_SYSTEM/product/app/Dialer
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Dialer
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Dialer
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Dialer
-        touch $SYSTEM_SYSTEM/app/Dialer/.replace
-        touch $SYSTEM_SYSTEM/priv-app/Dialer/.replace
-        touch $SYSTEM_SYSTEM/product/app/Dialer/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Dialer/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Dialer/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/Dialer/.replace
-        touch $SYSTEM_SYSTEM/etc/permissions/com.android.dialer.xml
-        touch $SYSTEM_SYSTEM/product/etc/permissions/com.android.dialer.xml
-        touch $SYSTEM_SYSTEM/system_ext/etc/permissions/com.android.dialer.xml
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/Dialer && touch $i/Dialer/.replace) 2>/dev/null
+        done
+        for i in $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/permissions; do
+          touch $i/com.android.dialer.xml
+        done
       fi
-      # Install
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         ADDON_CORE="DialerGooglePrebuilt_arm.tar.xz"
         PKG_CORE="DialerGooglePrebuilt"
@@ -7108,113 +3993,58 @@ set_addon_zip_sep() {
       dialer_framework
       set_google_dialer_default
     fi
-    if [ "$TARGET_DPS_GOOGLE" == "true" ]; then
-      if [ "$android_sdk" == "30" ]; then
-        ui_print "- Installing DPS Google"
-        if [ "$supported_module_config" == "false" ]; then
-          insert_line $SYSTEM/config.prop "ro.config.dps" after '# Begin addon properties' "ro.config.dps"
-          # Remove pre-install DPS
-          rm -rf $SYSTEM/app/DPSGooglePrebuilt
-          rm -rf $SYSTEM/app/Matchmaker*
-          rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt
-          rm -rf $SYSTEM/priv-app/Matchmaker*
-          rm -rf $SYSTEM/product/app/DPSGooglePrebuilt
-          rm -rf $SYSTEM/product/app/Matchmaker*
-          rm -rf $SYSTEM/product/priv-app/DPSGooglePrebuilt
-          rm -rf $SYSTEM/product/priv-app/Matchmaker*
-          rm -rf $SYSTEM/system_ext/app/DPSGooglePrebuilt
-          rm -rf $SYSTEM/system_ext/app/Matchmaker*
-          rm -rf $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
-          rm -rf $SYSTEM/system_ext/priv-app/Matchmaker*
-          rm -rf $SYSTEM/etc/permissions/com.google.android.as.xml
-          rm -rf $SYSTEM/product/etc/permissions/com.google.android.as.xml
-          rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.as.xml
-        fi
-        if [ "$supported_module_config" == "true" ]; then
-          # Remove pre-install DPS
-          mkdir $SYSTEM_SYSTEM/app/MatchmakerPrebuilt
-          mkdir $SYSTEM_SYSTEM/priv-app/MatchmakerPrebuilt
-          mkdir $SYSTEM_SYSTEM/product/app/MatchmakerPrebuilt
-          mkdir $SYSTEM_SYSTEM/product/priv-app/MatchmakerPrebuilt
-          mkdir $SYSTEM_SYSTEM/system_ext/app/MatchmakerPrebuilt
-          mkdir $SYSTEM_SYSTEM/system_ext/priv-app/MatchmakerPrebuilt
-          touch $SYSTEM_SYSTEM/app/MatchmakerPrebuilt/.replace
-          touch $SYSTEM_SYSTEM/priv-app/MatchmakerPrebuilt/.replace
-          touch $SYSTEM_SYSTEM/product/app/MatchmakerPrebuilt/.replace
-          touch $SYSTEM_SYSTEM/product/priv-app/MatchmakerPrebuilt/.replace
-          touch $SYSTEM_SYSTEM/system_ext/app/MatchmakerPrebuilt/.replace
-          touch $SYSTEM_SYSTEM/system_ext/priv-app/MatchmakerPrebuilt/.replace
-        fi
-        # Install
-        if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
-          ADDON_CORE="DPSGooglePrebuilt_arm.tar.xz"
-          PKG_CORE="DPSGooglePrebuilt"
-        fi
-        if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-          ADDON_CORE="DPSGooglePrebuilt_arm64.tar.xz"
-          PKG_CORE="DPSGooglePrebuilt"
-        fi
-        target_core
-        dps_config
-        dps_overlay
-        dps_sound_model
-      else
-        ui_print "! Cannot install DPS Google"
+    if [ "$TARGET_DPS_GOOGLE" == "true" ] && [ "$android_sdk" == "30" ]; then
+      ui_print "- Installing DPS Google"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.dps" after '# Begin addon properties' "ro.config.dps"
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/DPSGooglePrebuilt $i/Matchmaker*
+        done
+        for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
+          rm -rf $i/com.google.android.as.xml
+        done
       fi
+      if [ "$supported_module_config" == "true" ]; then
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/MatchmakerPrebuilt && touch $i/MatchmakerPrebuilt/.replace) 2>/dev/null
+        done
+      fi
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
+        ADDON_CORE="DPSGooglePrebuilt_arm.tar.xz"
+        PKG_CORE="DPSGooglePrebuilt"
+      fi
+      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
+        ADDON_CORE="DPSGooglePrebuilt_arm64.tar.xz"
+        PKG_CORE="DPSGooglePrebuilt"
+      fi
+      target_core
+      dps_config
+      dps_overlay
+      dps_sound_model
+    fi
+    if [ "$TARGET_DPS_GOOGLE" == "true" ] && [ "$android_sdk" -lt "30" ]; then
+      ui_print "! Cannot install DPS Google"
     fi
     if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
       ui_print "- Installing Keyboard Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.gboard" after '# Begin addon properties' "ro.config.gboard"
-        # Remove pre-installed Gboard
-        rm -rf $SYSTEM/app/Gboard*
-        rm -rf $SYSTEM/app/gboard*
-        rm -rf $SYSTEM/app/LatinIMEGooglePrebuilt
-        rm -rf $SYSTEM/priv-app/Gboard*
-        rm -rf $SYSTEM/priv-app/gboard*
-        rm -rf $SYSTEM/priv-app/LatinIMEGooglePrebuilt
-        rm -rf $SYSTEM/product/app/Gboard*
-        rm -rf $SYSTEM/product/app/gboard*
-        rm -rf $SYSTEM/product/app/LatinIMEGooglePrebuilt
-        rm -rf $SYSTEM/product/priv-app/Gboard*
-        rm -rf $SYSTEM/product/priv-app/gboard*
-        rm -rf $SYSTEM/product/priv-app/LatinIMEGooglePrebuilt
-        rm -rf $SYSTEM/system_ext/app/Gboard*
-        rm -rf $SYSTEM/system_ext/app/gboard*
-        rm -rf $SYSTEM/system_ext/app/LatinIMEGooglePrebuilt
-        rm -rf $SYSTEM/system_ext/priv-app/Gboard*
-        rm -rf $SYSTEM/system_ext/priv-app/gboard*
-        rm -rf $SYSTEM/system_ext/priv-app/LatinIMEGooglePrebuilt
-        # Remove AOSP keyboard
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Gboard* $i/gboard* $i/LatinIMEGooglePrebuilt
+        done
         if [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
-          rm -rf $SYSTEM/app/LatinIME
-          rm -rf $SYSTEM/priv-app/LatinIME
-          rm -rf $SYSTEM/product/app/LatinIME
-          rm -rf $SYSTEM/product/priv-app/LatinIME
-          rm -rf $SYSTEM/system_ext/app/LatinIME
-          rm -rf $SYSTEM/system_ext/priv-app/LatinIME
+          for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+            rm -rf $i/LatinIME
+          done
           # Enable wiping of AOSP Keyboard during OTA upgrade
           insert_line $SYSTEM/config.prop "ro.config.keyboard" after '# Begin addon properties' "ro.config.keyboard"
         fi
       fi
-      if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP keyboard
-        if [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
-          mkdir $SYSTEM_SYSTEM/app/LatinIME
-          mkdir $SYSTEM_SYSTEM/priv-app/LatinIME
-          mkdir $SYSTEM_SYSTEM/product/app/LatinIME
-          mkdir $SYSTEM_SYSTEM/product/priv-app/LatinIME
-          mkdir $SYSTEM_SYSTEM/system_ext/app/LatinIME
-          mkdir $SYSTEM_SYSTEM/system_ext/priv-app/LatinIME
-          touch $SYSTEM_SYSTEM/app/LatinIME/.replace
-          touch $SYSTEM_SYSTEM/priv-app/LatinIME/.replace
-          touch $SYSTEM_SYSTEM/product/app/LatinIME/.replace
-          touch $SYSTEM_SYSTEM/product/priv-app/LatinIME/.replace
-          touch $SYSTEM_SYSTEM/system_ext/app/LatinIME/.replace
-          touch $SYSTEM_SYSTEM/system_ext/priv-app/LatinIME/.replace
-        fi
+      if [ "$supported_module_config" == "true" ] && [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          mkdir $i/LatinIME && touch $i/LatinIME/.replace
+        done
       fi
-      # Install
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         ADDON_SYS="GboardGooglePrebuilt_arm.tar.xz"
         PKG_SYS="GboardGooglePrebuilt"
@@ -7230,21 +4060,10 @@ set_addon_zip_sep() {
       ui_print "- Installing Android Auto"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.gearhead" after '# Begin addon properties' "ro.config.gearhead"
-        # Remove pre-install AndroidAuto
-        rm -rf $SYSTEM/app/AndroidAuto*
-        rm -rf $SYSTEM/app/GearheadGooglePrebuilt
-        rm -rf $SYSTEM/priv-app/AndroidAuto*
-        rm -rf $SYSTEM/priv-app/GearheadGooglePrebuilt
-        rm -rf $SYSTEM/product/app/AndroidAuto*
-        rm -rf $SYSTEM/product/app/GearheadGooglePrebuilt
-        rm -rf $SYSTEM/product/priv-app/AndroidAuto*
-        rm -rf $SYSTEM/product/priv-app/GearheadGooglePrebuilt
-        rm -rf $SYSTEM/system_ext/app/AndroidAuto*
-        rm -rf $SYSTEM/system_ext/app/GearheadGooglePrebuilt
-        rm -rf $SYSTEM/system_ext/priv-app/AndroidAuto*
-        rm -rf $SYSTEM/system_ext/priv-app/GearheadGooglePrebuilt
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/AndroidAuto* $i/GearheadGooglePrebuilt
+        done
       fi
-      # Install
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         ADDON_CORE="GearheadGooglePrebuilt_arm.tar.xz"
         PKG_CORE="GearheadGooglePrebuilt"
@@ -7255,123 +4074,43 @@ set_addon_zip_sep() {
       fi
       target_core
     fi
-    if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
-      if [ "$android_sdk" == "30" ]; then
-        ui_print "- Installing Pixel Launcher"
-        if [ "$supported_module_config" == "false" ]; then
-          insert_line $SYSTEM/config.prop "ro.config.launcher" after '# Begin addon properties' "ro.config.launcher"
-          # Remove pre-install Launcher
-          rm -rf $SYSTEM/priv-app/Launcher3
-          rm -rf $SYSTEM/priv-app/Launcher3QuickStep
-          rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt
-          rm -rf $SYSTEM/priv-app/NexusLauncherRelease
-          rm -rf $SYSTEM/priv-app/NexusQuickAccessWallet
-          rm -rf $SYSTEM/priv-app/QuickAccessWallet
-          rm -rf $SYSTEM/priv-app/QuickStep
-          rm -rf $SYSTEM/priv-app/QuickStepLauncher
-          rm -rf $SYSTEM/priv-app/TrebuchetQuickStep
-          rm -rf $SYSTEM/product/priv-app/Launcher3
-          rm -rf $SYSTEM/product/priv-app/Launcher3QuickStep
-          rm -rf $SYSTEM/product/priv-app/NexusLauncherPrebuilt
-          rm -rf $SYSTEM/product/priv-app/NexusLauncherRelease
-          rm -rf $SYSTEM/product/priv-app/NexusQuickAccessWallet
-          rm -rf $SYSTEM/product/priv-app/QuickAccessWallet
-          rm -rf $SYSTEM/product/priv-app/QuickStep
-          rm -rf $SYSTEM/product/priv-app/QuickStepLauncher
-          rm -rf $SYSTEM/product/priv-app/TrebuchetQuickStep
-          rm -rf $SYSTEM/system_ext/priv-app/Launcher3
-          rm -rf $SYSTEM/system_ext/priv-app/Launcher3QuickStep
-          rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
-          rm -rf $SYSTEM/system_ext/priv-app/NexusLauncherRelease
-          rm -rf $SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
-          rm -rf $SYSTEM/system_ext/priv-app/QuickAccessWallet
-          rm -rf $SYSTEM/system_ext/priv-app/QuickStep
-          rm -rf $SYSTEM/system_ext/priv-app/QuickStepLauncher
-          rm -rf $SYSTEM/system_ext/priv-app/TrebuchetQuickStep
-        fi
-        if [ "$supported_module_config" == "true" ]; then
-          # Remove AOSP Launcher
-          (mkdir $SYSTEM_SYSTEM/priv-app/Launcher3
-           mkdir $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep
-           mkdir $SYSTEM_SYSTEM/priv-app/NexusLauncherPrebuilt
-           mkdir $SYSTEM_SYSTEM/priv-app/NexusLauncherRelease
-           mkdir $SYSTEM_SYSTEM/priv-app/NexusQuickAccessWallet
-           mkdir $SYSTEM_SYSTEM/priv-app/QuickAccessWallet
-           mkdir $SYSTEM_SYSTEM/priv-app/QuickStep
-           mkdir $SYSTEM_SYSTEM/priv-app/QuickStepLauncher
-           mkdir $SYSTEM_SYSTEM/priv-app/TrebuchetQuickStep
-           mkdir $SYSTEM_SYSTEM/product/priv-app/Launcher3
-           mkdir $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep
-           mkdir $SYSTEM_SYSTEM/product/priv-app/NexusLauncherPrebuilt
-           mkdir $SYSTEM_SYSTEM/product/priv-app/NexusLauncherRelease
-           mkdir $SYSTEM_SYSTEM/product/priv-app/NexusQuickAccessWallet
-           mkdir $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet
-           mkdir $SYSTEM_SYSTEM/product/priv-app/QuickStep
-           mkdir $SYSTEM_SYSTEM/product/priv-app/QuickStepLauncher
-           mkdir $SYSTEM_SYSTEM/product/priv-app/TrebuchetQuickStep
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherRelease
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/QuickStep
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/QuickStepLauncher
-           mkdir $SYSTEM_SYSTEM/system_ext/priv-app/TrebuchetQuickStep
-           touch $SYSTEM_SYSTEM/priv-app/Launcher3/.replace
-           touch $SYSTEM_SYSTEM/priv-app/Launcher3QuickStep/.replace
-           touch $SYSTEM_SYSTEM/priv-app/NexusLauncherPrebuilt/.replace
-           touch $SYSTEM_SYSTEM/priv-app/NexusLauncherRelease/.replace
-           touch $SYSTEM_SYSTEM/priv-app/NexusQuickAccessWallet/.replace
-           touch $SYSTEM_SYSTEM/priv-app/QuickAccessWallet/.replace
-           touch $SYSTEM_SYSTEM/priv-app/QuickStep/.replace
-           touch $SYSTEM_SYSTEM/priv-app/QuickStepLauncher/.replace
-           touch $SYSTEM_SYSTEM/priv-app/TrebuchetQuickStep/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/Launcher3/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/Launcher3QuickStep/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/NexusLauncherPrebuilt/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/NexusLauncherRelease/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/NexusQuickAccessWallet/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/QuickAccessWallet/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/QuickStep/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/QuickStepLauncher/.replace
-           touch $SYSTEM_SYSTEM/product/priv-app/TrebuchetQuickStep/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/Launcher3QuickStep/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherRelease/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/NexusQuickAccessWallet/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/QuickAccessWallet/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/QuickStep/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/QuickStepLauncher/.replace
-           touch $SYSTEM_SYSTEM/system_ext/priv-app/TrebuchetQuickStep/.replace) 2>/dev/null
-        fi
-        # Install
-        ADDON_CORE="NexusLauncherPrebuilt.tar.xz"
-        PKG_CORE="NexusLauncherPrebuilt"
-        target_core
-        ADDON_CORE="NexusQuickAccessWallet.tar.xz"
-        PKG_CORE="NexusQuickAccessWallet"
-        target_core
-        launcher_overlay
-        launcher_config
-      else
-        ui_print "! Cannot install Pixel Launcher"
+    if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ] && [ "$android_sdk" == "30" ]; then
+      ui_print "- Installing Pixel Launcher"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.launcher" after '# Begin addon properties' "ro.config.launcher"
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Launcher3 $i/Launcher3QuickStep $i/NexusLauncherPrebuilt $i/NexusLauncherRelease $i/NexusQuickAccessWallet $i/QuickAccessWallet $i/QuickStep $i/QuickStepLauncher $i/TrebuchetQuickStep
+        done
       fi
+      if [ "$supported_module_config" == "true" ]; then
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/Launcher3 $i/Launcher3QuickStep $i/NexusLauncherRelease $i/QuickAccessWallet $i/QuickStep $i/QuickStepLauncher $i/TrebuchetQuickStep) 2>/dev/null
+          (touch $i/Launcher3/.replace $i/Launcher3QuickStep/.replace $i/NexusLauncherRelease/.replace $i/QuickAccessWallet/.replace $i/QuickStep/.replace $i/QuickStepLauncher/.replace $i/TrebuchetQuickStep/.replace) 2>/dev/null
+        done
+      fi
+      ADDON_CORE="NexusLauncherPrebuilt.tar.xz"
+      PKG_CORE="NexusLauncherPrebuilt"
+      target_core
+      ADDON_CORE="NexusQuickAccessWallet.tar.xz"
+      PKG_CORE="NexusQuickAccessWallet"
+      target_core
+      launcher_overlay
+      launcher_config
+    fi
+    if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ] && [ "$android_sdk" -lt "30" ]; then
+      ui_print "! Cannot install Pixel Launcher"
     fi
     if [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
       ui_print "- Installing Maps Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.maps" after '# Begin addon properties' "ro.config.maps"
-        # Remove pre-install Maps
-        rm -rf $SYSTEM/app/Maps*
-        rm -rf $SYSTEM/product/app/Maps*
-        rm -rf $SYSTEM/system_ext/app/Maps*
-        rm -rf $SYSTEM/etc/permissions/com.google.android.maps.xml
-        rm -rf $SYSTEM/product/etc/permissions/com.google.android.maps.xml
-        rm -rf $SYSTEM/system_ext/etc/permissions/com.google.android.maps.xml
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Maps*
+        done
+        for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
+          rm -rf $i/com.google.android.maps.xml
+        done
       fi
-      # Install
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         ADDON_SYS="MapsGooglePrebuilt_arm.tar.xz"
         PKG_SYS="MapsGooglePrebuilt"
@@ -7388,15 +4127,10 @@ set_addon_zip_sep() {
       ui_print "- Installing Markup Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.markup" after '# Begin addon properties' "ro.config.markup"
-        # Remove pre-install Markup
-        rm -rf $SYSTEM/app/MarkupGoogle*
-        rm -rf $SYSTEM/priv-app/MarkupGoogle*
-        rm -rf $SYSTEM/product/app/MarkupGoogle*
-        rm -rf $SYSTEM/product/priv-app/MarkupGoogle*
-        rm -rf $SYSTEM/system_ext/app/MarkupGoogle*
-        rm -rf $SYSTEM/system_ext/priv-app/MarkupGoogle*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/MarkupGoogle*
+        done
       fi
-      # Install
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         ADDON_SYS="MarkupGooglePrebuilt_arm.tar.xz"
         PKG_SYS="MarkupGooglePrebuilt"
@@ -7411,48 +4145,15 @@ set_addon_zip_sep() {
       ui_print "- Installing Messages Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.messages" after '# Begin addon properties' "ro.config.messages"
-        # Remove AOSP Messages
-        rm -rf $SYSTEM/app/Messages*
-        rm -rf $SYSTEM/app/messages*
-        rm -rf $SYSTEM/app/Messaging*
-        rm -rf $SYSTEM/app/messaging*
-        rm -rf $SYSTEM/priv-app/Messages*
-        rm -rf $SYSTEM/priv-app/messages*
-        rm -rf $SYSTEM/priv-app/Messaging*
-        rm -rf $SYSTEM/priv-app/messaging*
-        rm -rf $SYSTEM/product/app/Messages*
-        rm -rf $SYSTEM/product/app/messages*
-        rm -rf $SYSTEM/product/app/Messaging*
-        rm -rf $SYSTEM/product/app/messaging*
-        rm -rf $SYSTEM/product/priv-app/Messages*
-        rm -rf $SYSTEM/product/priv-app/messages*
-        rm -rf $SYSTEM/product/priv-app/Messaging*
-        rm -rf $SYSTEM/product/priv-app/messaging*
-        rm -rf $SYSTEM/system_ext/app/Messages*
-        rm -rf $SYSTEM/system_ext/app/messages*
-        rm -rf $SYSTEM/system_ext/app/Messaging*
-        rm -rf $SYSTEM/system_ext/app/messaging*
-        rm -rf $SYSTEM/system_ext/priv-app/Messages*
-        rm -rf $SYSTEM/system_ext/priv-app/messages*
-        rm -rf $SYSTEM/system_ext/priv-app/Messaging*
-        rm -rf $SYSTEM/system_ext/priv-app/messaging*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Messages* $i/messages* $i/Messaging* $i/messaging*
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Messages
-        mkdir $SYSTEM_SYSTEM/app/messaging
-        mkdir $SYSTEM_SYSTEM/priv-app/messaging
-        mkdir $SYSTEM_SYSTEM/product/app/messaging
-        mkdir $SYSTEM_SYSTEM/product/priv-app/messaging
-        mkdir $SYSTEM_SYSTEM/system_ext/app/messaging
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/messaging
-        touch $SYSTEM_SYSTEM/app/messaging/.replace
-        touch $SYSTEM_SYSTEM/priv-app/messaging/.replace
-        touch $SYSTEM_SYSTEM/product/app/messaging/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/messaging/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/messaging/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/messaging/.replace
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/messaging && touch $i/messaging/.replace) 2>/dev/null
+        done
       fi
-      # Install
       ADDON_SYS="MessagesGooglePrebuilt.tar.xz"
       PKG_SYS="MessagesGooglePrebuilt"
       ADDON_CORE="CarrierServices.tar.xz"
@@ -7465,42 +4166,15 @@ set_addon_zip_sep() {
       ui_print "- Installing Photos Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.photos" after '# Begin addon properties' "ro.config.photos"
-        # Remove pre-install Photos
-        rm -rf $SYSTEM/app/Photos*
-        rm -rf $SYSTEM/app/photos*
-        rm -rf $SYSTEM/app/Gallery*
-        rm -rf $SYSTEM/priv-app/Photos*
-        rm -rf $SYSTEM/priv-app/photos*
-        rm -rf $SYSTEM/priv-app/Gallery*
-        rm -rf $SYSTEM/product/app/Photos*
-        rm -rf $SYSTEM/product/app/photos*
-        rm -rf $SYSTEM/product/app/Gallery*
-        rm -rf $SYSTEM/product/priv-app/Photos*
-        rm -rf $SYSTEM/product/priv-app/photos*
-        rm -rf $SYSTEM/product/priv-app/Gallery*
-        rm -rf $SYSTEM/system_ext/app/Photos*
-        rm -rf $SYSTEM/system_ext/app/photos*
-        rm -rf $SYSTEM/system_ext/app/Gallery*
-        rm -rf $SYSTEM/system_ext/priv-app/Photos*
-        rm -rf $SYSTEM/system_ext/priv-app/photos*
-        rm -rf $SYSTEM/system_ext/priv-app/Gallery*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Photos* $i/photos* $i/Gallery*
+        done
       fi
       if [ "$supported_module_config" == "true" ]; then
-        # Remove AOSP Gallery
-        mkdir $SYSTEM_SYSTEM/app/Gallery2
-        mkdir $SYSTEM_SYSTEM/priv-app/Gallery2
-        mkdir $SYSTEM_SYSTEM/product/app/Gallery2
-        mkdir $SYSTEM_SYSTEM/product/priv-app/Gallery2
-        mkdir $SYSTEM_SYSTEM/system_ext/app/Gallery2
-        mkdir $SYSTEM_SYSTEM/system_ext/priv-app/Gallery2
-        touch $SYSTEM_SYSTEM/app/Gallery2/.replace
-        touch $SYSTEM_SYSTEM/priv-app/Gallery2/.replace
-        touch $SYSTEM_SYSTEM/product/app/Gallery2/.replace
-        touch $SYSTEM_SYSTEM/product/priv-app/Gallery2/.replace
-        touch $SYSTEM_SYSTEM/system_ext/app/Gallery2/.replace
-        touch $SYSTEM_SYSTEM/system_ext/priv-app/Gallery2/.replace
+        for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+          (mkdir $i/Gallery2 && touch $i/Gallery2/.replace) 2>/dev/null
+        done
       fi
-      # Install
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         ADDON_SYS="PhotosGooglePrebuilt_arm.tar.xz"
         PKG_SYS="PhotosGooglePrebuilt"
@@ -7515,15 +4189,10 @@ set_addon_zip_sep() {
       ui_print "- Installing SoundPicker Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.soundpicker" after '# Begin addon properties' "ro.config.soundpicker"
-        # Remove pre-install SoundPicker
-        rm -rf $SYSTEM/app/SoundPicker*
-        rm -rf $SYSTEM/priv-app/SoundPicker*
-        rm -rf $SYSTEM/product/app/SoundPicker*
-        rm -rf $SYSTEM/product/priv-app/SoundPicker*
-        rm -rf $SYSTEM/system_ext/app/SoundPicker*
-        rm -rf $SYSTEM/system_ext/priv-app/SoundPicker*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/SoundPicker*
+        done
       fi
-      # Install
       ADDON_SYS="SoundPickerPrebuilt.tar.xz"
       PKG_SYS="SoundPickerPrebuilt"
       target_sys
@@ -7532,15 +4201,10 @@ set_addon_zip_sep() {
       ui_print "- Installing TTS Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.tts" after '# Begin addon properties' "ro.config.tts"
-        # Remove pre-install TTS
-        rm -rf $SYSTEM/app/GoogleTTS*
-        rm -rf $SYSTEM/priv-app/GoogleTTS*
-        rm -rf $SYSTEM/product/app/GoogleTTS*
-        rm -rf $SYSTEM/product/priv-app/GoogleTTS*
-        rm -rf $SYSTEM/system_ext/app/GoogleTTS*
-        rm -rf $SYSTEM/system_ext/priv-app/GoogleTTS*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/GoogleTTS*
+        done
       fi
-      # Install
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         ADDON_SYS="GoogleTTSPrebuilt_arm.tar.xz"
         PKG_SYS="GoogleTTSPrebuilt"
@@ -7551,25 +4215,17 @@ set_addon_zip_sep() {
       fi
       target_sys
     fi
-    if [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
+    if [ "$TARGET_VANCED_GOOGLE" == "true" ] && [ "$supported_microg_config" == "true" ]; then
       ui_print "- Installing YouTube Vanced"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.vanced" after '# Begin addon properties' "ro.config.vanced"
-        # Remove pre-install YouTube
-        rm -rf $SYSTEM/app/YouTube*
-        rm -rf $SYSTEM/app/Youtube*
-        rm -rf $SYSTEM/priv-app/YouTube*
-        rm -rf $SYSTEM/priv-app/Youtube*
-        rm -rf $SYSTEM/product/app/YouTube*
-        rm -rf $SYSTEM/product/app/Youtube*
-        rm -rf $SYSTEM/product/priv-app/YouTube*
-        rm -rf $SYSTEM/product/priv-app/Youtube*
-        rm -rf $SYSTEM/system_ext/app/YouTube*
-        rm -rf $SYSTEM/system_ext/app/Youtube*
-        rm -rf $SYSTEM/system_ext/priv-app/YouTube*
-        rm -rf $SYSTEM/system_ext/priv-app/Youtube*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/YouTube* $i/Youtube*
+        done
       fi
-      # Install
+      # Wipe additional YouTube Vanced components
+      rm -rf $SYSTEM_AS_SYSTEM/adb $SYSTEM_AS_SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
+      rm -rf $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         ADDON_SYS="YouTube_arm.tar.xz"
         PKG_SYS="YouTube"
@@ -7586,74 +4242,98 @@ set_addon_zip_sep() {
       ui_print "- Installing Vanced MicroG"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.vancedmicrog" after '# Begin addon properties' "ro.config.vancedmicrog"
-        # Remove pre-install MicroGGMSCore
-        rm -rf $SYSTEM/app/MicroG*
-        rm -rf $SYSTEM/app/microg*
-        rm -rf $SYSTEM/priv-app/MicroG*
-        rm -rf $SYSTEM/priv-app/microg*
-        rm -rf $SYSTEM/product/app/MicroG*
-        rm -rf $SYSTEM/product/app/microg*
-        rm -rf $SYSTEM/product/priv-app/MicroG*
-        rm -rf $SYSTEM/product/priv-app/microg*
-        rm -rf $SYSTEM/system_ext/app/MicroG*
-        rm -rf $SYSTEM/system_ext/app/microg*
-        rm -rf $SYSTEM/system_ext/priv-app/MicroG*
-        rm -rf $SYSTEM/system_ext/priv-app/microg*
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/MicroG* $i/microg*
+        done
       fi
-      # Install
       ADDON_SYS="MicroGGMSCore.tar.xz"
       PKG_SYS="MicroGGMSCore"
       target_sys
     fi
-    if [ "$TARGET_WELLBEING_GOOGLE" == "true" ]; then
-      # Android SDK 28 and above support Google's Wellbeing
-      if [ "$android_sdk" -ge "28" ]; then
-        ui_print "- Installing Wellbeing Google"
-        if [ "$supported_module_config" == "false" ]; then
-          insert_line $SYSTEM/config.prop "ro.config.wellbeing" after '# Begin addon properties' "ro.config.wellbeing"
-          # Remove pre-install Wellbeing
-          rm -rf $SYSTEM/app/Wellbeing*
-          rm -rf $SYSTEM/app/wellbeing*
-          rm -rf $SYSTEM/priv-app/Wellbeing*
-          rm -rf $SYSTEM/priv-app/wellbeing*
-          rm -rf $SYSTEM/product/app/Wellbeing*
-          rm -rf $SYSTEM/product/app/wellbeing*
-          rm -rf $SYSTEM/product/priv-app/Wellbeing*
-          rm -rf $SYSTEM/product/priv-app/wellbeing*
-          rm -rf $SYSTEM/system_ext/app/Wellbeing*
-          rm -rf $SYSTEM/system_ext/app/wellbeing*
-          rm -rf $SYSTEM/system_ext/priv-app/Wellbeing*
-          rm -rf $SYSTEM/system_ext/priv-app/wellbeing*
-        fi
-        # Install
-        ADDON_CORE="WellbeingPrebuilt.tar.xz"
-        PKG_CORE="WellbeingPrebuilt"
-        target_core
+    if [ "$TARGET_VANCED_GOOGLE" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "false" ] && [ "$supported_module_config" == "false" ]; then
+      ui_print "- Installing YouTube Vanced"
+      for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
+        rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
+      done
+      for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+        rm -rf $i/YouTube* $i/Youtube*
+      done
+      # Wipe additional YouTube Vanced components
+      rm -rf $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
+      ADDON_SYS="YouTubeVanced.tar.xz"
+      PKG_SYS="YouTube"
+      target_sys_adb
+      vanced_config
+      ADDON_SYS="YouTubeStock.tar.xz"
+      PKG_SYS="YouTube"
+      target_sys
+      vanced_boot_patch
+    fi
+    if [ "$TARGET_VANCED_GOOGLE" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "false" ] && [ "$supported_module_config" == "true" ]; then
+      ui_print "! Cannot install YouTube Vanced"
+    fi
+    if [ "$TARGET_VANCED_GOOGLE" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "true" ] && [ "$supported_module_config" == "false" ]; then
+      ui_print "- Installing YouTube Vanced"
+      for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
+        rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
+      done
+      for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+        rm -rf $i/YouTube* $i/Youtube*
+      done
+      # Wipe additional YouTube Vanced components
+      rm -rf $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
+      # Temporarily enable systemless feature for magisk detection
+      supported_module_config="true"
+      # Check magisk
+      require_new_magisk
+      # Disable systemless feature
+      supported_module_config="false"
+      ADDON_SYS="YouTubeVanced.tar.xz"
+      PKG_SYS="YouTube"
+      target_sys_data
+      mv -f $ANDROID_DATA/adb/$PKG_SYS $ANDROID_DATA/adb/YouTubeVanced
+      mv -f $ANDROID_DATA/adb/YouTubeVanced/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeVanced/base.apk
+      ADDON_SYS="YouTubeStock.tar.xz"
+      PKG_SYS="YouTube"
+      target_sys_data
+      mv -f $ANDROID_DATA/adb/$PKG_SYS $ANDROID_DATA/adb/YouTubeStock && rm -rf $ANDROID_DATA/adb/YouTubeStock/lib
+      mv -f $ANDROID_DATA/adb/YouTubeStock/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeStock/base.apk
+      vanced_config
+    fi
+    if [ "$TARGET_VANCED_GOOGLE" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "true" ] && [ "$supported_module_config" == "true" ]; then
+      ui_print "! Cannot install YouTube Vanced"
+    fi
+    if [ "$TARGET_WELLBEING_GOOGLE" == "true" ] && [ "$android_sdk" -ge "28" ]; then
+      ui_print "- Installing Wellbeing Google"
+      if [ "$supported_module_config" == "false" ]; then
+        insert_line $SYSTEM/config.prop "ro.config.wellbeing" after '# Begin addon properties' "ro.config.wellbeing"
+        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+          rm -rf $i/Wellbeing* $i/wellbeing*
+        done
       fi
+      ADDON_CORE="WellbeingPrebuilt.tar.xz"
+      PKG_CORE="WellbeingPrebuilt"
+      target_core
+    fi
+    if [ "$TARGET_WELLBEING_GOOGLE" == "true" ] && [ "$android_sdk" -lt "28" ]; then
+      ui_print "! Cannot install Wellbeing Google"
     fi
   fi
 }
 
-# Set addon package installation
 set_addon_install() {
   if [ "$ADDON" == "conf" ]; then
-    if [ "$addon_config" == "true" ] && [ "$addon_wipe" == "false" ]; then pre_installed_pkg; set_addon_zip_conf; fi
+    if [ "$addon_config" == "true" ] && [ "$addon_wipe" == "false" ]; then pre_installed_pkg; on_microg_check; set_addon_zip_conf; fi
     if [ "$addon_config" == "true" ] && [ "$addon_wipe" == "true" ]; then check_backup; pre_restore_pkg; post_restore_pkg; fi
     if [ "$addon_config" == "false" ]; then on_abort "! Skip installing additional packages"; fi
   fi
-  if [ "$ADDON" == "sep" ] && [ "$addon_wipe" == "false" ]; then set_addon_zip_sep; fi
+  if [ "$ADDON" == "sep" ] && [ "$addon_wipe" == "false" ]; then on_microg_check; set_addon_zip_sep; fi
   if [ "$ADDON" == "sep" ] && [ "$addon_wipe" == "true" ]; then check_backup; pre_restore_pkg; post_restore_pkg; fi
 }
 
-# Set addon package installation
 addon_ota_prop() { [ "$supported_module_config" == "false" ] && insert_line $SYSTEM/config.prop "ro.addon.enabled=true" after '# Begin build properties' "ro.addon.enabled=true"; }
 
-# Install config dependent packages
-on_addon_install() {
-  print_title_addon
-  set_addon_install
-  addon_ota_prop
-}
+on_addon_install() { print_title_addon; set_addon_install; addon_ota_prop; }
 
 # Delete existing GMS Doze entry from Android 7.1+
 opt_v25() {
@@ -7717,7 +4397,7 @@ purge_whitelist_permission() {
       rm -rf $TMP/default.prop
     fi
   fi
-  if [ "$device_vendorpartition" == "true" ]; then
+  if [ "$device_vendorpartition" == "true" ] && [ "$vendor_as_rw" == "rw" ]; then
     if [ -n "$(cat $VENDOR/build.prop | grep control_privapp_permissions)" ]; then
       grep -v "ro.control_privapp_permissions" $VENDOR/build.prop > $TMP/build.prop
       rm -rf $VENDOR/build.prop
@@ -7725,7 +4405,7 @@ purge_whitelist_permission() {
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/build.prop
     fi
-    if [ -n "$(cat $VENDOR/default.prop | grep control_privapp_permissions)" ]; then
+    if [ -f "$VENDOR/default.prop" ] && [ -n "$(cat $VENDOR/default.prop | grep control_privapp_permissions)" ]; then
       grep -v "ro.control_privapp_permissions" $VENDOR/default.prop > $TMP/default.prop
       rm -rf $VENDOR/default.prop
       cp -f $TMP/default.prop $VENDOR/default.prop
@@ -7756,87 +4436,64 @@ purge_whitelist_permission() {
   fi
 }
 
+whitelist_vendor_overlay() {
+  if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; then
+    # Set vndk version
+    [ "$android_sdk" == "30" ] && VNDK="30"
+    [ "$android_sdk" == "31" ] && VNDK="31"
+    # Create vendor overlay
+    mkdir -p $SYSTEM_AS_SYSTEM/vendor_overlay/${VNDK}
+    chmod -R 0755 $SYSTEM_AS_SYSTEM/vendor_overlay/${VNDK}
+    chcon -hR u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/vendor_overlay/${VNDK}"
+    # Override default permission
+    if [ "$device_vendorpartition" == "true" ] && [ -n "$(cat $VENDOR/build.prop | grep control_privapp_permissions)" ]; then
+      grep -v "ro.control_privapp_permissions" $VENDOR/build.prop > $TMP/build.prop
+      cp -f $TMP/build.prop $SYSTEM_AS_SYSTEM/vendor_overlay/${VNDK}/build.prop
+      chmod 0644 $SYSTEM_AS_SYSTEM/vendor_overlay/${VNDK}/build.prop
+      chcon -h u:object_r:vendor_file:s0 "$SYSTEM_AS_SYSTEM/vendor_overlay/${VNDK}/build.prop"
+      rm -rf $TMP/build.prop
+    fi
+  fi
+}
+
 # Add Whitelist property with flag disable
 set_whitelist_permission() { insert_line $SYSTEM_AS_SYSTEM/build.prop "ro.control_privapp_permissions=disable" after 'net.bt.name=Android' 'ro.control_privapp_permissions=disable'; }
 
 # Apply Privileged permission patch
-whitelist_patch() {
-  purge_whitelist_permission
-  set_whitelist_permission
-}
+whitelist_patch() { purge_whitelist_permission; whitelist_vendor_overlay; set_whitelist_permission; }
 
 # API fixes
 sdk_fix() {
   if [ "$android_sdk" -ge "26" ]; then # Android 8.0+ uses 0600 for its permission on build.prop
-    chmod 0600 $SYSTEM_AS_SYSTEM/build.prop
-    if [ -f "$SYSTEM_AS_SYSTEM/config.prop" ]; then
-      chmod 0600 $SYSTEM_AS_SYSTEM/config.prop
-    fi
-    if [ -f "$SYSTEM_AS_SYSTEM/etc/prop.default" ]; then
-      chmod 0600 $SYSTEM_AS_SYSTEM/etc/prop.default
-    fi
-    if [ -f "$SYSTEM_AS_SYSTEM/product/build.prop" ]; then
-      chmod 0600 $SYSTEM_AS_SYSTEM/product/build.prop
-    fi
-    if [ -f "$SYSTEM_AS_SYSTEM/system_ext/build.prop" ]; then
-      chmod 0600 $SYSTEM_AS_SYSTEM/system_ext/build.prop
-    fi
-    if [ -f "$SYSTEM_AS_SYSTEM/vendor/build.prop" ]; then
-      chmod 0600 $SYSTEM_AS_SYSTEM/vendor/build.prop
-    fi
-    if [ -f "$SYSTEM_AS_SYSTEM/vendor/default.prop" ]; then
-      chmod 0600 $SYSTEM_AS_SYSTEM/vendor/default.prop
-    fi
-    if [ "$device_vendorpartition" = "true" ]; then
-      chmod 0600 $VENDOR/build.prop
-      chmod 0600 $VENDOR/default.prop
-      if [ -f "$VENDOR/odm/etc/build.prop" ]; then
-        chmod 0600 $VENDOR/odm/etc/build.prop
-      fi
-      if [ -f "$VENDOR/odm_dlkm/etc/build.prop" ]; then
-        chmod 0600 $VENDOR/odm_dlkm/etc/build.prop
-      fi
-      if [ -f "$VENDOR/vendor_dlkm/etc/build.prop" ]; then
-        chmod 0600 $VENDOR/vendor_dlkm/etc/build.prop
-      fi
-    fi
+    (chmod 0600 $SYSTEM_AS_SYSTEM/build.prop
+     chmod 0600 $SYSTEM_AS_SYSTEM/config.prop
+     chmod 0600 $SYSTEM_AS_SYSTEM/etc/prop.default
+     chmod 0600 $SYSTEM_AS_SYSTEM/product/build.prop
+     chmod 0600 $SYSTEM_AS_SYSTEM/system_ext/build.prop
+     chmod 0600 $SYSTEM_AS_SYSTEM/vendor/build.prop
+     chmod 0600 $SYSTEM_AS_SYSTEM/vendor/default.prop
+     chmod 0600 $VENDOR/build.prop
+     chmod 0600 $VENDOR/default.prop
+     chmod 0600 $VENDOR/odm/etc/build.prop
+     chmod 0600 $VENDOR/odm_dlkm/etc/build.prop
+     chmod 0600 $VENDOR/vendor_dlkm/etc/build.prop) 2>/dev/null
   fi
 }
 
 # SELinux security context
 selinux_fix() {
-  chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/build.prop"
-  if [ -f "$SYSTEM_AS_SYSTEM/config.prop" ]; then
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/config.prop"
-  fi
-  if [ -f "$SYSTEM_AS_SYSTEM/etc/prop.default" ]; then
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/etc/prop.default"
-  fi
-  if [ -f "$SYSTEM_AS_SYSTEM/product/build.prop" ]; then
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/product/build.prop"
-  fi
-  if [ -f "$SYSTEM_AS_SYSTEM/system_ext/build.prop" ]; then
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/system_ext/build.prop"
-  fi
-  if [ -f "$SYSTEM_AS_SYSTEM/vendor/build.prop" ]; then
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/vendor/build.prop"
-  fi
-  if [ -f "$SYSTEM_AS_SYSTEM/vendor/default.prop" ]; then
-    chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/vendor/default.prop"
-  fi
-  if [ "$device_vendorpartition" == "true" ]; then
-    chcon -h u:object_r:vendor_file:s0 "$VENDOR/build.prop"
-    chcon -h u:object_r:vendor_file:s0 "$VENDOR/default.prop"
-    if [ -f "$VENDOR/odm/etc/build.prop" ]; then
-      chcon -h u:object_r:vendor_configs_file:s0 "$VENDOR/odm/etc/build.prop"
-    fi
-    if [ -f "$VENDOR/odm_dlkm/etc/build.prop" ]; then
-      chcon -h u:object_r:vendor_configs_file:s0 "$VENDOR/odm_dlkm/etc/build.prop"
-    fi
-    if [ -f "$VENDOR/vendor_dlkm/etc/build.prop" ]; then
-      chcon -h u:object_r:vendor_configs_file:s0 "$VENDOR/vendor_dlkm/etc/build.prop"
-    fi
-  fi
+  (chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/build.prop"
+   chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/config.prop"
+   chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/etc/prop.default"
+   chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/product/build.prop"
+   chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/system_ext/build.prop"
+   chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/vendor/build.prop"
+   chcon -h u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/vendor/default.prop"
+   chcon -h u:object_r:vendor_file:s0 "$VENDOR/build.prop"
+   chcon -h u:object_r:vendor_file:s0 "$VENDOR/default.prop"
+   chcon -h u:object_r:vendor_configs_file:s0 "$VENDOR/odm/etc/build.prop"
+   chcon -h u:object_r:vendor_configs_file:s0 "$VENDOR/odm_dlkm/etc/build.prop"
+   chcon -h u:object_r:vendor_configs_file:s0 "$VENDOR/vendor_dlkm/etc/build.prop") 2>/dev/null
 }
 
 set_wipe_config() {
@@ -7875,6 +4532,7 @@ product_uninstall() {
   SYSTEM_ETC_PERM="$SYSTEM/product/etc/permissions"
   SYSTEM_ETC_PREF="$SYSTEM/product/etc/preferred-apps"
   SYSTEM_FRAMEWORK="$SYSTEM/product/framework"
+  SYSTEM_OVERLAY="$SYSTEM/product/overlay"
 }
 
 system_uninstall() {
@@ -7886,146 +4544,52 @@ system_uninstall() {
   SYSTEM_ETC_PERM="$SYSTEM/etc/permissions"
   SYSTEM_ETC_PREF="$SYSTEM/etc/preferred-apps"
   SYSTEM_FRAMEWORK="$SYSTEM/framework"
+  SYSTEM_OVERLAY="$SYSTEM/overlay"
 }
 
 post_install_wipe() {
-  # Wipe temporary data
-  rm -rf $ANDROID_DATA/app/com.android.vending*
-  rm -rf $ANDROID_DATA/app/com.google.android*
-  rm -rf $ANDROID_DATA/app/*/com.android.vending*
-  rm -rf $ANDROID_DATA/app/*/com.google.android*
-  rm -rf $ANDROID_DATA/data/com.android.vending*
-  rm -rf $ANDROID_DATA/data/com.google.android*
-  # Wipe BiTGApps components
-  rm -rf $SYSTEM_APP/FaceLock
-  rm -rf $SYSTEM_APP/GoogleCalendarSyncAdapter
-  rm -rf $SYSTEM_APP/GoogleContactsSyncAdapter
-  rm -rf $SYSTEM_APP/GoogleExtShared
-  rm -rf $SYSTEM_PRIV_APP/ConfigUpdater
-  rm -rf $SYSTEM_PRIV_APP/GmsCoreSetupPrebuilt
-  rm -rf $SYSTEM_PRIV_APP/GoogleExtServices
-  rm -rf $SYSTEM_PRIV_APP/GoogleLoginService
-  rm -rf $SYSTEM_PRIV_APP/GoogleServicesFramework
-  rm -rf $SYSTEM_PRIV_APP/Phonesky
-  rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCore
-  rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCorePix
-  rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCorePi
-  rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreQt
-  rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreRvc
-  rm -rf $SYSTEM_PRIV_APP/PrebuiltGmsCoreSvc
-  rm -rf $SYSTEM_FRAMEWORK/com.google.android.dialer.support.jar
-  rm -rf $SYSTEM_FRAMEWORK/com.google.android.maps.jar
-  rm -rf $SYSTEM_ETC_CONFIG/com.google.android.apps.nexuslauncher.xml
-  rm -rf $SYSTEM_ETC_CONFIG/google.xml
-  rm -rf $SYSTEM_ETC_CONFIG/google_build.xml
-  rm -rf $SYSTEM_ETC_CONFIG/google_exclusives_enable.xml
-  rm -rf $SYSTEM_ETC_CONFIG/google-hiddenapi-package-whitelist.xml
-  rm -rf $SYSTEM_ETC_CONFIG/google-rollback-package-whitelist.xml
-  rm -rf $SYSTEM_ETC_CONFIG/google-staged-installer-whitelist.xml
-  rm -rf $SYSTEM_ETC_DEFAULT/default-permissions.xml
-  rm -rf $SYSTEM_ETC_PERM/com.google.android.as.xml
-  rm -rf $SYSTEM_ETC_PERM/com.google.android.apps.nexuslauncher.xml
-  rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.framework.xml
-  rm -rf $SYSTEM_ETC_PERM/com.google.android.dialer.support.xml
-  rm -rf $SYSTEM_ETC_PERM/com.google.android.maps.xml
-  rm -rf $SYSTEM_ETC_PERM/privapp-permissions-atv.xml
-  rm -rf $SYSTEM_ETC_PERM/privapp-permissions-google.xml
-  rm -rf $SYSTEM_ETC_PERM/split-permissions-google.xml
-  rm -rf $SYSTEM_ETC_PREF/google.xml
-  rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay
-  rm -rf $SYSTEM_OVERLAY/NexusLauncherOverlay
-  rm -rf $SYSTEM_OVERLAY/DPSOverlay
-  rm -rf $SYSTEM_ADDOND/bitgapps.sh
-  rm -rf $SYSTEM_ADDOND/backup.sh
-  rm -rf $SYSTEM_ADDOND/restore.sh
-  rm -rf $SYSTEM/etc/g.prop
-  rm -rf $SYSTEM/etc/firmware/music_detector.descriptor
-  rm -rf $SYSTEM/etc/firmware/music_detector.sound_model
-  rm -rf $SYSTEM/config.prop
-  # Wipe Additional packages
-  rm -rf $SYSTEM_APP/BromitePrebuilt
-  rm -rf $SYSTEM_APP/CalculatorGooglePrebuilt
-  rm -rf $SYSTEM_APP/CalendarGooglePrebuilt
-  rm -rf $SYSTEM_APP/ChromeGooglePrebuilt
-  rm -rf $SYSTEM_APP/DeskClockGooglePrebuilt
-  rm -rf $SYSTEM_APP/GboardGooglePrebuilt
-  rm -rf $SYSTEM_APP/GoogleTTSPrebuilt
-  rm -rf $SYSTEM_APP/MapsGooglePrebuilt
-  rm -rf $SYSTEM_APP/MarkupGooglePrebuilt
-  rm -rf $SYSTEM_APP/MessagesGooglePrebuilt
-  rm -rf $SYSTEM_APP/MicroGGMSCore
-  rm -rf $SYSTEM_APP/PhotosGooglePrebuilt
-  rm -rf $SYSTEM_APP/SoundPickerPrebuilt
-  rm -rf $SYSTEM_APP/TrichromeLibrary
-  rm -rf $SYSTEM_APP/WebViewBromite
-  rm -rf $SYSTEM_APP/WebViewGoogle
-  rm -rf $SYSTEM_APP/YouTube
-  rm -rf $SYSTEM_PRIV_APP/CarrierServices
-  rm -rf $SYSTEM_PRIV_APP/ContactsGooglePrebuilt
-  rm -rf $SYSTEM_PRIV_APP/DialerGooglePrebuilt
-  rm -rf $SYSTEM_PRIV_APP/DPSGooglePrebuilt
-  rm -rf $SYSTEM_PRIV_APP/GearheadGooglePrebuilt
-  rm -rf $SYSTEM_PRIV_APP/NexusLauncherPrebuilt
-  rm -rf $SYSTEM_PRIV_APP/NexusQuickAccessWallet
-  rm -rf $SYSTEM_PRIV_APP/Velvet
-  rm -rf $SYSTEM_PRIV_APP/WellbeingPrebuilt
-  # Non Additional packages and configs
-  rm -rf $SYSTEM_APP/Exactcalculator
-  rm -rf $SYSTEM_APP/Calendar
-  rm -rf $SYSTEM_APP/Etar
-  rm -rf $SYSTEM_APP/DeskClock
-  rm -rf $SYSTEM_APP/Gallery2
-  rm -rf $SYSTEM_APP/Jelly
-  rm -rf $SYSTEM_APP/LatinIME
-  rm -rf $SYSTEM_APP/webview
-  rm -rf $SYSTEM_PRIV_APP/Launcher3
-  rm -rf $SYSTEM_PRIV_APP/Launcher3QuickStep
-  rm -rf $SYSTEM_PRIV_APP/NexusLauncherRelease
-  rm -rf $SYSTEM_PRIV_APP/QuickAccessWallet
-  rm -rf $SYSTEM_PRIV_APP/QuickStep
-  rm -rf $SYSTEM_PRIV_APP/QuickStepLauncher
-  rm -rf $SYSTEM_PRIV_APP/TrebuchetQuickStep
-  for f in $SYSTEM/etc/permissions \
-           $SYSTEM/product/etc/permissions \
-           $SYSTEM/system_ext/etc/permissions
-  do
-    rm -rf $f/com.android.launcher3.xml
-    rm -rf $f/privapp_whitelist_com.android.launcher3-ext.xml
+  for i in \
+    $ANDROID_DATA/app/com.android.vending* \
+    $ANDROID_DATA/app/com.google.android* \
+    $ANDROID_DATA/app/*/com.android.vending* \
+    $ANDROID_DATA/app/*/com.google.android* \
+    $ANDROID_DATA/data/com.android.vending* \
+    $ANDROID_DATA/data/com.google.android*; do
+    rm -rf $i
   done
-  # SetupWizard components and library
-  rm -rf $SYSTEM_PRIV_APP/AndroidMigratePrebuilt
-  rm -rf $SYSTEM_PRIV_APP/GoogleBackupTransport
-  rm -rf $SYSTEM_PRIV_APP/GoogleOneTimeInitializer
-  rm -rf $SYSTEM_PRIV_APP/GoogleRestore
-  rm -rf $SYSTEM_PRIV_APP/SetupWizardPrebuilt
-  # Non SetupWizard components and configs
-  rm -rf $SYSTEM_PRIV_APP/OneTimeInitializer
-  rm -rf $SYSTEM_PRIV_APP/ManagedProvisioning
-  rm -rf $SYSTEM_PRIV_APP/Provision
-  rm -rf $SYSTEM_PRIV_APP/LineageSetupWizard
-  for f in $SYSTEM/etc/permissions \
-           $SYSTEM/product/etc/permissions \
-           $SYSTEM/system_ext/etc/permissions
-  do
-    rm -rf $f/com.android.managedprovisioning.xml
-    rm -rf $f/com.android.provision.xml
+  for i in \
+    FaceLock GoogleCalendarSyncAdapter GoogleContactsSyncAdapter GoogleExtShared ConfigUpdater \
+    GmsCoreSetupPrebuilt GoogleExtServices GoogleLoginService GoogleServicesFramework Phonesky \
+    PrebuiltGmsCore PrebuiltGmsCorePix PrebuiltGmsCorePi PrebuiltGmsCoreQt PrebuiltGmsCoreRvc \
+    PrebuiltGmsCoreSvc BromitePrebuilt CalculatorGooglePrebuilt CalendarGooglePrebuilt \
+    ChromeGooglePrebuilt DeskClockGooglePrebuilt GboardGooglePrebuilt GoogleTTSPrebuilt \
+    MapsGooglePrebuilt MarkupGooglePrebuilt MessagesGooglePrebuilt MicroGGMSCore PhotosGooglePrebuilt \
+    SoundPickerPrebuilt TrichromeLibrary WebViewBromite WebViewGoogle YouTube CarrierServices \
+    ContactsGooglePrebuilt DialerGooglePrebuilt DPSGooglePrebuilt GearheadGooglePrebuilt \
+    NexusLauncherPrebuilt NexusQuickAccessWallet Velvet WellbeingPrebuilt Exactcalculator \
+    Calendar Etar DeskClock Gallery2 Jelly LatinIME webview Launcher3 Launcher3QuickStep \
+    NexusLauncherRelease QuickAccessWallet QuickStep QuickStepLauncher TrebuchetQuickStep \
+    AndroidMigratePrebuilt GoogleBackupTransport GoogleOneTimeInitializer GoogleRestore \
+    SetupWizardPrebuilt OneTimeInitializer ManagedProvisioning Provision LineageSetupWizard \
+    messaging Contacts Dialer; do
+    rm -rf $SYSTEM_APP/$i $SYSTEM_PRIV_APP/$i
   done
-  # AOSP APKs and configs
-  rm -rf $SYSTEM_APP/messaging
-  rm -rf $SYSTEM_PRIV_APP/Contacts
-  rm -rf $SYSTEM_PRIV_APP/Dialer
-  for f in $SYSTEM/etc/permissions \
-           $SYSTEM/product/etc/permissions \
-           $SYSTEM/system_ext/etc/permissions
-  do
-    rm -rf $f/com.android.contacts.xml
-    rm -rf $f/com.android.dialer.xml
+  for i in \
+    google.xml google_build.xml google_exclusives_enable.xml google-hiddenapi-package-whitelist.xml \
+    google-rollback-package-whitelist.xml google-staged-installer-whitelist.xml default-permissions.xml \
+    com.google.android.as.xml com.google.android.apps.nexuslauncher.xml com.google.android.dialer.framework.xml \
+    com.google.android.dialer.support.xml com.google.android.maps.xml privapp-permissions-atv.xml \
+    privapp-permissions-google.xml split-permissions-google.xml com.google.android.apps.nexuslauncher.xml \
+    com.android.launcher3.xml privapp_whitelist_com.android.launcher3-ext.xml com.android.managedprovisioning.xml \
+    com.android.provision.xml com.android.contacts.xml com.android.dialer.xml; do
+    rm -rf $SYSTEM_ETC_CONFIG/$i $SYSTEM_ETC_DEFAULT/$i $SYSTEM_ETC_PERM/$i $SYSTEM_ETC_PREF/$i
   done
-  # Wipe Gboard components
-  for f in $SYSTEM/usr $SYSTEM/product/usr $SYSTEM/system_ext/usr
-  do
-    rm -rf $f/share/ime
-    rm -rf $f/srec
+  rm -rf $SYSTEM_FRAMEWORK/com.google.android.dialer.support.jar $SYSTEM_FRAMEWORK/com.google.android.maps.jar
+  rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay $SYSTEM_OVERLAY/NexusLauncherOverlay $SYSTEM_OVERLAY/DPSOverlay
+  rm -rf $SYSTEM_ADDOND/bitgapps.sh $SYSTEM_ADDOND/backup.sh $SYSTEM_ADDOND/restore.sh
+  rm -rf $SYSTEM/etc/firmware/music_detector.descriptor $SYSTEM/etc/firmware/music_detector.sound_model $SYSTEM/etc/g.prop $SYSTEM/config.prop
+  for f in $SYSTEM/usr $SYSTEM/product/usr $SYSTEM/system_ext/usr; do
+    rm -rf $f/share/ime $f/srec
   done
   # Remove properties from system build
   remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
@@ -8036,16 +4600,16 @@ post_install_wipe() {
 post_backup() {
   if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$supported_module_config" == "false" ]; then
     ui_print "- Backup Non-GApps components"
-    for f in $SYSTEM/app \
-             $SYSTEM/priv-app \
-             $SYSTEM/product/app \
-             $SYSTEM/product/priv-app \
-             $SYSTEM/system_ext/app \
-             $SYSTEM/system_ext/priv-app \
-             $SYSTEM/etc/permissions \
-             $SYSTEM/product/etc/permissions \
-             $SYSTEM/system_ext/etc/permissions
-    do
+    for f in \
+      $SYSTEM/app \
+      $SYSTEM/priv-app \
+      $SYSTEM/product/app \
+      $SYSTEM/product/priv-app \
+      $SYSTEM/system_ext/app \
+      $SYSTEM/system_ext/priv-app \
+      $SYSTEM/etc/permissions \
+      $SYSTEM/product/etc/permissions \
+      $SYSTEM/system_ext/etc/permissions; do
       test -d $ANDROID_DATA/.backup || mkdir -p $ANDROID_DATA/.backup
       chmod 0755 $ANDROID_DATA/.backup
       # Add previous backup detection
@@ -8087,7 +4651,7 @@ post_backup() {
       fi
     done
     # Create dummy file outside of loop function
-    touch $ANDROID_DATA/.backup/.backup
+    touch $ANDROID_DATA/.backup/.backup && chmod 0644 $ANDROID_DATA/.backup/.backup
   fi
   if [ "$TARGET_RWG_STATUS" == "true" ]; then ui_print "! RWG device detected"; fi
 }
@@ -8161,17 +4725,19 @@ post_uninstall() {
   if [ "$ZIPTYPE" == "basic" ] && [ "$supported_module_config" == "true" ] && [ "$wipe_config" == "true" ]; then
     print_title_wipe
     # Wipe temporary data
-    rm -rf $ANDROID_DATA/app/com.android.vending*
-    rm -rf $ANDROID_DATA/app/com.google.android*
-    rm -rf $ANDROID_DATA/app/*/com.android.vending*
-    rm -rf $ANDROID_DATA/app/*/com.google.android*
-    rm -rf $ANDROID_DATA/data/com.android.vending*
-    rm -rf $ANDROID_DATA/data/com.google.android*
+    for i in \
+      $ANDROID_DATA/app/com.android.vending* \
+      $ANDROID_DATA/app/com.google.android* \
+      $ANDROID_DATA/app/*/com.android.vending* \
+      $ANDROID_DATA/app/*/com.google.android* \
+      $ANDROID_DATA/data/com.android.vending* \
+      $ANDROID_DATA/data/com.google.android*; do
+      rm -rf $i
+    done
     # Wipe module
     rm -rf $ANDROID_DATA/adb/modules/BiTGApps
     # Wipe GooglePlayServices from system
-    for gms in $SYSTEM/priv-app $SYSTEM/product/priv-app $SYSTEM/system_ext/priv-app
-    do
+    for gms in $SYSTEM/priv-app $SYSTEM/product/priv-app $SYSTEM/system_ext/priv-app; do
       rm -rf $gms/PrebuiltGmsCore*
     done
     # Remove properties from system build
@@ -8187,6 +4753,15 @@ boot_image_editor() {
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   tar -xf $ZIP_FILE/AIK.tar.xz -C $TMP_AIK
   chmod -R 0755 $TMP_AIK
+}
+
+sign_chromeos() {
+  echo > empty
+  ./chromeos/futility vbutil_kernel --pack mboot.img.signed \
+  --keyblock ./chromeos/kernel.keyblock --signprivate ./chromeos/kernel_data_key.vbprivk \
+  --version 1 --vmlinuz mboot.img --config empty --arch arm --bootloader empty --flags 0x1
+  rm -f empty mboot.img
+  mv mboot.img.signed mboot.img
 }
 
 # Bootlog function, trigger at 'on fs' stage
@@ -8221,31 +4796,9 @@ patch_bootimg() {
       continue
       ;;
   esac
-  # Device Tree Patches
-  for dt in dtb kernel_dtb extra; do
-    [ -f $dt ] && ./magiskboot dtb $dt patch
-  done
-  # Binary Patches
-  if [ -f kernel ]; then
-   # Remove Samsung RKP
-   ./magiskboot hexpatch kernel \
-   49010054011440B93FA00F71E9000054010840B93FA00F7189000054001840B91FA00F7188010054 \
-   A1020054011440B93FA00F7140020054010840B93FA00F71E0010054001840B91FA00F7181010054
-
-   # Remove Samsung defex
-   # Before: [mov w2, #-221]   (-__NR_execve)
-   # After:  [mov w2, #-32768]
-   ./magiskboot hexpatch kernel 821B8012 E2FF8F12
-
-   # Force kernel to load rootfs
-   # skip_initramfs -> want_initramfs
-   ./magiskboot hexpatch kernel \
-   736B69705F696E697472616D667300 \
-   77616E745F696E697472616D667300
-  fi
   if [ -f "header" ]; then
     # Change selinux state to permissive, without this bootlog script failed to execute
-    sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
+    sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
   if [ -f "ramdisk.cpio" ]; then
     mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk
@@ -8268,37 +4821,21 @@ patch_bootimg() {
     # Checkout ramdisk path
     cd ../
     ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
-    if [ "$CHROMEOS" == "true" ]; then
-      echo > empty
-      ./chromeos/futility vbutil_kernel --pack mboot.img.signed \
-      --keyblock ./chromeos/kernel.keyblock --signprivate ./chromeos/kernel_data_key.vbprivk \
-      --version 1 --vmlinuz mboot.img --config empty --arch arm --bootloader empty --flags 0x1
-      rm -f empty mboot.img
-      mv mboot.img.signed mboot.img
-    fi
+    # Sign ChromeOS boot image
+    [ "$CHROMEOS" == "true" ] && sign_chromeos
     dd if="mboot.img" of="$block" > /dev/null 2>&1
     # Wipe boot dump
-    rm -rf boot.img
-    rm -rf mboot.img
-    rm -rf ramdisk
+    rm -rf boot.img mboot.img ramdisk
     ./magiskboot cleanup > /dev/null 2>&1
     cd ../../..
   fi
   if [ ! -f "ramdisk/init.rc" ]; then
     ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
     # Sign ChromeOS boot image
-    if [ "$CHROMEOS" == "true" ]; then
-      echo > empty
-      ./chromeos/futility vbutil_kernel --pack mboot.img.signed \
-      --keyblock ./chromeos/kernel.keyblock --signprivate ./chromeos/kernel_data_key.vbprivk \
-      --version 1 --vmlinuz mboot.img --config empty --arch arm --bootloader empty --flags 0x1
-      rm -f empty mboot.img
-      mv mboot.img.signed mboot.img
-    fi
+    [ "$CHROMEOS" == "true" ] && sign_chromeos
     dd if="mboot.img" of="$block" > /dev/null 2>&1
     # Wipe boot dump
-    rm -rf boot.img
-    rm -rf mboot.img
+    rm -rf boot.img mboot.img
     ./magiskboot cleanup > /dev/null 2>&1
     cd ../../..
   fi
@@ -8365,43 +4902,13 @@ spl_update_boot() {
       continue
       ;;
   esac
-  # Device Tree Patches
-  for dt in dtb kernel_dtb extra; do
-    [ -f $dt ] && ./magiskboot dtb $dt patch
-  done
-  # Binary Patches
-  if [ -f kernel ]; then
-   # Remove Samsung RKP
-   ./magiskboot hexpatch kernel \
-   49010054011440B93FA00F71E9000054010840B93FA00F7189000054001840B91FA00F7188010054 \
-   A1020054011440B93FA00F7140020054010840B93FA00F71E0010054001840B91FA00F7181010054
-
-   # Remove Samsung defex
-   # Before: [mov w2, #-221]   (-__NR_execve)
-   # After:  [mov w2, #-32768]
-   ./magiskboot hexpatch kernel 821B8012 E2FF8F12
-
-   # Force kernel to load rootfs
-   # skip_initramfs -> want_initramfs
-   ./magiskboot hexpatch kernel \
-   736B69705F696E697472616D667300 \
-   77616E745F696E697472616D667300
-  fi
   if [ -f "header" ]; then
-    sed -i '/os_patch_level/c\os_patch_level=2021-07' header
+    sed -i '/os_patch_level/c\os_patch_level=2021-08' header
     ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
     # Sign ChromeOS boot image
-    if [ "$CHROMEOS" == "true" ]; then
-      echo > empty
-      ./chromeos/futility vbutil_kernel --pack mboot.img.signed \
-      --keyblock ./chromeos/kernel.keyblock --signprivate ./chromeos/kernel_data_key.vbprivk \
-      --version 1 --vmlinuz mboot.img --config empty --arch arm --bootloader empty --flags 0x1
-      rm -f empty mboot.img
-      mv mboot.img.signed mboot.img
-    fi
+    [ "$CHROMEOS" == "true" ] && sign_chromeos
     dd if="mboot.img" of="$block" > /dev/null 2>&1
-    rm -rf boot.img
-    rm -rf mboot.img
+    rm -rf boot.img mboot.img
     ./magiskboot cleanup > /dev/null 2>&1
     cd ../../..
     export TARGET_SPLIT_IMAGE="true"
@@ -8416,74 +4923,74 @@ spl_update_boot() {
 # Apply safetynet patch on system/vendor build
 set_cts_patch() {
   # Ext Build fingerprint
-  if [ -n "$(cat $SYSTEM/build.prop | grep ro.system.build.fingerprint)" ]; then
+  if [ -n "$(cat $SYSTEM_AS_SYSTEM/build.prop | grep ro.system.build.fingerprint)" ]; then
     CTS_DEFAULT_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint="
-    grep -v "$CTS_DEFAULT_SYSTEM_EXT_BUILD_FINGERPRINT" $SYSTEM/build.prop > $TMP/system.prop
-    rm -rf $SYSTEM/build.prop
-    cp -f $TMP/system.prop $SYSTEM/build.prop
-    chmod 0644 $SYSTEM/build.prop
+    grep -v "$CTS_DEFAULT_SYSTEM_EXT_BUILD_FINGERPRINT" $SYSTEM_AS_SYSTEM/build.prop > $TMP/system.prop
+    rm -rf $SYSTEM_AS_SYSTEM/build.prop
+    cp -f $TMP/system.prop $SYSTEM_AS_SYSTEM/build.prop
+    chmod 0644 $SYSTEM_AS_SYSTEM/build.prop
     rm -rf $TMP/system.prop
-    CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/redfin/redfin:11/RQ3A.210705.001/7380771:user/release-keys"
-    insert_line $SYSTEM/build.prop "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT" after 'ro.system.build.date.utc=' "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT"
+    CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/redfin/redfin:11/RQ3A.210805.001.A1/7474174:user/release-keys"
+    insert_line $SYSTEM_AS_SYSTEM/build.prop "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT" after 'ro.system.build.date.utc=' "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT"
   fi
   # Build fingerprint
-  if [ -n "$(cat $SYSTEM/build.prop | grep ro.build.fingerprint)" ]; then
+  if [ -n "$(cat $SYSTEM_AS_SYSTEM/build.prop | grep ro.build.fingerprint)" ]; then
     CTS_DEFAULT_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint="
-    grep -v "$CTS_DEFAULT_SYSTEM_BUILD_FINGERPRINT" $SYSTEM/build.prop > $TMP/system.prop
-    rm -rf $SYSTEM/build.prop
-    cp -f $TMP/system.prop $SYSTEM/build.prop
-    chmod 0644 $SYSTEM/build.prop
+    grep -v "$CTS_DEFAULT_SYSTEM_BUILD_FINGERPRINT" $SYSTEM_AS_SYSTEM/build.prop > $TMP/system.prop
+    rm -rf $SYSTEM_AS_SYSTEM/build.prop
+    cp -f $TMP/system.prop $SYSTEM_AS_SYSTEM/build.prop
+    chmod 0644 $SYSTEM_AS_SYSTEM/build.prop
     rm -rf $TMP/system.prop
-    CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/redfin/redfin:11/RQ3A.210705.001/7380771:user/release-keys"
-    insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_FINGERPRINT" after 'ro.build.description=' "$CTS_SYSTEM_BUILD_FINGERPRINT"
+    CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/redfin/redfin:11/RQ3A.210805.001.A1/7474174:user/release-keys"
+    insert_line $SYSTEM_AS_SYSTEM/build.prop "$CTS_SYSTEM_BUILD_FINGERPRINT" after 'ro.build.description=' "$CTS_SYSTEM_BUILD_FINGERPRINT"
   fi
   # Build security patch
-  if [ -n "$(cat $SYSTEM/build.prop | grep ro.build.version.security_patch)" ]; then
+  if [ -n "$(cat $SYSTEM_AS_SYSTEM/build.prop | grep ro.build.version.security_patch)" ]; then
     CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=";
-    grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $SYSTEM/build.prop > $TMP/system.prop
-    rm -rf $SYSTEM/build.prop
-    cp -f $TMP/system.prop $SYSTEM/build.prop
-    chmod 0644 $SYSTEM/build.prop
+    grep -v "$CTS_DEFAULT_SYSTEM_BUILD_SEC_PATCH" $SYSTEM_AS_SYSTEM/build.prop > $TMP/system.prop
+    rm -rf $SYSTEM_AS_SYSTEM/build.prop
+    cp -f $TMP/system.prop $SYSTEM_AS_SYSTEM/build.prop
+    chmod 0644 $SYSTEM_AS_SYSTEM/build.prop
     rm -rf $TMP/system.prop
-    CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-07-05";
-    insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
+    CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-08-05";
+    insert_line $SYSTEM_AS_SYSTEM/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
   fi
   if [ "$device_vendorpartition" == "false" ]; then
     # Build security patch
-    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.vendor.build.security_patch)" ]; then
+    if [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep ro.vendor.build.security_patch)" ]; then
       CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=";
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
-      rm -rf $SYSTEM/vendor/build.prop
-      cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
-      chmod 0644 $SYSTEM/vendor/build.prop
+      grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $SYSTEM_AS_SYSTEM/vendor/build.prop > $TMP/vendor.prop
+      rm -rf $SYSTEM_AS_SYSTEM/vendor/build.prop
+      cp -f $TMP/vendor.prop $SYSTEM_AS_SYSTEM/vendor/build.prop
+      chmod 0644 $SYSTEM_AS_SYSTEM/vendor/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-07-05";
-      insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
+      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-08-05";
+      insert_line $SYSTEM_AS_SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
     fi
     # Build fingerprint
-    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.vendor.build.fingerprint)" ]; then
+    if [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep ro.vendor.build.fingerprint)" ]; then
       CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint="
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
-      rm -rf $SYSTEM/vendor/build.prop
-      cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
-      chmod 0644 $SYSTEM/vendor/build.prop
+      grep -v "$CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT" $SYSTEM_AS_SYSTEM/vendor/build.prop > $TMP/vendor.prop
+      rm -rf $SYSTEM_AS_SYSTEM/vendor/build.prop
+      cp -f $TMP/vendor.prop $SYSTEM_AS_SYSTEM/vendor/build.prop
+      chmod 0644 $SYSTEM_AS_SYSTEM/vendor/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/redfin/redfin:11/RQ3A.210705.001/7380771:user/release-keys"
-      insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
+      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/redfin/redfin:11/RQ3A.210805.001.A1/7474174:user/release-keys"
+      insert_line $SYSTEM_AS_SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build bootimage
-    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.bootimage.build.fingerprint)" ]; then
+    if [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep ro.bootimage.build.fingerprint)" ]; then
       CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint="
-      grep -v "$CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
-      rm -rf $SYSTEM/vendor/build.prop
-      cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
-      chmod 0644 $SYSTEM/vendor/build.prop
+      grep -v "$CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE" $SYSTEM_AS_SYSTEM/vendor/build.prop > $TMP/vendor.prop
+      rm -rf $SYSTEM_AS_SYSTEM/vendor/build.prop
+      cp -f $TMP/vendor.prop $SYSTEM_AS_SYSTEM/vendor/build.prop
+      chmod 0644 $SYSTEM_AS_SYSTEM/vendor/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/redfin/redfin:11/RQ3A.210705.001/7380771:user/release-keys"
-      insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
+      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/redfin/redfin:11/RQ3A.210805.001.A1/7474174:user/release-keys"
+      insert_line $SYSTEM_AS_SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
     fi
   fi
-  if [ "$device_vendorpartition" == "true" ]; then
+  if [ "$device_vendorpartition" == "true" ] && [ "$vendor_as_rw" == "rw" ]; then
     # Build security patch
     if [ -n "$(cat $VENDOR/build.prop | grep ro.vendor.build.security_patch)" ]; then
       CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=";
@@ -8492,7 +4999,7 @@ set_cts_patch() {
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-07-05";
+      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-08-05";
       insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
     fi
     # Build fingerprint
@@ -8503,7 +5010,7 @@ set_cts_patch() {
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/redfin/redfin:11/RQ3A.210705.001/7380771:user/release-keys"
+      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/redfin/redfin:11/RQ3A.210805.001.A1/7474174:user/release-keys"
       insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build bootimage
@@ -8514,7 +5021,7 @@ set_cts_patch() {
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/redfin/redfin:11/RQ3A.210705.001/7380771:user/release-keys"
+      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/redfin/redfin:11/RQ3A.210805.001.A1/7474174:user/release-keys"
       insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
     fi
   fi
@@ -8534,38 +5041,46 @@ usf_v26() {
   if [ ! "$android_sdk" == "25" ]; then
     # Up-to Android SDK 29, patched keystore executable required
     if [ "$android_sdk" -le "29" ]; then
+      # Default keystore backup
+      cp -f $SYSTEM_AS_SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
       # Install patched keystore
-      rm -rf $SYSTEM/bin/keystore
-      cp -f $TMP_KEYSTORE/keystore $SYSTEM/bin/keystore
-      chmod 0755 $SYSTEM/bin/keystore
-      chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
+      rm -rf $SYSTEM_AS_SYSTEM/bin/keystore
+      cp -f $TMP_KEYSTORE/keystore $SYSTEM_AS_SYSTEM/bin/keystore
+      chmod 0755 $SYSTEM_AS_SYSTEM/bin/keystore
+      chcon -h u:object_r:keystore_exec:s0 "$SYSTEM_AS_SYSTEM/bin/keystore"
     fi
   fi
   # For Android SDK 30, patched keystore executable and library required
   if [ "$android_sdk" == "30" ]; then
+    # Default keystore backup
+    cp -f $SYSTEM_AS_SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
+    cp -f $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
     # Install patched keystore
-    rm -rf $SYSTEM/bin/keystore
-    cp -f $TMP_KEYSTORE/keystore $SYSTEM/bin/keystore
-    chmod 0755 $SYSTEM/bin/keystore
-    chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
+    rm -rf $SYSTEM_AS_SYSTEM/bin/keystore
+    cp -f $TMP_KEYSTORE/keystore $SYSTEM_AS_SYSTEM/bin/keystore
+    chmod 0755 $SYSTEM_AS_SYSTEM/bin/keystore
+    chcon -h u:object_r:keystore_exec:s0 "$SYSTEM_AS_SYSTEM/bin/keystore"
     # Install patched libkeystore
-    rm -rf $SYSTEM/lib64/libkeystore-attestation-application-id.so
-    cp -f $TMP_KEYSTORE/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
-    chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so
-    chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
+    rm -rf $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so
+    cp -f $TMP_KEYSTORE/libkeystore-attestation-application-id.so $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so
+    chmod 0644 $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so
+    chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so"
   fi
   # For Android SDK 31, patched keystore executable and library required
   if [ "$android_sdk" == "31" ]; then
+    # Default keystore backup
+    cp -f $SYSTEM_AS_SYSTEM/bin/keystore2 $ANDROID_DATA/.backup/keystore2
+    cp -f $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
     # Install patched keystore
-    rm -rf $SYSTEM/bin/keystore2
-    cp -f $TMP_KEYSTORE/keystore2 $SYSTEM/bin/keystore2
-    chmod 0755 $SYSTEM/bin/keystore2
-    chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore2"
+    rm -rf $SYSTEM_AS_SYSTEM/bin/keystore2
+    cp -f $TMP_KEYSTORE/keystore2 $SYSTEM_AS_SYSTEM/bin/keystore2
+    chmod 0755 $SYSTEM_AS_SYSTEM/bin/keystore2
+    chcon -h u:object_r:keystore_exec:s0 "$SYSTEM_AS_SYSTEM/bin/keystore2"
     # Install patched libkeystore
-    rm -rf $SYSTEM/lib64/libkeystore-attestation-application-id.so
-    cp -f $TMP_KEYSTORE/libkeystore-attestation-application-id.so $SYSTEM/lib64/libkeystore-attestation-application-id.so
-    chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so
-    chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
+    rm -rf $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so
+    cp -f $TMP_KEYSTORE/libkeystore-attestation-application-id.so $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so
+    chmod 0644 $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so
+    chcon -h u:object_r:system_lib_file:s0 "$SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so"
   fi
 }
 
@@ -8610,28 +5125,6 @@ boot_whitelist_permission() {
       continue
       ;;
   esac
-  # Device Tree Patches
-  for dt in dtb kernel_dtb extra; do
-    [ -f $dt ] && ./magiskboot dtb $dt patch
-  done
-  # Binary Patches
-  if [ -f kernel ]; then
-   # Remove Samsung RKP
-   ./magiskboot hexpatch kernel \
-   49010054011440B93FA00F71E9000054010840B93FA00F7189000054001840B91FA00F7188010054 \
-   A1020054011440B93FA00F7140020054010840B93FA00F71E0010054001840B91FA00F7181010054
-
-   # Remove Samsung defex
-   # Before: [mov w2, #-221]   (-__NR_execve)
-   # After:  [mov w2, #-32768]
-   ./magiskboot hexpatch kernel 821B8012 E2FF8F12
-
-   # Force kernel to load rootfs
-   # skip_initramfs -> want_initramfs
-   ./magiskboot hexpatch kernel \
-   736B69705F696E697472616D667300 \
-   77616E745F696E697472616D667300
-  fi
   if [ -f "ramdisk.cpio" ]; then
     mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk
   fi
@@ -8643,19 +5136,10 @@ boot_whitelist_permission() {
     cd ../
     ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
     # Sign ChromeOS boot image
-    if [ "$CHROMEOS" == "true" ]; then
-      echo > empty
-      ./chromeos/futility vbutil_kernel --pack mboot.img.signed \
-      --keyblock ./chromeos/kernel.keyblock --signprivate ./chromeos/kernel_data_key.vbprivk \
-      --version 1 --vmlinuz mboot.img --config empty --arch arm --bootloader empty --flags 0x1
-      rm -f empty mboot.img
-      mv mboot.img.signed mboot.img
-    fi
+    [ "$CHROMEOS" == "true" ] && sign_chromeos
     dd if="mboot.img" of="$block" > /dev/null 2>&1
     # Wipe boot dump
-    rm -rf boot.img
-    rm -rf mboot.img
-    rm -rf ramdisk
+    rm -rf boot.img mboot.img ramdisk
     ./magiskboot cleanup > /dev/null 2>&1
     cd ../../..
   else
@@ -8739,68 +5223,36 @@ set_module_path() {
 
 override_module() {
   if [ "$supported_module_config" == "true" ]; then
-    if [ "$android_sdk" -ge "30" ]; then
-      mkdir $SYSTEM_SYSTEM/app/ExtShared
-      touch $SYSTEM_SYSTEM/app/ExtShared/.replace
-    fi
-    if [ "$android_sdk" -le "29" ]; then
-      mkdir $SYSTEM_SYSTEM/app/ExtShared
-      mkdir $SYSTEM_SYSTEM/priv-app/ExtServices
-      touch $SYSTEM_SYSTEM/app/ExtShared/.replace
-      touch $SYSTEM_SYSTEM/priv-app/ExtServices/.replace
-    fi
+    mkdir $SYSTEM_SYSTEM/app/ExtShared
+    mkdir $SYSTEM_SYSTEM/priv-app/ExtServices
+    touch $SYSTEM_SYSTEM/app/ExtShared/.replace
+    touch $SYSTEM_SYSTEM/priv-app/ExtServices/.replace
   fi
 }
 
 fix_gms_hide() {
   if [ "$supported_module_config" == "true" ]; then
-    if [ "$android_sdk" == "31" ]; then
-      mv -f $SYSTEM_SYSTEM/system_ext/priv-app/PrebuiltGmsCoreSvc $SYSTEM_AS_SYSTEM/system_ext/priv-app
-    fi
-    if [ "$android_sdk" == "30" ]; then
-      mv -f $SYSTEM_SYSTEM/system_ext/priv-app/PrebuiltGmsCoreRvc $SYSTEM_AS_SYSTEM/system_ext/priv-app
-    fi
-    if [ "$android_sdk" == "29" ]; then
-      mv -f $SYSTEM_SYSTEM/product/priv-app/PrebuiltGmsCoreQt $SYSTEM_AS_SYSTEM/product/priv-app
-    fi
-    if [ "$android_sdk" == "28" ]; then
-      mv -f $SYSTEM_SYSTEM/priv-app/PrebuiltGmsCorePi $SYSTEM_AS_SYSTEM/priv-app
-    fi
-    if [ "$android_sdk" == "27" ] ||  [ "$android_sdk" == "26" ]; then
-      mv -f $SYSTEM_SYSTEM/priv-app/PrebuiltGmsCorePix $SYSTEM_AS_SYSTEM/priv-app
-    fi
-    if [ "$android_sdk" == "25" ]; then
-      mv -f $SYSTEM_SYSTEM/priv-app/PrebuiltGmsCore $SYSTEM_AS_SYSTEM/priv-app
-    fi
+    for i in PrebuiltGmsCore PrebuiltGmsCorePix PrebuiltGmsCorePi PrebuiltGmsCoreQt PrebuiltGmsCoreRvc PrebuiltGmsCoreSvc; do
+       mv -f $SYSTEM_SYSTEM/priv-app/$i $SYSTEM_AS_SYSTEM/priv-app 2>/dev/null
+    done
   fi
 }
 
 fix_module_perm() {
   if [ "$supported_module_config" == "true" ]; then
-    (chmod 0755 $SYSTEM_SYSTEM/app/*
-     chmod 0644 $SYSTEM_SYSTEM/app/*/.replace
-     chmod 0755 $SYSTEM_SYSTEM/priv-app/*
-     chmod 0644 $SYSTEM_SYSTEM/priv-app/*/.replace
-     chmod 0644 $SYSTEM_SYSTEM/etc/default-permissions/*
-     chmod 0644 $SYSTEM_SYSTEM/etc/permissions/*
-     chmod 0644 $SYSTEM_SYSTEM/etc/preferred-apps/*
-     chmod 0644 $SYSTEM_SYSTEM/etc/sysconfig/*
-     chmod 0755 $SYSTEM_SYSTEM/product/app/*
-     chmod 0644 $SYSTEM_SYSTEM/product/app/*/.replace
-     chmod 0755 $SYSTEM_SYSTEM/product/priv-app/*
-     chmod 0644 $SYSTEM_SYSTEM/product/priv-app/*/.replace
-     chmod 0644 $SYSTEM_SYSTEM/product/etc/default-permissions/*
-     chmod 0644 $SYSTEM_SYSTEM/product/etc/permissions/*
-     chmod 0644 $SYSTEM_SYSTEM/product/etc/preferred-apps/*
-     chmod 0644 $SYSTEM_SYSTEM/product/etc/sysconfig/*
-     chmod 0755 $SYSTEM_SYSTEM/system_ext/app/*
-     chmod 0644 $SYSTEM_SYSTEM/system_ext/app/*/.replace
-     chmod 0755 $SYSTEM_SYSTEM/system_ext/priv-app/*
-     chmod 0644 $SYSTEM_SYSTEM/system_ext/priv-app/*/.replace
-     chmod 0644 $SYSTEM_SYSTEM/system_ext/etc/default-permissions/*
-     chmod 0644 $SYSTEM_SYSTEM/system_ext/etc/permissions/*
-     chmod 0644 $SYSTEM_SYSTEM/system_ext/etc/preferred-apps/*
-     chmod 0644 $SYSTEM_SYSTEM/system_ext/etc/sysconfig/*) 2>/dev/null
+    for i in \
+      $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app \
+      $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app \
+      $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
+      (chmod 0755 $i/*
+       chmod 0644 $i/*/.replace) 2>/dev/null
+    done
+    for i in \
+      $SYSTEM_SYSTEM/etc/default-permissions $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/etc/preferred-apps $SYSTEM_SYSTEM/etc/sysconfig \
+      $SYSTEM_SYSTEM/product/etc/default-permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/product/etc/preferred-apps $SYSTEM_SYSTEM/product/etc/sysconfig \
+      $SYSTEM_SYSTEM/system_ext/etc/default-permissions $SYSTEM_SYSTEM/system_ext/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/preferred-apps $SYSTEM_SYSTEM/system_ext/etc/sysconfig; do
+      (chmod 0644 $i/*) 2>/dev/null
+    done
   fi
 }
 
@@ -8812,877 +5264,190 @@ module_info() {
 }
 
 # Do not add these functions inside 'pre_install' or 'post_install' function
-helper() {
-  env_vars
-  print_title
-  set_bb
-  umount_all
-  recovery_actions
-}
+helper() { env_vars; print_title; set_bb; umount_all; recovery_actions; }
 
 # These set of functions should be executed after 'helper' function
 pre_install() {
   if [ "$ZIPTYPE" == "addon" ] && [ "$BOOTMODE" == "false" ]; then
-    on_partition_check
-    on_fstab_check
-    ab_partition
-    system_as_root
-    super_partition
-    vendor_mnt
-    mount_all
-    check_rw_status
-    system_layout
-    mount_status
-    get_bitgapps_config
-    profile
-    on_version_check
-    on_platform_check
-    on_target_platform
-    on_config_version
-    config_version
-    on_addon_stack
-    on_addon_check
-    on_module_check
-    on_wipe_check
-    set_wipe_config
+    { on_partition_check; on_fstab_check; ab_partition
+      system_as_root; super_partition; vendor_mnt
+      mount_all; check_rw_status; system_layout
+      mount_status; get_bitgapps_config; profile
+      on_release_tag; chk_release_tag; on_version_check
+      on_platform_check; on_target_platform; on_config_version
+      config_version; on_addon_stack; on_addon_check
+      on_module_check; on_wipe_check; set_wipe_config
+      on_addon_wipe; set_addon_wipe; }
   fi
   if [ "$ZIPTYPE" == "addon" ] && [ "$BOOTMODE" == "true" ]; then
-    on_partition_check
-    ab_partition
-    system_as_root
-    super_partition
-    vendor_mnt
-    mount_BM
-    check_rw_status
-    system_layout
-    mount_status
-    get_bitgapps_config
-    profile
-    on_version_check
-    on_platform_check
-    on_target_platform
-    on_config_version
-    config_version
-    on_addon_stack
-    on_addon_check
-    on_module_check
-    on_wipe_check
-    set_wipe_config
+    { on_partition_check; ab_partition; system_as_root
+      super_partition; vendor_mnt; mount_BM
+      check_rw_status; system_layout; mount_status
+      get_bitgapps_config; profile; on_release_tag
+      chk_release_tag; on_version_check; on_platform_check
+      on_target_platform; on_config_version; config_version
+      on_addon_stack; on_addon_check; on_module_check
+      on_wipe_check; set_wipe_config; on_addon_wipe
+      set_addon_wipe; }
   fi
   if [ "$ZIPTYPE" == "basic" ] && [ "$BOOTMODE" == "false" ]; then
-    on_partition_check
-    on_fstab_check
-    ab_partition
-    system_as_root
-    super_partition
-    vendor_mnt
-    mount_all
-    check_rw_status
-    system_layout
-    mount_status
-    chk_inst_pkg
-    on_inst_abort
-    get_bitgapps_config
-    profile
-    on_release_tag
-    check_release_tag
-    on_version_check
-    check_sdk
-    check_version
-    on_platform_check
-    on_target_platform
-    build_platform
-    check_platform
-    clean_inst
-    on_config_version
-    config_version
-    on_module_check
-    on_wipe_check
-    set_wipe_config
-    on_safetynet_check
+    { on_partition_check; on_fstab_check; ab_partition
+      system_as_root; super_partition; vendor_mnt
+      mount_all; check_rw_status; system_layout
+      mount_status; chk_inst_pkg; on_inst_abort
+      get_bitgapps_config; profile; on_release_tag
+      check_release_tag; on_version_check; check_sdk
+      check_version; on_platform_check; on_target_platform
+      build_platform; check_platform; clean_inst
+      on_config_version; config_version; on_module_check
+      on_wipe_check; set_wipe_config; on_addon_wipe
+      set_addon_wipe; on_safetynet_check; }
   fi
   if [ "$ZIPTYPE" == "basic" ] && [ "$BOOTMODE" == "true" ]; then
-    on_partition_check
-    ab_partition
-    system_as_root
-    super_partition
-    vendor_mnt
-    mount_BM
-    check_rw_status
-    system_layout
-    mount_status
-    chk_inst_pkg
-    on_inst_abort
-    get_bitgapps_config
-    profile
-    on_release_tag
-    check_release_tag
-    on_version_check
-    check_sdk
-    check_version
-    on_platform_check
-    on_target_platform
-    build_platform
-    check_platform
-    clean_inst
-    on_config_version
-    config_version
-    on_module_check
-    on_wipe_check
-    set_wipe_config
-    on_safetynet_check
+    { on_partition_check; ab_partition; system_as_root
+      super_partition; vendor_mnt; mount_BM
+      check_rw_status; system_layout; mount_status
+      chk_inst_pkg; on_inst_abort; get_bitgapps_config
+      profile; on_release_tag; check_release_tag
+      on_version_check; check_sdk; check_version
+      on_platform_check; on_target_platform; build_platform
+      check_platform; clean_inst; on_config_version
+      config_version; on_module_check; on_wipe_check
+      set_wipe_config; on_addon_wipe; set_addon_wipe
+      on_safetynet_check; }
   fi
 }
 
 # Check availability of Product partition
 chk_product() {
   if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "29" ] && [ "$BOOTMODE" == "false" ]; then
-    if [ ! -n "$(cat $fstab | grep /product)" ]; then
-      ui_print "! Product partition not found. Aborting..."
-      # Wipe ZIP extracts
-      cleanup
-      unmount_all
-      ui_print "! Installation failed"
-      ui_print " "
-      # Reset any error code
-      true
-      sync
-      exit 1
-    fi
+    if [ ! -n "$(cat $fstab | grep /product)" ]; then ui_print "! Product partition not found. Aborting..."; lp_abort; fi
   fi
   if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "29" ] && [ "$BOOTMODE" == "true" ]; then
-    if [ ! "$($l/grep -w -o /product /proc/mounts)" ]; then
-      ui_print "! Product partition not found. Aborting..."
-      # Wipe ZIP extracts
-      cleanup
-      unmount_all
-      ui_print "! Installation failed"
-      ui_print " "
-      # Reset any error code
-      true
-      sync
-      exit 1
-    fi
+    if [ ! "$($l/grep -w -o /product /proc/mounts)" ]; then ui_print "! Product partition not found. Aborting..."; lp_abort; fi
   fi
 }
 
 # Check availability of SystemExt partition
 chk_system_Ext() {
   if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ] && [ "$BOOTMODE" == "false" ]; then
-    if [ ! -n "$(cat $fstab | grep /system_ext)" ]; then
-      ui_print "! SystemExt partition not found. Aborting..."
-      # Wipe ZIP extracts
-      cleanup
-      unmount_all
-      ui_print "! Installation failed"
-      ui_print " "
-      # Reset any error code
-      true
-      sync
-      exit 1
-    fi
+    if [ ! -n "$(cat $fstab | grep /system_ext)" ]; then ui_print "! SystemExt partition not found. Aborting..."; lp_abort; fi
   fi
   if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ] && [ "$BOOTMODE" == "true" ]; then
-    if [ ! "$($l/grep -w -o /system_ext /proc/mounts)" ]; then
-      ui_print "! SystemExt partition not found. Aborting..."
-      # Wipe ZIP extracts
-      cleanup
-      unmount_all
-      ui_print "! Installation failed"
-      ui_print " "
-      # Reset any error code
-      true
-      sync
-      exit 1
-    fi
+    if [ ! "$($l/grep -w -o /system_ext /proc/mounts)" ]; then ui_print "! SystemExt partition not found. Aborting..."; lp_abort; fi
   fi
 }
 
 # Set partitions for checking available space
 df_system() {
-  if [ "$ZIPTYPE" == "basic" ] && [ "$SUPER_PARTITION" == "false" ]; then
-    # Get the available space left on the device
-    size=`df -k $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    CAPACITY="150000"
-    # Disk space in human readable format (k=1024)
-    ds_hr=`df -h $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Print partition type
-    partition="System"
+  if [ "$ZIPTYPE" == "basic" ]; then CAPACITY="150000"; fi
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$supported_addon_stack" == "false" ]; then
+    [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1567000"
+    [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1834000"
   fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$SUPER_PARTITION" == "false" ]; then
-    # Get the available space left on the device
-    size=`df -k $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Default capacity
-    if [ "$supported_addon_stack" == "false" ]; then
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1567000"
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1834000"
-    fi
-    # Selected capacity
-    if [ "$supported_addon_stack" == "true" ]; then
-      # Size of each package, according to Android platform
-      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
-        $supported_assistant_config && ASSISTANT="142000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="200000" || BROMITE="0"
-        $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
-        $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="445000" || CHROME="0"
-        $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
-        $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
-        $supported_dialer_config && DIALER="45000" || DIALER="0"
-        $supported_dps_config && DPS="70000" || DPS="0"
-        $supported_gboard_config && GBOARD="122000" || GBOARD="0"
-        $supported_gearhead_config && GEARHEAD="33000" || GEARHEAD="0"
-        $supported_launcher_config && LAUNCHER="10000" || LAUNCHER="0"
-        $supported_maps_config && MAPS="110000" || MAPS="0"
-        $supported_markup_config && MARKUP="10000" || MARKUP="0"
-        $supported_messages_config && MESSAGES="100000" || MESSAGES="0"
-        $supported_photos_config && PHOTOS="92000" || PHOTOS="0"
-        $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
-        $supported_tts_config && TTS="30000" || TTS="0"
-        $supported_vanced_config && VANCED="94000" || VANCED="0"
-        $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
-      fi
-      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-        $supported_assistant_config && ASSISTANT="170000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="374000" || BROMITE="0"
-        $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
-        $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="445000" || CHROME="0"
-        $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
-        $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
-        $supported_dialer_config && DIALER="52000" || DIALER="0"
-        $supported_dps_config && DPS="70000" || DPS="0"
-        $supported_gboard_config && GBOARD="134000" || GBOARD="0"
-        $supported_gearhead_config && GEARHEAD="33000" || GEARHEAD="0"
-        $supported_launcher_config && LAUNCHER="10000" || LAUNCHER="0"
-        $supported_maps_config && MAPS="116000" || MAPS="0"
-        $supported_markup_config && MARKUP="10000" || MARKUP="0"
-        $supported_messages_config && MESSAGES="100000" || MESSAGES="0"
-        $supported_photos_config && PHOTOS="107000" || PHOTOS="0"
-        $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
-        $supported_tts_config && TTS="35000" || TTS="0"
-        $supported_vanced_config && VANCED="114000" || VANCED="0"
-        $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
-      fi
-      # Set capacity by targetting selected packages
-      CAPACITY=`expr $ASSISTANT + $BROMITE + $CALCULATOR + $CALENDAR + $CHROME + $CONTACTS + $DESKCLOCK + $DIALER + $DPS + $GBOARD + $GEARHEAD + $LAUNCHER + $MAPS + $MARKUP + $MESSAGES + $PHOTOS + $SOUNDPICKER + $TTS + $VANCED + $WELLBEING`
-    fi
-    # Disk space in human readable format (k=1024)
-    ds_hr=`df -h $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Print partition type
-    partition="System"
-  fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ] && [ "$SUPER_PARTITION" == "false" ]; then
-    # Get the available space left on the device
-    size=`df -k $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Size of each package, according to Android platform
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$supported_addon_stack" == "true" ]; then
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
-      $TARGET_ASSISTANT_GOOGLE && CAPACITY="142000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="200000"
-      $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
-      $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
-      $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
-      $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
-      $TARGET_DIALER_GOOGLE && CAPACITY="45000"
-      $TARGET_DPS_GOOGLE && CAPACITY="70000"
-      $TARGET_GBOARD_GOOGLE && CAPACITY="122000"
-      $TARGET_GEARHEAD_GOOGLE && CAPACITY="33000"
-      $TARGET_LAUNCHER_GOOGLE && CAPACITY="10000"
-      $TARGET_MAPS_GOOGLE && CAPACITY="110000"
-      $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
-      $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"
-      $TARGET_PHOTOS_GOOGLE && CAPACITY="92000"
-      $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
-      $TARGET_TTS_GOOGLE && CAPACITY="30000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="94000"
-      $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
+      $supported_assistant_config && ASSISTANT="142000" || ASSISTANT="0"; $supported_bromite_config && BROMITE="200000" || BROMITE="0"
+      $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"; $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
+      $supported_chrome_config && CHROME="445000" || CHROME="0"; $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
+      $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"; $supported_dialer_config && DIALER="45000" || DIALER="0"
+      $supported_dps_config && DPS="70000" || DPS="0"; $supported_gboard_config && GBOARD="122000" || GBOARD="0"
+      $supported_gearhead_config && GEARHEAD="33000" || GEARHEAD="0"; $supported_launcher_config && LAUNCHER="10000" || LAUNCHER="0"
+      $supported_maps_config && MAPS="110000" || MAPS="0"; $supported_markup_config && MARKUP="10000" || MARKUP="0"
+      $supported_messages_config && MESSAGES="100000" || MESSAGES="0"; $supported_photos_config && PHOTOS="92000" || PHOTOS="0"
+      $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"; $supported_tts_config && TTS="30000" || TTS="0"
+      $supported_vanced_config && VANCED="94000" || VANCED="0"; $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
     fi
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-      $TARGET_ASSISTANT_GOOGLE && CAPACITY="170000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="374000"
-      $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
-      $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
-      $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
-      $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
-      $TARGET_DIALER_GOOGLE && CAPACITY="52000"
-      $TARGET_DPS_GOOGLE && CAPACITY="70000"
-      $TARGET_GBOARD_GOOGLE && CAPACITY="134000"
-      $TARGET_GEARHEAD_GOOGLE && CAPACITY="33000"
-      $TARGET_LAUNCHER_GOOGLE && CAPACITY="10000"
-      $TARGET_MAPS_GOOGLE && CAPACITY="116000"
-      $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
-      $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"
-      $TARGET_PHOTOS_GOOGLE && CAPACITY="107000"
-      $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
-      $TARGET_TTS_GOOGLE && CAPACITY="35000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="114000"
-      $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
+      $supported_assistant_config && ASSISTANT="170000" || ASSISTANT="0"; $supported_bromite_config && BROMITE="374000" || BROMITE="0"
+      $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"; $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
+      $supported_chrome_config && CHROME="445000" || CHROME="0"; $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
+      $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"; $supported_dialer_config && DIALER="52000" || DIALER="0"
+      $supported_dps_config && DPS="70000" || DPS="0"; $supported_gboard_config && GBOARD="134000" || GBOARD="0"
+      $supported_gearhead_config && GEARHEAD="33000" || GEARHEAD="0"; $supported_launcher_config && LAUNCHER="10000" || LAUNCHER="0"
+      $supported_maps_config && MAPS="116000" || MAPS="0"; $supported_markup_config && MARKUP="10000" || MARKUP="0"
+      $supported_messages_config && MESSAGES="100000" || MESSAGES="0"; $supported_photos_config && PHOTOS="107000" || PHOTOS="0"
+      $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"; $supported_tts_config && TTS="35000" || TTS="0"
+      $supported_vanced_config && VANCED="114000" || VANCED="0"; $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
     fi
-    # Common target
-    CAPACITY="$CAPACITY"
-    # Disk space in human readable format (k=1024)
-    ds_hr=`df -h $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Print partition type
-    partition="System"
+    CAPACITY=`expr $ASSISTANT + $BROMITE + $CALCULATOR + $CALENDAR + $CHROME + $CONTACTS + $DESKCLOCK + $DIALER + $DPS + $GBOARD + $GEARHEAD + $LAUNCHER + $MAPS + $MARKUP + $MESSAGES + $PHOTOS + $SOUNDPICKER + $TTS + $VANCED + $WELLBEING`
   fi
-}
-
-df_product() {
-  if [ "$ZIPTYPE" == "basic" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "29" ]; then
-    # Get the available space left on the device
-    size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    CAPACITY="150000"
-    # Disk space in human readable format (k=1024)
-    ds_hr=`df -h /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Print partition type
-    partition="Product"
-  fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "29" ]; then
-    # Get the available space left on the device
-    size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Default capacity
-    if [ "$supported_addon_stack" == "false" ]; then
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1567000"
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1834000"
-    fi
-    # Selected capacity
-    if [ "$supported_addon_stack" == "true" ]; then
-      # Size of each package, according to Android platform
-      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
-        $supported_assistant_config && ASSISTANT="142000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="200000" || BROMITE="0"
-        $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
-        $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="445000" || CHROME="0"
-        $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
-        $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
-        $supported_dialer_config && DIALER="45000" || DIALER="0"
-        $supported_dps_config && DPS="70000" || DPS="0"
-        $supported_gboard_config && GBOARD="122000" || GBOARD="0"
-        $supported_gearhead_config && GEARHEAD="33000" || GEARHEAD="0"
-        $supported_launcher_config && LAUNCHER="10000" || LAUNCHER="0"
-        $supported_maps_config && MAPS="110000" || MAPS="0"
-        $supported_markup_config && MARKUP="10000" || MARKUP="0"
-        $supported_messages_config && MESSAGES="100000" || MESSAGES="0"
-        $supported_photos_config && PHOTOS="92000" || PHOTOS="0"
-        $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
-        $supported_tts_config && TTS="30000" || TTS="0"
-        $supported_vanced_config && VANCED="94000" || VANCED="0"
-        $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
-      fi
-      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-        $supported_assistant_config && ASSISTANT="170000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="374000" || BROMITE="0"
-        $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
-        $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="445000" || CHROME="0"
-        $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
-        $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
-        $supported_dialer_config && DIALER="52000" || DIALER="0"
-        $supported_dps_config && DPS="70000" || DPS="0"
-        $supported_gboard_config && GBOARD="134000" || GBOARD="0"
-        $supported_gearhead_config && GEARHEAD="33000" || GEARHEAD="0"
-        $supported_launcher_config && LAUNCHER="10000" || LAUNCHER="0"
-        $supported_maps_config && MAPS="116000" || MAPS="0"
-        $supported_markup_config && MARKUP="10000" || MARKUP="0"
-        $supported_messages_config && MESSAGES="100000" || MESSAGES="0"
-        $supported_photos_config && PHOTOS="107000" || PHOTOS="0"
-        $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
-        $supported_tts_config && TTS="35000" || TTS="0"
-        $supported_vanced_config && VANCED="114000" || VANCED="0"
-        $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
-      fi
-      # Set capacity by targetting selected packages
-      CAPACITY=`expr $ASSISTANT + $BROMITE + $CALCULATOR + $CALENDAR + $CHROME + $CONTACTS + $DESKCLOCK + $DIALER + $DPS + $GBOARD + $GEARHEAD + $LAUNCHER + $MAPS + $MARKUP + $MESSAGES + $PHOTOS + $SOUNDPICKER + $TTS + $VANCED + $WELLBEING`
-    fi
-    # Disk space in human readable format (k=1024)
-    ds_hr=`df -h /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Print partition type
-    partition="Product"
-  fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "29" ]; then
-    # Get the available space left on the device
-    size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Size of each package, according to Android platform
+  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ]; then
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
-      $TARGET_ASSISTANT_GOOGLE && CAPACITY="142000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="200000"
-      $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
-      $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
-      $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
-      $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
-      $TARGET_DIALER_GOOGLE && CAPACITY="45000"
-      $TARGET_DPS_GOOGLE && CAPACITY="70000"
-      $TARGET_GBOARD_GOOGLE && CAPACITY="122000"
-      $TARGET_GEARHEAD_GOOGLE && CAPACITY="33000"
-      $TARGET_LAUNCHER_GOOGLE && CAPACITY="10000"
-      $TARGET_MAPS_GOOGLE && CAPACITY="110000"
-      $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
-      $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"
-      $TARGET_PHOTOS_GOOGLE && CAPACITY="92000"
-      $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
-      $TARGET_TTS_GOOGLE && CAPACITY="30000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="94000"
-      $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
+      $TARGET_ASSISTANT_GOOGLE && CAPACITY="142000"; $TARGET_BROMITE_GOOGLE && CAPACITY="200000"
+      $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"; $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
+      $TARGET_CHROME_GOOGLE && CAPACITY="445000"; $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
+      $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"; $TARGET_DIALER_GOOGLE && CAPACITY="45000"
+      $TARGET_DPS_GOOGLE && CAPACITY="70000"; $TARGET_GBOARD_GOOGLE && CAPACITY="122000"
+      $TARGET_GEARHEAD_GOOGLE && CAPACITY="33000"; $TARGET_LAUNCHER_GOOGLE && CAPACITY="10000"
+      $TARGET_MAPS_GOOGLE && CAPACITY="110000"; $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
+      $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"; $TARGET_PHOTOS_GOOGLE && CAPACITY="92000"
+      $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"; $TARGET_TTS_GOOGLE && CAPACITY="30000"
+      $TARGET_VANCED_GOOGLE && CAPACITY="94000"; $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
     fi
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-      $TARGET_ASSISTANT_GOOGLE && CAPACITY="170000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="374000"
-      $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
-      $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
-      $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
-      $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
-      $TARGET_DIALER_GOOGLE && CAPACITY="52000"
-      $TARGET_DPS_GOOGLE && CAPACITY="70000"
-      $TARGET_GBOARD_GOOGLE && CAPACITY="134000"
-      $TARGET_GEARHEAD_GOOGLE && CAPACITY="33000"
-      $TARGET_LAUNCHER_GOOGLE && CAPACITY="10000"
-      $TARGET_MAPS_GOOGLE && CAPACITY="116000"
-      $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
-      $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"
-      $TARGET_PHOTOS_GOOGLE && CAPACITY="107000"
-      $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
-      $TARGET_TTS_GOOGLE && CAPACITY="35000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="114000"
-      $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
+      $TARGET_ASSISTANT_GOOGLE && CAPACITY="170000"; $TARGET_BROMITE_GOOGLE && CAPACITY="374000"
+      $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"; $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
+      $TARGET_CHROME_GOOGLE && CAPACITY="445000"; $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
+      $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"; $TARGET_DIALER_GOOGLE && CAPACITY="52000"
+      $TARGET_DPS_GOOGLE && CAPACITY="70000"; $TARGET_GBOARD_GOOGLE && CAPACITY="134000"
+      $TARGET_GEARHEAD_GOOGLE && CAPACITY="33000"; $TARGET_LAUNCHER_GOOGLE && CAPACITY="10000"
+      $TARGET_MAPS_GOOGLE && CAPACITY="116000"; $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
+      $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"; $TARGET_PHOTOS_GOOGLE && CAPACITY="107000"
+      $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"; $TARGET_TTS_GOOGLE && CAPACITY="35000"
+      $TARGET_VANCED_GOOGLE && CAPACITY="114000"; $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
     fi
-    # Common target
-    CAPACITY="$CAPACITY"
-    # Disk space in human readable format (k=1024)
-    ds_hr=`df -h /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Print partition type
-    partition="Product"
   fi
-}
-
-df_systemExt() {
-  if [ "$ZIPTYPE" == "basic" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; then
-    # Get the available space left on the device
-    size=`df -k /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    CAPACITY="150000"
-    # Disk space in human readable format (k=1024)
-    ds_hr=`df -h /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Print partition type
-    partition="SystemExt"
-  fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; then
-    # Get the available space left on the device
-    size=`df -k /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Default capacity
-    if [ "$supported_addon_stack" == "false" ]; then
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1567000"
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1834000"
-    fi
-    # Selected capacity
-    if [ "$supported_addon_stack" == "true" ]; then
-      # Size of each package, according to Android platform
-      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
-        $supported_assistant_config && ASSISTANT="142000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="200000" || BROMITE="0"
-        $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
-        $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="445000" || CHROME="0"
-        $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
-        $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
-        $supported_dialer_config && DIALER="45000" || DIALER="0"
-        $supported_dps_config && DPS="70000" || DPS="0"
-        $supported_gboard_config && GBOARD="122000" || GBOARD="0"
-        $supported_gearhead_config && GEARHEAD="33000" || GEARHEAD="0"
-        $supported_launcher_config && LAUNCHER="10000" || LAUNCHER="0"
-        $supported_maps_config && MAPS="110000" || MAPS="0"
-        $supported_markup_config && MARKUP="10000" || MARKUP="0"
-        $supported_messages_config && MESSAGES="100000" || MESSAGES="0"
-        $supported_photos_config && PHOTOS="92000" || PHOTOS="0"
-        $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
-        $supported_tts_config && TTS="30000" || TTS="0"
-        $supported_vanced_config && VANCED="94000" || VANCED="0"
-        $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
-      fi
-      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-        $supported_assistant_config && ASSISTANT="170000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="374000" || BROMITE="0"
-        $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
-        $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="445000" || CHROME="0"
-        $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
-        $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
-        $supported_dialer_config && DIALER="52000" || DIALER="0"
-        $supported_dps_config && DPS="70000" || DPS="0"
-        $supported_gboard_config && GBOARD="134000" || GBOARD="0"
-        $supported_gearhead_config && GEARHEAD="33000" || GEARHEAD="0"
-        $supported_launcher_config && LAUNCHER="10000" || LAUNCHER="0"
-        $supported_maps_config && MAPS="116000" || MAPS="0"
-        $supported_markup_config && MARKUP="10000" || MARKUP="0"
-        $supported_messages_config && MESSAGES="100000" || MESSAGES="0"
-        $supported_photos_config && PHOTOS="107000" || PHOTOS="0"
-        $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
-        $supported_tts_config && TTS="35000" || TTS="0"
-        $supported_vanced_config && VANCED="114000" || VANCED="0"
-        $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
-      fi
-      # Set capacity by targetting selected packages
-      CAPACITY=`expr $ASSISTANT + $BROMITE + $CALCULATOR + $CALENDAR + $CHROME + $CONTACTS + $DESKCLOCK + $DIALER + $DPS + $GBOARD + $GEARHEAD + $LAUNCHER + $MAPS + $MARKUP + $MESSAGES + $PHOTOS + $SOUNDPICKER + $TTS + $VANCED + $WELLBEING`
-    fi
-    # Disk space in human readable format (k=1024)
-    ds_hr=`df -h /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Print partition type
-    partition="SystemExt"
-  fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; then
-    # Get the available space left on the device
-    size=`df -k /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Size of each package, according to Android platform
-    if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
-      $TARGET_ASSISTANT_GOOGLE && CAPACITY="142000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="200000"
-      $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
-      $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
-      $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
-      $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
-      $TARGET_DIALER_GOOGLE && CAPACITY="45000"
-      $TARGET_DPS_GOOGLE && CAPACITY="70000"
-      $TARGET_GBOARD_GOOGLE && CAPACITY="122000"
-      $TARGET_GEARHEAD_GOOGLE && CAPACITY="33000"
-      $TARGET_LAUNCHER_GOOGLE && CAPACITY="10000"
-      $TARGET_MAPS_GOOGLE && CAPACITY="110000"
-      $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
-      $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"
-      $TARGET_PHOTOS_GOOGLE && CAPACITY="92000"
-      $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
-      $TARGET_TTS_GOOGLE && CAPACITY="30000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="94000"
-      $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
-    fi
-    if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-      $TARGET_ASSISTANT_GOOGLE && CAPACITY="170000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="374000"
-      $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
-      $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
-      $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
-      $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
-      $TARGET_DIALER_GOOGLE && CAPACITY="52000"
-      $TARGET_DPS_GOOGLE && CAPACITY="70000"
-      $TARGET_GBOARD_GOOGLE && CAPACITY="134000"
-      $TARGET_GEARHEAD_GOOGLE && CAPACITY="33000"
-      $TARGET_LAUNCHER_GOOGLE && CAPACITY="10000"
-      $TARGET_MAPS_GOOGLE && CAPACITY="116000"
-      $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
-      $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"
-      $TARGET_PHOTOS_GOOGLE && CAPACITY="107000"
-      $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
-      $TARGET_TTS_GOOGLE && CAPACITY="35000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="114000"
-      $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
-    fi
-    # Common target
-    CAPACITY="$CAPACITY"
-    # Disk space in human readable format (k=1024)
-    ds_hr=`df -h /system_ext | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Print partition type
-    partition="SystemExt"
-  fi
-}
-
-df_systemExt_fallback() {
-  if [ "$ZIPTYPE" == "basic" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; then
-    # Get the available space left on the device
-    size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    CAPACITY="150000"
-    # Disk space in human readable format (k=1024)
-    ds_hr=`df -h /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Print partition type
-    partition="Product"
-  fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; then
-    # Get the available space left on the device
-    size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Default capacity
-    if [ "$supported_addon_stack" == "false" ]; then
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1567000"
-      [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1834000"
-    fi
-    # Selected capacity
-    if [ "$supported_addon_stack" == "true" ]; then
-      # Size of each package, according to Android platform
-      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
-        $supported_assistant_config && ASSISTANT="142000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="200000" || BROMITE="0"
-        $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
-        $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="445000" || CHROME="0"
-        $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
-        $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
-        $supported_dialer_config && DIALER="45000" || DIALER="0"
-        $supported_dps_config && DPS="70000" || DPS="0"
-        $supported_gboard_config && GBOARD="122000" || GBOARD="0"
-        $supported_gearhead_config && GEARHEAD="33000" || GEARHEAD="0"
-        $supported_launcher_config && LAUNCHER="10000" || LAUNCHER="0"
-        $supported_maps_config && MAPS="110000" || MAPS="0"
-        $supported_markup_config && MARKUP="10000" || MARKUP="0"
-        $supported_messages_config && MESSAGES="100000" || MESSAGES="0"
-        $supported_photos_config && PHOTOS="92000" || PHOTOS="0"
-        $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
-        $supported_tts_config && TTS="30000" || TTS="0"
-        $supported_vanced_config && VANCED="94000" || VANCED="0"
-        $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
-      fi
-      if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-        $supported_assistant_config && ASSISTANT="170000" || ASSISTANT="0"
-        $supported_bromite_config && BROMITE="374000" || BROMITE="0"
-        $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"
-        $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-        $supported_chrome_config && CHROME="445000" || CHROME="0"
-        $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
-        $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"
-        $supported_dialer_config && DIALER="52000" || DIALER="0"
-        $supported_dps_config && DPS="70000" || DPS="0"
-        $supported_gboard_config && GBOARD="134000" || GBOARD="0"
-        $supported_gearhead_config && GEARHEAD="33000" || GEARHEAD="0"
-        $supported_launcher_config && LAUNCHER="10000" || LAUNCHER="0"
-        $supported_maps_config && MAPS="116000" || MAPS="0"
-        $supported_markup_config && MARKUP="10000" || MARKUP="0"
-        $supported_messages_config && MESSAGES="100000" || MESSAGES="0"
-        $supported_photos_config && PHOTOS="107000" || PHOTOS="0"
-        $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"
-        $supported_tts_config && TTS="35000" || TTS="0"
-        $supported_vanced_config && VANCED="114000" || VANCED="0"
-        $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
-      fi
-      # Set capacity by targetting selected packages
-      CAPACITY=`expr $ASSISTANT + $BROMITE + $CALCULATOR + $CALENDAR + $CHROME + $CONTACTS + $DESKCLOCK + $DIALER + $DPS + $GBOARD + $GEARHEAD + $LAUNCHER + $MAPS + $MARKUP + $MESSAGES + $PHOTOS + $SOUNDPICKER + $TTS + $VANCED + $WELLBEING`
-    fi
-    # Disk space in human readable format (k=1024)
-    ds_hr=`df -h /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Print partition type
-    partition="Product"
-  fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ] && [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; then
-    # Get the available space left on the device
-    size=`df -k /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Size of each package, according to Android platform
-    if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
-      $TARGET_ASSISTANT_GOOGLE && CAPACITY="142000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="200000"
-      $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
-      $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
-      $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
-      $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
-      $TARGET_DIALER_GOOGLE && CAPACITY="45000"
-      $TARGET_DPS_GOOGLE && CAPACITY="70000"
-      $TARGET_GBOARD_GOOGLE && CAPACITY="122000"
-      $TARGET_GEARHEAD_GOOGLE && CAPACITY="33000"
-      $TARGET_LAUNCHER_GOOGLE && CAPACITY="10000"
-      $TARGET_MAPS_GOOGLE && CAPACITY="110000"
-      $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
-      $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"
-      $TARGET_PHOTOS_GOOGLE && CAPACITY="92000"
-      $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
-      $TARGET_TTS_GOOGLE && CAPACITY="30000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="94000"
-      $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
-    fi
-    if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-      $TARGET_ASSISTANT_GOOGLE && CAPACITY="170000"
-      $TARGET_BROMITE_GOOGLE && CAPACITY="374000"
-      $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"
-      $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="445000"
-      $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
-      $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"
-      $TARGET_DIALER_GOOGLE && CAPACITY="52000"
-      $TARGET_DPS_GOOGLE && CAPACITY="70000"
-      $TARGET_GBOARD_GOOGLE && CAPACITY="134000"
-      $TARGET_GEARHEAD_GOOGLE && CAPACITY="33000"
-      $TARGET_LAUNCHER_GOOGLE && CAPACITY="10000"
-      $TARGET_MAPS_GOOGLE && CAPACITY="116000"
-      $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
-      $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"
-      $TARGET_PHOTOS_GOOGLE && CAPACITY="107000"
-      $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"
-      $TARGET_TTS_GOOGLE && CAPACITY="35000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="114000"
-      $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
-    fi
-    # Common target
-    CAPACITY="$CAPACITY"
-    # Disk space in human readable format (k=1024)
-    ds_hr=`df -h /product | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
-    # Print partition type
-    partition="Product"
-  fi
+  # Get the available space left on the device
+  size=`df -k $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+  # Disk space in human readable format (k=1024)
+  ds_hr=`df -h $ANDROID_ROOT | tail -n 1 | tr -s ' ' | cut -d' ' -f4`
+  # Common target
+  CAPACITY="$CAPACITY"
+  # Print partition type
+  partition="System"
 }
 
 # Check available space is greater than 150MB(150000KB) or 1.567GB(1567000KB)/1.834GB(1834000KB)
 diskfree() {
-  # Do not execute this function, when ZIPTYPE target is set to 'patch'
-  if [ "$ZIPTYPE" == "basic" ] || [ "$ZIPTYPE" == "addon" ]; then
-    if [[ "$size" -gt "$CAPACITY" ]]; then
-      TARGET_ANDROID_PARTITION="true"
-    else
-      TARGET_ANDROID_PARTITION="false"
-    fi
-    if [ "$TARGET_ANDROID_PARTITION" == "true" ]; then
-      ui_print "- ${partition} Space: $ds_hr"
-    fi
-    # Do not abort, if partition is SystemExt
-    if [ "$TARGET_ANDROID_PARTITION" == "false" ] && [ ! "$partition" == "SystemExt" ]; then
-      ui_print "! Insufficient space in ${partition}"
-      on_abort "! Current space: $ds_hr"
-    fi
-    # Set additional target for free space check, if partition is SystemExt
-    if [ "$partition" == "SystemExt" ]; then
-      TARGET_FALLBACK_CHECK="true"
-    fi
-  fi
+  if [[ "$size" -gt "$CAPACITY" ]]; then TARGET_ANDROID_PARTITION="true"; else TARGET_ANDROID_PARTITION="false"; fi
+  if [ "$TARGET_ANDROID_PARTITION" == "true" ]; then ui_print "- ${partition} Space: $ds_hr"; fi
+  if [ "$TARGET_ANDROID_PARTITION" == "false" ]; then ui_print "! Insufficient space in ${partition}"; on_abort "! Current space: $ds_hr"; fi
 }
 
-# Check available space is greater than 150MB(150000KB) or 1.567GB(1567000KB)/1.834GB(1834000KB)
-diskfreefallback() {
-  # Do not execute this function, when ZIPTYPE target is set to 'patch'
-  if { [ "$ZIPTYPE" == "basic" ] || [ "$ZIPTYPE" == "addon" ]; } && [ "$TARGET_FALLBACK_CHECK" == "true" ]; then
-    if [[ "$size" -gt "$CAPACITY" ]]; then
-      TARGET_ANDROID_PARTITION="true"
-    fi
-    # Finally abort, if fallback partition lack required space
-    if [ "$TARGET_ANDROID_PARTITION" == "true" ]; then
-      ui_print "- ${partition} Space: $ds_hr"
-      # Set target for overriding pathmap
-      BOARD_USES_PRODUCT_PARTITION="true"
-      BOARD_USES_SYSTEMEXT_PARTITION="true"
-      # Set OTA script target for overriding pathmap
-      echo "product" >> $ANDROID_DATA/FALLBACK_PARTITION
-    else
-      ui_print "! Insufficient space in ${partition}"
-      on_abort "! Current space: $ds_hr"
-    fi
-  fi
-}
-
-chk_disk() {
-  if [ "$wipe_config" == "false" ]; then
-    chk_product
-    chk_system_Ext
-    df_system
-    df_product
-    df_systemExt
-    diskfree
-    df_systemExt_fallback
-    diskfreefallback
-  fi
-}
+chk_disk() { if [ "$wipe_config" == "false" ]; then chk_product; chk_system_Ext; df_system; diskfree; fi; }
 
 # Do not merge 'pre_install' functions here
 post_install() {
   if [ "$ZIPTYPE" == "addon" ] && [ "$wipe_config" == "false" ]; then
-    on_rwg_check
-    on_unsupported_rwg
-    skip_on_unsupported
-    build_defaults
-    mk_component
-    ext_pathmap
-    ext_pathmap_fallback
-    product_pathmap
-    system_pathmap
-    print_title_module
-    require_new_magisk
-    check_modules_path
-    on_rwg_systemless
-    set_bitgapps_module
-    set_module_path
-    create_module_pathmap
-    ext_module_pathmap
-    ext_module_pathmap_fallback
-    product_module_pathmap
-    system_module_pathmap
-    on_addon_config
-    on_addon_check
-    on_addon_chk
-    set_addon_config
-    on_addon_wipe
-    set_addon_wipe
-    on_addon_install
-    fix_module_perm
-    module_info
-    on_installed
+    { on_rwg_check; on_unsupported_rwg; skip_on_unsupported
+      build_defaults; mk_component; system_pathmap
+      print_title_module; require_new_magisk; check_modules_path
+      on_rwg_systemless; set_bitgapps_module; set_module_path
+      create_module_pathmap; system_module_pathmap; on_addon_config
+      on_addon_check; on_addon_chk; set_addon_config
+      on_addon_install; fix_module_perm; module_info; on_installed; }
   fi
   if [ "$ZIPTYPE" == "basic" ] && [ "$wipe_config" == "false" ]; then
-    on_rwg_check
-    on_unsupported_rwg
-    skip_on_unsupported
-    post_backup
-    build_defaults
-    mk_component
-    ext_pathmap
-    ext_pathmap_fallback
-    product_pathmap
-    system_pathmap
-    print_title_module
-    require_new_magisk
-    check_modules_path
-    on_rwg_systemless
-    set_bitgapps_module
-    set_module_path
-    create_module_pathmap
-    ext_module_pathmap
-    ext_module_pathmap_fallback
-    product_module_pathmap
-    system_module_pathmap
-    override_module
-    rwg_aosp_install
-    set_aosp_default
-    lim_aosp_install
-    pre_installed_v31
-    pre_installed_v30
-    pre_installed_v29
-    pre_installed_v28
-    pre_installed_v27
-    pre_installed_v26
-    pre_installed_v25
-    sdk_v31_install
-    sdk_v30_install
-    sdk_v29_install
-    sdk_v28_install
-    sdk_v27_install
-    sdk_v26_install
-    sdk_v25_install
-    aosp_pkg_install
-    build_prop_file
-    ota_prop_file
-    rwg_ota_prop
-    on_setup_check
-    set_setup_config
-    print_title_setup
-    on_setup_install
-    backup_script
-    opt_v25
-    whitelist_patch
-    sdk_fix
-    selinux_fix
-    fix_gms_hide
-    fix_module_perm
-    module_info
-    mk_busybox_backup
-    boot_image_editor
-    patch_bootimg
-    on_cts_patch
-    boot_whitelist_permission
-    on_installed
+    { on_rwg_check; on_unsupported_rwg; skip_on_unsupported
+      post_backup; build_defaults; mk_component
+      system_pathmap; print_title_module; require_new_magisk
+      check_modules_path; on_rwg_systemless; set_bitgapps_module
+      set_module_path; create_module_pathmap; system_module_pathmap
+      override_module; rwg_aosp_install; set_aosp_default
+      lim_aosp_install; pre_installed_v25; sdk_v25_install
+      on_aosp_install; build_prop_file; ota_prop_file
+      rwg_ota_prop; on_setup_check; set_setup_config
+      print_title_setup; on_setup_install; backup_script
+      opt_v25; whitelist_patch; sdk_fix; selinux_fix
+      fix_gms_hide; fix_module_perm; module_info
+      mk_busybox_backup; boot_image_editor; patch_bootimg
+      on_cts_patch; boot_whitelist_permission; on_installed; }
   fi
 }
 
 # Begin installation
-helper
-pre_install
-chk_disk
-post_install
-post_uninstall
+{ helper; pre_install; chk_disk; post_install; post_uninstall; }
 # end installation
 
 # end method

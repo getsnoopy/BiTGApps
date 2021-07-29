@@ -30,31 +30,22 @@ BBDIR="/tmp"
 BBBAK="/data/busybox"
 
 # Mount backup partitions
-mount /cache > /dev/null 2>&1
-mount /persist > /dev/null 2>&1
-mount /metadata > /dev/null 2>&1
+for i in /cache /persist /metadata; do
+  (mount $i) > /dev/null 2>&1
+done
 
 # Copy busybox backup
-if [ -e "/cache/busybox/busybox-arm" ]; then
-  cp -f /cache/busybox/busybox-arm $BBDIR/busybox-arm
-fi
-if [ -e "/persist/busybox/busybox-arm" ]; then
-  cp -f /persist/busybox/busybox-arm $BBDIR/busybox-arm
-fi
-if [ -e "/metadata/busybox/busybox-arm" ]; then
-  cp -f /metadata/busybox/busybox-arm $BBDIR/busybox-arm
-fi
+[ -e "/cache/busybox/busybox-arm" ] && cp -f /cache/busybox/busybox-arm $BBDIR/busybox-arm
+[ -e "/persist/busybox/busybox-arm" ] && cp -f /persist/busybox/busybox-arm $BBDIR/busybox-arm
+[ -e "/metadata/busybox/busybox-arm" ]&& cp -f /metadata/busybox/busybox-arm $BBDIR/busybox-arm
 
 # Set runtime permission
 [ -e "$BBDIR/busybox-arm" ] && chmod +x $BBDIR/busybox-arm
 
 # Unmount backup partitions
-umount /cache > /dev/null 2>&1
-umount -l /cache > /dev/null 2>&1
-umount /persist > /dev/null 2>&1
-umount -l /persist > /dev/null 2>&1
-umount /metadata > /dev/null 2>&1
-umount -l /metadata > /dev/null 2>&1
+for i in /cache /persist /metadata; do
+  (umount $i && umount -l $i) > /dev/null 2>&1
+done
 
 # Run scripts in the busybox environment
 case "$1" in
