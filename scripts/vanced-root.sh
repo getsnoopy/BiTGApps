@@ -33,4 +33,9 @@ chcon u:object_r:apk_data_file:s0 /data/adb/YouTubeStock/base.apk
 pm install -r /data/adb/YouTubeStock/base.apk
 
 # Bind mount operation
-mount -o bind /data/adb/YouTubeVanced/base.apk /data/app/*/com.google.android.youtube-*/base.apk
+if [ "$(readlink -f /data/app/com.google.android.youtube-*/base.apk)" ]; then
+  mount -o bind /data/adb/YouTubeVanced/base.apk /data/app/com.google.android.youtube-*/base.apk
+fi
+if [ "$(readlink -f /data/app/*/com.google.android.youtube-*/base.apk)" ]; then
+  mount -o bind /data/adb/YouTubeVanced/base.apk /data/app/*/com.google.android.youtube-*/base.apk
+fi

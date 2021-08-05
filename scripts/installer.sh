@@ -1548,6 +1548,18 @@ system_pathmap() {
   fi
 }
 
+override_pathmap() {
+  SYSTEM_ADB="$SYSTEM/adb"
+  SYSTEM_ADB_APP="$SYSTEM/adb/app"
+  SYSTEM_ADB_XBIN="$SYSTEM/adb/xbin"
+  SYSTEM_APP="$SYSTEM/app"
+  for i in app xbin; do
+    mkdir -p $SYSTEM_ADB/$i
+    chmod -R 0755 $SYSTEM_ADB
+    chcon -hR u:object_r:system_file:s0 "$SYSTEM_ADB"
+  done
+}
+
 create_module_pathmap() {
   if [ "$supported_module_config" == "true" ]; then
     # Common system pathmap
@@ -3706,7 +3718,7 @@ set_addon_zip_conf() {
       fi
       # Wipe additional YouTube Vanced components
       rm -rf $SYSTEM_AS_SYSTEM/adb $SYSTEM_AS_SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
-      rm -rf $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
+      rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       ADDON_SYS="YouTube.tar.xz"
       PKG_SYS="YouTube"
       target_sys
@@ -3729,7 +3741,12 @@ set_addon_zip_conf() {
     else
       ui_print "! Skip installing Vanced MicroG"
     fi
-    if [ "$supported_vanced_config" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "false" ] && [ "$supported_module_config" == "false" ]; then
+    if [ "$supported_vanced_config" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "false" ]; then
+      # Override default layout
+      if [ "$supported_module_config" == "true" ]; then
+        system_layout
+        override_pathmap
+      fi
       ui_print "- Installing YouTube Vanced"
       for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
@@ -3738,7 +3755,7 @@ set_addon_zip_conf() {
         rm -rf $i/YouTube* $i/Youtube*
       done
       # Wipe additional YouTube Vanced components
-      rm -rf $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
+      rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       ADDON_SYS="YouTubeVanced.tar.xz"
       PKG_SYS="YouTube"
       target_sys_adb
@@ -3747,10 +3764,21 @@ set_addon_zip_conf() {
       PKG_SYS="YouTube"
       target_sys
       vanced_boot_patch
+      # Restore default layout
+      if [ "$supported_module_config" == "true" ]; then
+        set_module_path
+        create_module_pathmap
+        system_module_pathmap
+      fi
     else
-      ui_print "! Cannot install YouTube Vanced"
+      ui_print "! Skip installing YouTube Vanced"
     fi
-    if [ "$supported_vanced_config" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "true" ] && [ "$supported_module_config" == "false" ]; then
+    if [ "$supported_vanced_config" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "true" ]; then
+      # Override default layout
+      if [ "$supported_module_config" == "true" ]; then
+        system_layout
+        override_pathmap
+      fi
       ui_print "- Installing YouTube Vanced"
       for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
@@ -3759,26 +3787,31 @@ set_addon_zip_conf() {
         rm -rf $i/YouTube* $i/Youtube*
       done
       # Wipe additional YouTube Vanced components
-      rm -rf $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
-      # Temporarily enable systemless feature for magisk detection
-      supported_module_config="true"
+      rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       # Check magisk
-      require_new_magisk
-      # Disable systemless feature
-      supported_module_config="false"
-      ADDON_SYS="YouTubeVanced.tar.xz"
-      PKG_SYS="YouTube"
-      target_sys_data
-      mv -f $ANDROID_DATA/adb/$PKG_SYS $ANDROID_DATA/adb/YouTubeVanced
-      mv -f $ANDROID_DATA/adb/YouTubeVanced/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeVanced/base.apk
-      ADDON_SYS="YouTubeStock.tar.xz"
-      PKG_SYS="YouTube"
-      target_sys_data
-      mv -f $ANDROID_DATA/adb/$PKG_SYS $ANDROID_DATA/adb/YouTubeStock && rm -rf $ANDROID_DATA/adb/YouTubeStock/lib
-      mv -f $ANDROID_DATA/adb/YouTubeStock/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeStock/base.apk
-      vanced_config
+      require_new_magisk_v2
+      # Skip installation
+      if [ ! "$SKIP_VANCED_INSTALL" == "true" ]; then
+        ADDON_SYS="YouTubeVanced.tar.xz"
+        PKG_SYS="YouTube"
+        target_sys_data
+        mv -f $ANDROID_DATA/adb/$PKG_SYS $ANDROID_DATA/adb/YouTubeVanced
+        mv -f $ANDROID_DATA/adb/YouTubeVanced/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeVanced/base.apk
+        ADDON_SYS="YouTubeStock.tar.xz"
+        PKG_SYS="YouTube"
+        target_sys_data
+        mv -f $ANDROID_DATA/adb/$PKG_SYS $ANDROID_DATA/adb/YouTubeStock && rm -rf $ANDROID_DATA/adb/YouTubeStock/lib
+        mv -f $ANDROID_DATA/adb/YouTubeStock/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeStock/base.apk
+        vanced_config
+      fi
+      # Restore default layout
+      if [ "$supported_module_config" == "true" ]; then
+        set_module_path
+        create_module_pathmap
+        system_module_pathmap
+      fi
     else
-      ui_print "! Cannot install YouTube Vanced"
+      ui_print "! Skip installing YouTube Vanced"
     fi
     if [ "$supported_wellbeing_config" == "true" ] && [ "$android_sdk" -ge "28" ]; then
       ui_print "- Installing Wellbeing Google"
@@ -4225,7 +4258,7 @@ set_addon_zip_sep() {
       fi
       # Wipe additional YouTube Vanced components
       rm -rf $SYSTEM_AS_SYSTEM/adb $SYSTEM_AS_SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
-      rm -rf $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
+      rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         ADDON_SYS="YouTube_arm.tar.xz"
         PKG_SYS="YouTube"
@@ -4250,7 +4283,12 @@ set_addon_zip_sep() {
       PKG_SYS="MicroGGMSCore"
       target_sys
     fi
-    if [ "$TARGET_VANCED_GOOGLE" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "false" ] && [ "$supported_module_config" == "false" ]; then
+    if [ "$TARGET_VANCED_GOOGLE" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "false" ]; then
+      # Override default layout
+      if [ "$supported_module_config" == "true" ]; then
+        system_layout
+        override_pathmap
+      fi
       ui_print "- Installing YouTube Vanced"
       for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
@@ -4259,7 +4297,7 @@ set_addon_zip_sep() {
         rm -rf $i/YouTube* $i/Youtube*
       done
       # Wipe additional YouTube Vanced components
-      rm -rf $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
+      rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       ADDON_SYS="YouTubeVanced.tar.xz"
       PKG_SYS="YouTube"
       target_sys_adb
@@ -4268,11 +4306,19 @@ set_addon_zip_sep() {
       PKG_SYS="YouTube"
       target_sys
       vanced_boot_patch
+      # Restore default layout
+      if [ "$supported_module_config" == "true" ]; then
+        set_module_path
+        create_module_pathmap
+        system_module_pathmap
+      fi
     fi
-    if [ "$TARGET_VANCED_GOOGLE" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "false" ] && [ "$supported_module_config" == "true" ]; then
-      ui_print "! Cannot install YouTube Vanced"
-    fi
-    if [ "$TARGET_VANCED_GOOGLE" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "true" ] && [ "$supported_module_config" == "false" ]; then
+    if [ "$TARGET_VANCED_GOOGLE" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "true" ]; then
+      # Override default layout
+      if [ "$supported_module_config" == "true" ]; then
+        system_layout
+        override_pathmap
+      fi
       ui_print "- Installing YouTube Vanced"
       for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
@@ -4281,27 +4327,29 @@ set_addon_zip_sep() {
         rm -rf $i/YouTube* $i/Youtube*
       done
       # Wipe additional YouTube Vanced components
-      rm -rf $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
-      # Temporarily enable systemless feature for magisk detection
-      supported_module_config="true"
+      rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       # Check magisk
-      require_new_magisk
-      # Disable systemless feature
-      supported_module_config="false"
-      ADDON_SYS="YouTubeVanced.tar.xz"
-      PKG_SYS="YouTube"
-      target_sys_data
-      mv -f $ANDROID_DATA/adb/$PKG_SYS $ANDROID_DATA/adb/YouTubeVanced
-      mv -f $ANDROID_DATA/adb/YouTubeVanced/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeVanced/base.apk
-      ADDON_SYS="YouTubeStock.tar.xz"
-      PKG_SYS="YouTube"
-      target_sys_data
-      mv -f $ANDROID_DATA/adb/$PKG_SYS $ANDROID_DATA/adb/YouTubeStock && rm -rf $ANDROID_DATA/adb/YouTubeStock/lib
-      mv -f $ANDROID_DATA/adb/YouTubeStock/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeStock/base.apk
-      vanced_config
-    fi
-    if [ "$TARGET_VANCED_GOOGLE" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "true" ] && [ "$supported_module_config" == "true" ]; then
-      ui_print "! Cannot install YouTube Vanced"
+      require_new_magisk_v2
+      # Skip installation
+      if [ ! "$SKIP_VANCED_INSTALL" == "true" ]; then
+        ADDON_SYS="YouTubeVanced.tar.xz"
+        PKG_SYS="YouTube"
+        target_sys_data
+        mv -f $ANDROID_DATA/adb/$PKG_SYS $ANDROID_DATA/adb/YouTubeVanced
+        mv -f $ANDROID_DATA/adb/YouTubeVanced/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeVanced/base.apk
+        ADDON_SYS="YouTubeStock.tar.xz"
+        PKG_SYS="YouTube"
+        target_sys_data
+        mv -f $ANDROID_DATA/adb/$PKG_SYS $ANDROID_DATA/adb/YouTubeStock && rm -rf $ANDROID_DATA/adb/YouTubeStock/lib
+        mv -f $ANDROID_DATA/adb/YouTubeStock/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeStock/base.apk
+        vanced_config
+      fi
+      # Restore default layout
+      if [ "$supported_module_config" == "true" ]; then
+        set_module_path
+        create_module_pathmap
+        system_module_pathmap
+      fi
     fi
     if [ "$TARGET_WELLBEING_GOOGLE" == "true" ] && [ "$android_sdk" -ge "28" ]; then
       ui_print "- Installing Wellbeing Google"
@@ -5191,6 +5239,26 @@ require_new_magisk() {
     chmod 0755 $TMP/MAGISK_VER_CODE && . $TMP/MAGISK_VER_CODE
     [ "$MAGISK_VER_CODE" -lt "20400" ] && on_abort "! Please install Magisk v20.4+"
   fi
+}
+
+require_new_magisk_v2() {
+  for m in /data/magisk; do
+    if [ -d "$m" ]; then
+      mkdir -p /data/adb/modules
+      chmod -R 0755 /data/adb
+      mv -f /data/magisk /data/adb/magisk
+    fi
+  done
+  for m in /data/adb/magisk; do
+    if [ -d "$m" ]; then
+      test -d /data/adb/modules || mkdir /data/adb/modules
+      chmod 0755 /data/adb/modules
+    fi
+  done
+  [ -f /data/adb/magisk/util_functions.sh ] || SKIP_VANCED_INSTALL="true"
+  grep -w 'MAGISK_VER_CODE' /data/adb/magisk/util_functions.sh >> $TMP/MAGISK_VER_CODE
+  chmod 0755 $TMP/MAGISK_VER_CODE && . $TMP/MAGISK_VER_CODE
+  [ "$MAGISK_VER_CODE" -lt "20400" ] && SKIP_VANCED_INSTALL="true"
 }
 
 check_modules_path() {
