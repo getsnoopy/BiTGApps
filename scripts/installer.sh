@@ -158,9 +158,11 @@ mk_busybox_backup_v1() {
     chmod -R 0755 /cache/busybox
   fi
   # Backup busybox in persist partition for OTA script
-  rm -rf /persist/busybox && mkdir /persist/busybox
-  cp -f $TMP/busybox-arm /persist/busybox/busybox-arm
-  chmod -R 0755 /persist/busybox
+  if [ -d "/persist" ]; then
+    rm -rf /persist/busybox && mkdir /persist/busybox
+    cp -f $TMP/busybox-arm /persist/busybox/busybox-arm
+    chmod -R 0755 /persist/busybox
+  fi
   # Backup busybox in metadata partition for OTA script
   if [ -n "$(cat $fstab | grep /metadata)" ]; then
     rm -rf /metadata/busybox && mkdir /metadata/busybox
@@ -177,9 +179,11 @@ mk_busybox_backup_v2() {
     chmod -R 0755 /cache/busybox
   fi
   # Backup busybox in persist partition for OTA script
-  rm -rf /mnt/vendor/persist/busybox && mkdir /mnt/vendor/persist/busybox
-  cp -f $TMP/busybox-arm /mnt/vendor/persist/busybox/busybox-arm
-  chmod -R 0755 /mnt/vendor/persist/busybox
+  if [ -d "/mnt/vendor/persist" ]; then
+    rm -rf /mnt/vendor/persist/busybox && mkdir /mnt/vendor/persist/busybox
+    cp -f $TMP/busybox-arm /mnt/vendor/persist/busybox/busybox-arm
+    chmod -R 0755 /mnt/vendor/persist/busybox
+  fi
   # Backup busybox in metadata partition for OTA script
   if [ "$($l/grep -w -o /metadata /proc/mounts)" ]; then
     rm -rf /metadata/busybox && mkdir /metadata/busybox
