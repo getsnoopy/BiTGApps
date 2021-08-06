@@ -227,7 +227,7 @@ insert_line() {
     if [ -f $1 -a "$line" ] && [ "$(wc -l $1 | cut -d\  -f1)" -lt "$line" ]; then
       echo "$5" >> $1
     else
-      sed -i "${line}s;^;${5}\n;" $1
+      $l/sed -i "${line}s;^;${5}\n;" $1
     fi
   fi
 }
@@ -236,7 +236,7 @@ insert_line() {
 replace_line() {
   if grep -q "$2" $1; then
     local line=$(grep -n "$2" $1 | head -n1 | cut -d: -f1)
-    sed -i "${line}s;.*;${3};" $1
+    $l/sed -i "${line}s;.*;${3};" $1
   fi
 }
 
@@ -244,7 +244,7 @@ replace_line() {
 remove_line() {
   if grep -q "$2" $1; then
     local line=$(grep -n "$2" $1 | head -n1 | cut -d: -f1)
-    sed -i "${line}d" $1
+    $l/sed -i "${line}d" $1
   fi
 }
 
@@ -340,7 +340,7 @@ is_mounted() {
 
 grep_cmdline() {
   local REGEX="s/^$1=//p"
-  cat /proc/cmdline | tr '[:space:]' '\n' | sed -n "$REGEX" 2>/dev/null
+  cat /proc/cmdline | tr '[:space:]' '\n' | $l/sed -n "$REGEX" 2>/dev/null
 }
 
 setup_mountpoint() {
@@ -2927,7 +2927,7 @@ set_google_assistant_default() {
           if ! $l/grep -q 'assistant" value="com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService' "$setsec"; then
             curentry="$($l/grep -o 'assistant" value=.*$' "$setsec")"
             newentry='assistant" value="com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService" package="com.android.settings" />\r'
-            sed -i "s;${curentry};${newentry};" "$setsec"
+            $l/sed -i "s;${curentry};${newentry};" "$setsec"
           fi
         else
           max="0"
@@ -2935,7 +2935,7 @@ set_google_assistant_default() {
             test "$i" -gt "$max" && max="$i"
           done
           entry='<setting id="'"$((max + 1))"'" name="assistant" value="com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService" package="com.android.settings" />\r'
-          sed -i "/<settings version=\"/a\ \ ${entry}" "$setsec"
+          $l/sed -i "/<settings version=\"/a\ \ ${entry}" "$setsec"
         fi
       else
         if [ ! -d "/data/system/users/0" ]; then
@@ -3042,7 +3042,7 @@ set_google_dialer_default() {
           if ! $l/grep -q 'dialer_default_application" value="com.google.android.dialer' "$setsec"; then
             curentry="$($l/grep -o 'dialer_default_application" value=.*$' "$setsec")"
             newentry='dialer_default_application" value="com.google.android.dialer" package="android" />\r'
-            sed -i "s;${curentry};${newentry};" "$setsec"
+            $l/sed -i "s;${curentry};${newentry};" "$setsec"
           fi
         else
           max="0"
@@ -3050,7 +3050,7 @@ set_google_dialer_default() {
             test "$i" -gt "$max" && max="$i"
           done
           entry='<setting id="'"$((max + 1))"'" name="dialer_default_application" value="com.google.android.dialer" package="android" />\r'
-          sed -i "/<settings version=\"/a\ \ ${entry}" "$setsec"
+          $l/sed -i "/<settings version=\"/a\ \ ${entry}" "$setsec"
         fi
       else
         if [ ! -d "/data/system/users/0" ]; then
@@ -3145,7 +3145,7 @@ set_google_messages_default() {
           if ! $l/grep -q 'sms_default_application" value="com.google.android.apps.messaging' "$setsec"; then
             curentry="$(grep -o 'sms_default_application" value=.*$' "$setsec")"
             newentry='sms_default_application" value="com.google.android.apps.messaging" package="com.android.phone" />\r'
-            sed -i "s;${curentry};${newentry};" "$setsec"
+            $l/sed -i "s;${curentry};${newentry};" "$setsec"
           fi
         else
           max="0"
@@ -3153,7 +3153,7 @@ set_google_messages_default() {
             test "$i" -gt "$max" && max="$i"
           done
           entry='<setting id="'"$((max + 1))"'" name="sms_default_application" value="com.google.android.apps.messaging" package="com.android.phone" />\r'
-          sed -i "/<settings version=\"/a\ \ ${entry}" "$setsec"
+          $l/sed -i "/<settings version=\"/a\ \ ${entry}" "$setsec"
         fi
       else
         if [ ! -d "/data/system/users/0" ]; then
@@ -3288,14 +3288,14 @@ vanced_boot_patch() {
   esac
   if [ -f "header" ]; then
     # Change selinux state to permissive, without this bootlog script failed to execute
-    sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
+    $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
   if [ -f "ramdisk.cpio" ]; then
     mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk > /dev/null 2>&1
   fi
   if [ -f "ramdisk/init.rc" ]; then
     if [ ! -n "$(cat ramdisk/init.rc | grep init.vanced.rc)" ]; then
-      sed -i '/init.${ro.zygote}.rc/a\\import /init.vanced.rc' ramdisk/init.rc
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.vanced.rc' ramdisk/init.rc
       cp -f $TMP/init.vanced.rc ramdisk/init.vanced.rc
       chmod 0750 ramdisk/init.vanced.rc
       chcon -h u:object_r:rootfs:s0 "ramdisk/init.vanced.rc"
@@ -3334,7 +3334,7 @@ vanced_boot_patch() {
   # Patch root file system component
   if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/init.rc" ] && [ -n "$(cat /system_root/init.rc | grep ro.zygote)" ]; }; then
     if [ ! -n "$(cat /system_root/init.rc | grep init.vanced.rc)" ]; then
-      sed -i '/init.${ro.zygote}.rc/a\\import /init.vanced.rc' /system_root/init.rc
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.vanced.rc' /system_root/init.rc
       cp -f $TMP/init.vanced.rc /system_root/init.vanced.rc
       chmod 0750 /system_root/init.vanced.rc
       chcon -h u:object_r:rootfs:s0 "/system_root/init.vanced.rc"
@@ -3348,7 +3348,7 @@ vanced_boot_patch() {
   fi
   if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
     if [ ! -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.vanced.rc)" ]; then
-      sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.vanced.rc' /system_root/system/etc/init/hw/init.rc
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.vanced.rc' /system_root/system/etc/init/hw/init.rc
       cp -f $TMP/init.vanced.rc /system_root/system/etc/init/hw/init.vanced.rc
       chmod 0644 /system_root/system/etc/init/hw/init.vanced.rc
       chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.vanced.rc"
@@ -3362,7 +3362,7 @@ vanced_boot_patch() {
   fi
   if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
     if [ ! -n "$(cat /system/etc/init/hw/init.rc | grep init.vanced.rc)" ]; then
-      sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.vanced.rc' /system/etc/init/hw/init.rc
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.vanced.rc' /system/etc/init/hw/init.rc
       cp -f $TMP/init.vanced.rc /system/etc/init/hw/init.vanced.rc
       chmod 0644 /system/etc/init/hw/init.vanced.rc
       chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.vanced.rc"
@@ -4417,12 +4417,12 @@ on_addon_install() { print_title_addon; set_addon_install; addon_ota_prop; }
 # Delete existing GMS Doze entry from Android 7.1+
 opt_v25() {
   if [ "$android_sdk" -ge "25" ]; then
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM_AS_SYSTEM/etc/permissions/*.xml 2>/dev/null
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM_AS_SYSTEM/etc/sysconfig/*.xml 2>/dev/null
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM_AS_SYSTEM/product/etc/permissions/*.xml 2>/dev/null
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM_AS_SYSTEM/product/etc/sysconfig/*.xml 2>/dev/null
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/*.xml 2>/dev/null
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/*.xml 2>/dev/null
+    $l/sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM_AS_SYSTEM/etc/permissions/*.xml 2>/dev/null
+    $l/sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM_AS_SYSTEM/etc/sysconfig/*.xml 2>/dev/null
+    $l/sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM_AS_SYSTEM/product/etc/permissions/*.xml 2>/dev/null
+    $l/sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM_AS_SYSTEM/product/etc/sysconfig/*.xml 2>/dev/null
+    $l/sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM_AS_SYSTEM/system_ext/etc/permissions/*.xml 2>/dev/null
+    $l/sed -i '/allow-in-power-save package="com.google.android.gms"/d' $SYSTEM_AS_SYSTEM/system_ext/etc/sysconfig/*.xml 2>/dev/null
   fi
 }
 
@@ -4886,14 +4886,14 @@ patch_bootimg() {
   esac
   if [ -f "header" ]; then
     # Change selinux state to permissive, without this bootlog script failed to execute
-    sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
+    $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
   if [ -f "ramdisk.cpio" ]; then
     mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk > /dev/null 2>&1
   fi
   if [ -f "ramdisk/init.rc" ]; then
     if [ ! -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
-      sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' ramdisk/init.rc
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' ramdisk/init.rc
       cp -f $TMP/init.logcat.rc ramdisk/init.logcat.rc
       chmod 0750 ramdisk/init.logcat.rc
       chcon -h u:object_r:rootfs:s0 "ramdisk/init.logcat.rc"
@@ -4932,7 +4932,7 @@ patch_bootimg() {
   # Patch root file system component
   if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/init.rc" ] && [ -n "$(cat /system_root/init.rc | grep ro.zygote)" ]; }; then
     if [ ! -n "$(cat /system_root/init.rc | grep init.logcat.rc)" ]; then
-      sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' /system_root/init.rc
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' /system_root/init.rc
       cp -f $TMP/init.logcat.rc /system_root/init.logcat.rc
       chmod 0750 /system_root/init.logcat.rc
       chcon -h u:object_r:rootfs:s0 "/system_root/init.logcat.rc"
@@ -4946,7 +4946,7 @@ patch_bootimg() {
   fi
   if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
     if [ ! -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
-      sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' /system_root/system/etc/init/hw/init.rc
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' /system_root/system/etc/init/hw/init.rc
       cp -f $TMP/init.logcat.rc /system_root/system/etc/init/hw/init.logcat.rc
       chmod 0644 /system_root/system/etc/init/hw/init.logcat.rc
       chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.logcat.rc"
@@ -4960,7 +4960,7 @@ patch_bootimg() {
   fi
   if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
     if [ ! -n "$(cat /system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
-      sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' /system/etc/init/hw/init.rc
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' /system/etc/init/hw/init.rc
       cp -f $TMP/init.logcat.rc /system/etc/init/hw/init.logcat.rc
       chmod 0644 /system/etc/init/hw/init.logcat.rc
       chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.logcat.rc"
@@ -5005,7 +5005,7 @@ spl_update_boot() {
       ;;
   esac
   if [ -f "header" ]; then
-    sed -i '/os_patch_level/c\os_patch_level=2021-08' header
+    $l/sed -i '/os_patch_level/c\os_patch_level=2021-08' header
     ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
     # Sign ChromeOS boot image
     [ "$CHROMEOS" == "true" ] && sign_chromeos
@@ -5231,7 +5231,7 @@ boot_whitelist_permission() {
     mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk > /dev/null 2>&1
   fi
   if [ -f "ramdisk/default.prop" ] && [ -n "$(cat ramdisk/default.prop | grep control_privapp_permissions)" ]; then
-    sed -i '/ro.control_privapp_permissions=enforce/c\ro.control_privapp_permissions=disable' default.prop
+    $l/sed -i '/ro.control_privapp_permissions=enforce/c\ro.control_privapp_permissions=disable' default.prop
     rm -rf ramdisk.cpio && cd $TMP_AIK/ramdisk
     find $TMP_AIK/ramdisk | $TMP_AIK/cpio -ov > $TMP_AIK/ramdisk.cpio
     # Checkout ramdisk path
