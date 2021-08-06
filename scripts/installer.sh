@@ -3885,17 +3885,6 @@ set_addon_zip_sep() {
         PKG_SYS="WebViewBromite"
         target_sys
       fi
-      if [ -d "$SYSTEM_ADDOND" ] && [ "$supported_module_config" == "false" ]; then
-        ui_print "- Installing Bromite OTA script"
-        rm -rf $SYSTEM_ADDOND/bromite.sh
-        ZIP="zip/Addon.tar.xz"
-        [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
-        tar -xf $ZIP_FILE/Addon.tar.xz -C $TMP_ADDON
-        pkg_TMPAddon
-        chcon -h u:object_r:system_file:s0 "$SYSTEM_ADDOND/bromite.sh"
-      else
-        ui_print "! Skip installing OTA survival script"
-      fi
     fi
     if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
       ui_print "- Installing Calculator Google"
