@@ -4837,6 +4837,7 @@ post_uninstall() {
 
 # Boot Image Patcher
 boot_image_editor() {
+  ui_print "- Boot image modification"
   ZIP="zip/AIK.tar.xz"
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   tar -xf $ZIP_FILE/AIK.tar.xz -C $TMP_AIK
