@@ -150,7 +150,7 @@ set_bb() {
 }
 
 # Create busybox backup in multiple locations to overcome encryption conflict
-mk_busybox_backup() {
+mk_busybox_backup_v1() {
   # Backup busybox in cache partition for OTA script
   if [ -n "$(cat $fstab | grep /cache)" ]; then
     rm -rf /cache/busybox && mkdir /cache/busybox
@@ -168,6 +168,27 @@ mk_busybox_backup() {
     chmod -R 0755 /metadata/busybox
   fi
 }
+
+mk_busybox_backup_v2() {
+  # Backup busybox in cache partition for OTA script
+  if [ "$($l/grep -w -o /cache /proc/mounts)" ]; then
+    rm -rf /cache/busybox && mkdir /cache/busybox
+    cp -f $TMP/busybox-arm /cache/busybox/busybox-arm
+    chmod -R 0755 /cache/busybox
+  fi
+  # Backup busybox in persist partition for OTA script
+  rm -rf /mnt/vendor/persist/busybox && mkdir /mnt/vendor/persist/busybox
+  cp -f $TMP/busybox-arm /mnt/vendor/persist/busybox/busybox-arm
+  chmod -R 0755 /mnt/vendor/persist/busybox
+  # Backup busybox in metadata partition for OTA script
+  if [ "$($l/grep -w -o /metadata /proc/mounts)" ]; then
+    rm -rf /metadata/busybox && mkdir /metadata/busybox
+    cp -f $TMP/busybox-arm /metadata/busybox/busybox-arm
+    chmod -R 0755 /metadata/busybox
+  fi
+}
+
+mk_busybox_backup() { { [ "$BOOTMODE" == "false" ] && mk_busybox_backup_v1; }; { [ "$BOOTMODE" == "true" ] && mk_busybox_backup_v2; }; }
 
 # Unset predefined environmental variable
 recovery_actions() {
@@ -1367,6 +1388,7 @@ RTP_v29() {
       rm -rf /data/system/users/*/runtime-permissions.xml
     fi
   fi
+  [ "$BOOTMODE" == "true" ] && rm -rf /data/system/users/*/runtime-permissions.xml
 }
 
 RTP_v30() {
@@ -1382,10 +1404,11 @@ RTP_v30() {
       rm -rf "$RTP_DEST"
     fi
   fi
+  [ "$BOOTMODE" == "true" ] && rm -rf "$RTP_DEST"
 }
 
 # Wipe runtime permissions
-clean_inst() { { [ "$android_sdk" -le "29" ] && RTP_v29; } && { [ "$android_sdk" -ge "30" ] && RTP_v30; }; }
+clean_inst() { { [ "$android_sdk" -le "29" ] && RTP_v29; }; { [ "$android_sdk" -ge "30" ] && RTP_v30; }; }
 
 # Create installation components
 mk_component() {
@@ -3263,7 +3286,7 @@ vanced_boot_patch() {
     sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
   if [ -f "ramdisk.cpio" ]; then
-    mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk
+    mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk > /dev/null 2>&1
   fi
   if [ -f "ramdisk/init.rc" ]; then
     if [ ! -n "$(cat ramdisk/init.rc | grep init.vanced.rc)" ]; then
@@ -3330,6 +3353,20 @@ vanced_boot_patch() {
       cp -f $TMP/init.vanced.rc /system_root/system/etc/init/hw/init.vanced.rc
       chmod 0644 /system_root/system/etc/init/hw/init.vanced.rc
       chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.vanced.rc"
+    fi
+  fi
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+    if [ ! -n "$(cat /system/etc/init/hw/init.rc | grep init.vanced.rc)" ]; then
+      sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.vanced.rc' /system/etc/init/hw/init.rc
+      cp -f $TMP/init.vanced.rc /system/etc/init/hw/init.vanced.rc
+      chmod 0644 /system/etc/init/hw/init.vanced.rc
+      chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.vanced.rc"
+    fi
+    if [ -n "$(cat /system/etc/init/hw/init.rc | grep init.vanced.rc)" ]; then
+      rm -rf /system/etc/init/hw/init.vanced.rc
+      cp -f $TMP/init.vanced.rc /system/etc/init/hw/init.vanced.rc
+      chmod 0644 /system/etc/init/hw/init.vanced.rc
+      chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.vanced.rc"
     fi
   fi
 }
@@ -4418,6 +4455,15 @@ purge_whitelist_permission() {
     ln -sfnv $SYSTEM_AS_SYSTEM/etc/prop.default $ANDROID_ROOT/default.prop
     rm -rf $TMP/prop.default
   fi
+  if [ -f "$SYSTEM_AS_SYSTEM/etc/prop.default" ] && [ -f "/default.prop" ] && [ -n "$(cat $SYSTEM_AS_SYSTEM/etc/prop.default | grep control_privapp_permissions)" ]; then
+    rm -rf /default.prop
+    grep -v "ro.control_privapp_permissions" $SYSTEM_AS_SYSTEM/etc/prop.default > $TMP/prop.default
+    rm -rf $SYSTEM_AS_SYSTEM/etc/prop.default
+    cp -f $TMP/prop.default $SYSTEM_AS_SYSTEM/etc/prop.default
+    chmod 0644 $SYSTEM_AS_SYSTEM/etc/prop.default
+    ln -sfnv $SYSTEM_AS_SYSTEM/etc/prop.default /default.prop
+    rm -rf $TMP/prop.default
+  fi
   if [ "$device_vendorpartition" == "false" ]; then
     if [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep control_privapp_permissions)" ]; then
       grep -v "ro.control_privapp_permissions" $SYSTEM_AS_SYSTEM/vendor/build.prop > $TMP/build.prop
@@ -4838,7 +4884,7 @@ patch_bootimg() {
     sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
   if [ -f "ramdisk.cpio" ]; then
-    mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk
+    mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk > /dev/null 2>&1
   fi
   if [ -f "ramdisk/init.rc" ]; then
     if [ ! -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
@@ -4905,6 +4951,20 @@ patch_bootimg() {
       cp -f $TMP/init.logcat.rc /system_root/system/etc/init/hw/init.logcat.rc
       chmod 0644 /system_root/system/etc/init/hw/init.logcat.rc
       chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.logcat.rc"
+    fi
+  fi
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+    if [ ! -n "$(cat /system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
+      sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' /system/etc/init/hw/init.rc
+      cp -f $TMP/init.logcat.rc /system/etc/init/hw/init.logcat.rc
+      chmod 0644 /system/etc/init/hw/init.logcat.rc
+      chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.logcat.rc"
+    fi
+    if [ -n "$(cat /system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
+      rm -rf /system/etc/init/hw/init.logcat.rc
+      cp -f $TMP/init.logcat.rc /system/etc/init/hw/init.logcat.rc
+      chmod 0644 /system/etc/init/hw/init.logcat.rc
+      chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.logcat.rc"
     fi
   fi
 }
@@ -5163,7 +5223,7 @@ boot_whitelist_permission() {
       ;;
   esac
   if [ -f "ramdisk.cpio" ]; then
-    mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk
+    mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk > /dev/null 2>&1
   fi
   if [ -f "ramdisk/default.prop" ] && [ -n "$(cat ramdisk/default.prop | grep control_privapp_permissions)" ]; then
     sed -i '/ro.control_privapp_permissions=enforce/c\ro.control_privapp_permissions=disable' default.prop

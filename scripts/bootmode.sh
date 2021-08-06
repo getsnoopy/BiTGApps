@@ -90,6 +90,8 @@ if [ "$option" == "1" ]; then
   mount -o remount,rw,errors=continue /vendor > /dev/null 2>&1
   mount -o remount,rw,errors=continue /product > /dev/null 2>&1
   mount -o remount,rw,errors=continue /system_ext > /dev/null 2>&1
+  mount -o remount,rw,errors=continue /cache > /dev/null 2>&1
+  mount -o remount,rw,errors=continue /metadata > /dev/null 2>&1
   # Set default
   export TMP="/tmp"
   # Create temporary directory
