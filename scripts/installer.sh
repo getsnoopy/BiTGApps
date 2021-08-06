@@ -3307,7 +3307,7 @@ vanced_boot_patch() {
       chcon -h u:object_r:rootfs:s0 "ramdisk/init.vanced.rc"
     fi
     rm -rf ramdisk.cpio && cd $TMP_AIK/ramdisk
-    find $TMP_AIK/ramdisk | $TMP_AIK/cpio -ov > $TMP_AIK/ramdisk.cpio
+    $l/find $TMP_AIK/ramdisk | $TMP_AIK/cpio -ov > $TMP_AIK/ramdisk.cpio
     # Checkout ramdisk path
     cd ../
     ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
@@ -4905,7 +4905,7 @@ patch_bootimg() {
       chcon -h u:object_r:rootfs:s0 "ramdisk/init.logcat.rc"
     fi
     rm -rf ramdisk.cpio && cd $TMP_AIK/ramdisk
-    find $TMP_AIK/ramdisk | $TMP_AIK/cpio -ov > $TMP_AIK/ramdisk.cpio
+    $l/find $TMP_AIK/ramdisk | $TMP_AIK/cpio -ov > $TMP_AIK/ramdisk.cpio
     # Checkout ramdisk path
     cd ../
     ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
@@ -5233,7 +5233,7 @@ boot_whitelist_permission() {
   if [ -f "ramdisk/default.prop" ] && [ -n "$(cat ramdisk/default.prop | grep control_privapp_permissions)" ]; then
     $l/sed -i '/ro.control_privapp_permissions=enforce/c\ro.control_privapp_permissions=disable' default.prop
     rm -rf ramdisk.cpio && cd $TMP_AIK/ramdisk
-    find $TMP_AIK/ramdisk | $TMP_AIK/cpio -ov > $TMP_AIK/ramdisk.cpio
+    $l/find $TMP_AIK/ramdisk | $TMP_AIK/cpio -ov > $TMP_AIK/ramdisk.cpio
     # Checkout ramdisk path
     cd ../
     ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
