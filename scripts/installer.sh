@@ -1082,12 +1082,13 @@ unmount_all() {
   fi
 }
 
-f_cleanup() { ($l/find .$TMP -mindepth 1 -maxdepth 1 -type f -not -name 'recovery.log' -exec rm -rf '{}' \;); }
+f_cleanup() { ($l/find .$TMP -mindepth 1 -maxdepth 1 -type f -not -name 'recovery.log' -not -name 'busybox-arm' -exec rm -rf '{}' \;); }
 
 d_cleanup() { ($l/find .$TMP -mindepth 1 -maxdepth 1 -type d -not -name 'bin' -exec rm -rf '{}' \;); }
 
 lp_abort() {
   unmount_all
+  recovery_cleanup
   f_cleanup
   d_cleanup
   ui_print "! Installation failed"
