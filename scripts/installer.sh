@@ -1082,9 +1082,9 @@ unmount_all() {
   fi
 }
 
-f_cleanup() { (find .$TMP -mindepth 1 -maxdepth 1 -type f -not -name 'recovery.log' -exec rm -rf '{}' \;); }
+f_cleanup() { ($l/find .$TMP -mindepth 1 -maxdepth 1 -type f -not -name 'recovery.log' -exec rm -rf '{}' \;); }
 
-d_cleanup() { (find .$TMP -mindepth 1 -maxdepth 1 -type d -not -name 'bin' -exec rm -rf '{}' \;); }
+d_cleanup() { ($l/find .$TMP -mindepth 1 -maxdepth 1 -type d -not -name 'bin' -exec rm -rf '{}' \;); }
 
 lp_abort() {
   unmount_all
@@ -3440,7 +3440,7 @@ set_addon_zip_conf() {
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.calendar" after '# Begin addon properties' "ro.config.calendar"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          (find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'CalendarProvider' -exec rm -rf $i/Calendar $i/calendar $i/Etar \;)
+          ($l/find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'CalendarProvider' -exec rm -rf $i/Calendar $i/calendar $i/Etar \;)
         done
       fi
       if [ "$supported_module_config" == "true" ]; then
@@ -3484,7 +3484,7 @@ set_addon_zip_conf() {
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.contacts" after '# Begin addon properties' "ro.config.contacts"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          (find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'ContactsProvider' -exec rm -rf $i/Contacts $i/contacts \;)
+          ($l/find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'ContactsProvider' -exec rm -rf $i/Contacts $i/contacts \;)
         done
         for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
           rm -rf $i/com.android.contacts.xml
@@ -3949,7 +3949,7 @@ set_addon_zip_sep() {
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.calendar" after '# Begin addon properties' "ro.config.calendar"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          (find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'CalendarProvider' -exec rm -rf $i/Calendar $i/calendar $i/Etar \;)
+          ($l/find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'CalendarProvider' -exec rm -rf $i/Calendar $i/calendar $i/Etar \;)
         done
       fi
       if [ "$supported_module_config" == "true" ]; then
@@ -3989,7 +3989,7 @@ set_addon_zip_sep() {
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.contacts" after '# Begin addon properties' "ro.config.contacts"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          (find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'ContactsProvider' -exec rm -rf $i/Contacts $i/contacts \;)
+          ($l/find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'ContactsProvider' -exec rm -rf $i/Contacts $i/contacts \;)
         done
         for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
           rm -rf $i/com.android.contacts.xml
