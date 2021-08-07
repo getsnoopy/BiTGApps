@@ -85,7 +85,9 @@ env_vars() {
     TARGET_PHOTOS_GOOGLE="$TARGET_PHOTOS_GOOGLE"
     TARGET_SOUNDPICKER_GOOGLE="$TARGET_SOUNDPICKER_GOOGLE"
     TARGET_TTS_GOOGLE="$TARGET_TTS_GOOGLE"
-    TARGET_VANCED_GOOGLE="$TARGET_VANCED_GOOGLE"
+    TARGET_VANCED_MICROG="$TARGET_VANCED_MICROG"
+    TARGET_VANCED_ROOT="$TARGET_VANCED_ROOT"
+    TARGET_VANCED_NONROOT="$TARGET_VANCED_NONROOT"
     TARGET_WELLBEING_GOOGLE="$TARGET_WELLBEING_GOOGLE"
   fi
 }
@@ -770,252 +772,16 @@ mount_status() {
 }
 
 # Set installation logs
-del_error_log_zip() {
-  if [ "$ZIPTYPE" == "basic" ]; then
-    rm -rf $INTERNAL/bitgapps_debug_failed_logs.tar.gz
-  fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ]; then
-    rm -rf $INTERNAL/bitgapps_addon_failed_logs.tar.gz
-  fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ]; then
-    [ "$TARGET_ASSISTANT_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_assistant_failed_logs.tar.gz
-    [ "$TARGET_BROMITE_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_bromite_failed_logs.tar.gz
-    [ "$TARGET_CALCULATOR_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_calculator_failed_logs.tar.gz
-    [ "$TARGET_CALENDAR_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_calendar_failed_logs.tar.gz
-    [ "$TARGET_CHROME_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_chrome_failed_logs.tar.gz
-    [ "$TARGET_CONTACTS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_contacts_failed_logs.tar.gz
-    [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_deskclock_failed_logs.tar.gz
-    [ "$TARGET_DIALER_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_dialer_failed_logs.tar.gz
-    [ "$TARGET_DPS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_dps_failed_logs.tar.gz
-    [ "$TARGET_GBOARD_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_gboard_failed_logs.tar.gz
-    [ "$TARGET_GEARHEAD_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_gearhead_failed_logs.tar.gz
-    [ "$TARGET_LAUNCHER_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_launcher_failed_logs.tar.gz
-    [ "$TARGET_MAPS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_maps_failed_logs.tar.gz
-    [ "$TARGET_MARKUP_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_markup_failed_logs.tar.gz
-    [ "$TARGET_MESSAGES_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_messages_failed_logs.tar.gz
-    [ "$TARGET_PHOTOS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_photos_failed_logs.tar.gz
-    [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_soundpicker_failed_logs.tar.gz
-    [ "$TARGET_TTS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_tts_failed_logs.tar.gz
-    [ "$TARGET_VANCED_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_vanced_failed_logs.tar.gz
-    [ "$TARGET_WELLBEING_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_wellbeing_failed_logs.tar.gz
-  fi
-}
-
 set_error_log_zip() {
-  if [ "$ZIPTYPE" == "basic" ]; then
-    tar -cz -f "$TMP/bitgapps_debug_failed_logs.tar.gz" *
-    cp -f $TMP/bitgapps_debug_failed_logs.tar.gz $INTERNAL/bitgapps_debug_failed_logs.tar.gz
-  fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ]; then
-    tar -cz -f "$TMP/bitgapps_addon_failed_logs.tar.gz" *
-    cp -f $TMP/bitgapps_addon_failed_logs.tar.gz $INTERNAL/bitgapps_addon_failed_logs.tar.gz
-  fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ]; then
-    if [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_assistant_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_assistant_failed_logs.tar.gz $INTERNAL/bitgapps_addon_assistant_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_bromite_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_bromite_failed_logs.tar.gz $INTERNAL/bitgapps_addon_bromite_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_calculator_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_calculator_failed_logs.tar.gz $INTERNAL/bitgapps_addon_calculator_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_calendar_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_calendar_failed_logs.tar.gz $INTERNAL/bitgapps_addon_calendar_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_chrome_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_chrome_failed_logs.tar.gz $INTERNAL/bitgapps_addon_chrome_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_contacts_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_contacts_failed_logs.tar.gz $INTERNAL/bitgapps_addon_contacts_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_deskclock_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_deskclock_failed_logs.tar.gz $INTERNAL/bitgapps_addon_deskclock_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_dialer_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_dialer_failed_logs.tar.gz $INTERNAL/bitgapps_addon_dialer_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_DPS_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_dps_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_dps_failed_logs.tar.gz $INTERNAL/bitgapps_addon_dps_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_gboard_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_gboard_failed_logs.tar.gz $INTERNAL/bitgapps_addon_gboard_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_gearhead_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_gearhead_failed_logs.tar.gz $INTERNAL/bitgapps_addon_gearhead_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_launcher_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_launcher_failed_logs.tar.gz $INTERNAL/bitgapps_addon_launcher_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_maps_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_maps_failed_logs.tar.gz $INTERNAL/bitgapps_addon_maps_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_markup_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_markup_failed_logs.tar.gz $INTERNAL/bitgapps_addon_markup_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_messages_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_messages_failed_logs.tar.gz $INTERNAL/bitgapps_addon_messages_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_photos_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_photos_failed_logs.tar.gz $INTERNAL/bitgapps_addon_photos_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_soundpicker_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_soundpicker_failed_logs.tar.gz $INTERNAL/bitgapps_addon_soundpicker_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_TTS_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_tts_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_tts_failed_logs.tar.gz $INTERNAL/bitgapps_addon_tts_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_vanced_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_vanced_failed_logs.tar.gz $INTERNAL/bitgapps_addon_vanced_failed_logs.tar.gz
-    fi
-    if [ "$TARGET_WELLBEING_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_wellbeing_failed_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_wellbeing_failed_logs.tar.gz $INTERNAL/bitgapps_addon_wellbeing_failed_logs.tar.gz
-    fi
-  fi
-}
-
-del_comp_log_zip() {
-  if [ "$ZIPTYPE" == "basic" ]; then
-    rm -rf $INTERNAL/bitgapps_debug_complete_logs.tar.gz
-  fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ]; then
-    rm -rf $INTERNAL/bitgapps_addon_complete_logs.tar.gz
-  fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ]; then
-    [ "$TARGET_ASSISTANT_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_assistant_complete_logs.tar.gz
-    [ "$TARGET_BROMITE_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_bromite_complete_logs.tar.gz
-    [ "$TARGET_CALCULATOR_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_calculator_complete_logs.tar.gz
-    [ "$TARGET_CALENDAR_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_calendar_complete_logs.tar.gz
-    [ "$TARGET_CHROME_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_chrome_complete_logs.tar.gz
-    [ "$TARGET_CONTACTS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_contacts_complete_logs.tar.gz
-    [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_deskclock_complete_logs.tar.gz
-    [ "$TARGET_DIALER_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_dialer_complete_logs.tar.gz
-    [ "$TARGET_DPS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_dps_complete_logs.tar.gz
-    [ "$TARGET_GBOARD_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_gboard_complete_logs.tar.gz
-    [ "$TARGET_GEARHEAD_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_gearhead_complete_logs.tar.gz
-    [ "$TARGET_LAUNCHER_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_launcher_complete_logs.tar.gz
-    [ "$TARGET_MAPS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_maps_complete_logs.tar.gz
-    [ "$TARGET_MARKUP_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_markup_complete_logs.tar.gz
-    [ "$TARGET_MESSAGES_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_messages_complete_logs.tar.gz
-    [ "$TARGET_PHOTOS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_photos_complete_logs.tar.gz
-    [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_soundpicker_complete_logs.tar.gz
-    [ "$TARGET_TTS_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_tts_complete_logs.tar.gz
-    [ "$TARGET_VANCED_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_vanced_complete_logs.tar.gz
-    [ "$TARGET_WELLBEING_GOOGLE" == "true" ] && rm -rf $INTERNAL/bitgapps_addon_wellbeing_complete_logs.tar.gz
-  fi
+  NUM=$(( $RANDOM % 100 ))
+  tar -cz -f "$TMP/bitgapps_debug_failed_logs.tar.gz" *
+  cp -f $TMP/bitgapps_debug_failed_logs.tar.gz $INTERNAL/bitgapps_debug_failed_logs_r${NUM}.tar.gz
 }
 
 set_comp_log_zip() {
-  if [ "$ZIPTYPE" == "basic" ]; then
-    tar -cz -f "$TMP/bitgapps_debug_complete_logs.tar.gz" *
-    cp -f $TMP/bitgapps_debug_complete_logs.tar.gz $INTERNAL/bitgapps_debug_complete_logs.tar.gz
-  fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ]; then
-    tar -cz -f "$TMP/bitgapps_addon_complete_logs.tar.gz" *
-    cp -f $TMP/bitgapps_addon_complete_logs.tar.gz $INTERNAL/bitgapps_addon_complete_logs.tar.gz
-  fi
-  if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ]; then
-    if [ "$TARGET_ASSISTANT_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_assistant_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_assistant_complete_logs.tar.gz $INTERNAL/bitgapps_addon_assistant_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_bromite_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_bromite_complete_logs.tar.gz $INTERNAL/bitgapps_addon_bromite_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_calculator_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_calculator_complete_logs.tar.gz $INTERNAL/bitgapps_addon_calculator_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_CALENDAR_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_calendar_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_calendar_complete_logs.tar.gz $INTERNAL/bitgapps_addon_calendar_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_chrome_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_chrome_complete_logs.tar.gz $INTERNAL/bitgapps_addon_chrome_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_contacts_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_contacts_complete_logs.tar.gz $INTERNAL/bitgapps_addon_contacts_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_DESKCLOCK_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_deskclock_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_deskclock_complete_logs.tar.gz $INTERNAL/bitgapps_addon_deskclock_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_dialer_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_dialer_complete_logs.tar.gz $INTERNAL/bitgapps_addon_dialer_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_DPS_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_dps_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_dps_complete_logs.tar.gz $INTERNAL/bitgapps_addon_dps_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_gboard_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_gboard_complete_logs.tar.gz $INTERNAL/bitgapps_addon_gboard_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_gearhead_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_gearhead_complete_logs.tar.gz $INTERNAL/bitgapps_addon_gearhead_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_launcher_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_launcher_complete_logs.tar.gz $INTERNAL/bitgapps_addon_launcher_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_maps_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_maps_complete_logs.tar.gz $INTERNAL/bitgapps_addon_maps_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_MARKUP_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_markup_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_markup_complete_logs.tar.gz $INTERNAL/bitgapps_addon_markup_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_messages_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_messages_complete_logs.tar.gz $INTERNAL/bitgapps_addon_messages_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_photos_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_photos_complete_logs.tar.gz $INTERNAL/bitgapps_addon_photos_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_SOUNDPICKER_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_soundpicker_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_soundpicker_complete_logs.tar.gz $INTERNAL/bitgapps_addon_soundpicker_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_TTS_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_tts_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_tts_complete_logs.tar.gz $INTERNAL/bitgapps_addon_tts_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_vanced_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_vanced_complete_logs.tar.gz $INTERNAL/bitgapps_addon_vanced_complete_logs.tar.gz
-    fi
-    if [ "$TARGET_WELLBEING_GOOGLE" == "true" ]; then
-      tar -cz -f "$TMP/bitgapps_addon_wellbeing_complete_logs.tar.gz" *
-      cp -f $TMP/bitgapps_addon_wellbeing_complete_logs.tar.gz $INTERNAL/bitgapps_addon_wellbeing_complete_logs.tar.gz
-    fi
-  fi
+  NUM=$(( $RANDOM % 100 ))
+  tar -cz -f "$TMP/bitgapps_debug_complete_logs.tar.gz" *
+  cp -f $TMP/bitgapps_debug_complete_logs.tar.gz $INTERNAL/bitgapps_debug_complete_logs_r${NUM}.tar.gz
 }
 
 set_install_logs() {
@@ -1042,7 +808,6 @@ set_install_logs() {
 }
 
 on_install_failed() {
-  del_error_log_zip
   rm -rf $TMP/bitgapps
   mkdir $TMP/bitgapps
   cd $TMP/bitgapps
@@ -1053,7 +818,6 @@ on_install_failed() {
 }
 
 on_install_complete() {
-  del_comp_log_zip
   cd $TMP/bitgapps
   set_install_logs
   set_comp_log_zip
@@ -2439,9 +2203,30 @@ pre_restore_pkg() {
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.tts"
     fi
-    if [ "$supported_vanced_wipe" == "true" ] || [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
+    if [ "$supported_vanced_wipe" == "true" ] || [ "$TARGET_VANCED_MICROG" == "true" ]; then
       ui_print "- Uninstall YouTube Vanced"
       rm -rf $SYSTEM/app/YouTube $SYSTEM/product/app/YouTube $SYSTEM/system_ext/app/YouTube
+      ui_print "- Uninstall Vanced MicroG"
+      rm -rf $SYSTEM/app/MicroGGMSCore $SYSTEM/product/app/MicroGGMSCore $SYSTEM/system_ext/app/MicroGGMSCore
+      # Remove Addon property from OTA config
+      remove_line $SYSTEM/config.prop "ro.config.vanced"
+      remove_line $SYSTEM/config.prop "ro.config.vancedmicrog"
+    fi
+    if [ "$supported_vanced_wipe" == "true" ] || [ "$TARGET_VANCED_ROOT" == "true" ]; then
+      ui_print "- Uninstall YouTube Vanced"
+      rm -rf $SYSTEM/app/YouTube $SYSTEM/product/app/YouTube $SYSTEM/system_ext/app/YouTube
+      rm -rf $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
+      rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-*
+      ui_print "- Uninstall Vanced MicroG"
+      rm -rf $SYSTEM/app/MicroGGMSCore $SYSTEM/product/app/MicroGGMSCore $SYSTEM/system_ext/app/MicroGGMSCore
+      # Remove Addon property from OTA config
+      remove_line $SYSTEM/config.prop "ro.config.vanced"
+      remove_line $SYSTEM/config.prop "ro.config.vancedmicrog"
+    fi
+    if [ "$supported_vanced_wipe" == "true" ] || [ "$TARGET_VANCED_NONROOT" == "true" ]; then
+      ui_print "- Uninstall YouTube Vanced"
+      rm -rf $SYSTEM/adb $SYSTEM/app/YouTube $SYSTEM/product/app/YouTube $SYSTEM/system_ext/app/YouTube
+      rm -rf $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
       ui_print "- Uninstall Vanced MicroG"
       rm -rf $SYSTEM/app/MicroGGMSCore $SYSTEM/product/app/MicroGGMSCore $SYSTEM/system_ext/app/MicroGGMSCore
       # Remove Addon property from OTA config
@@ -2561,7 +2346,7 @@ pre_restore_pkg() {
       ui_print "- Uninstall TTS Google"
       rm -rf $SYSTEM_SYSTEM/app/GoogleTTSPrebuilt $SYSTEM_SYSTEM/product/app/GoogleTTSPrebuilt $SYSTEM_SYSTEM/system_ext/app/GoogleTTSPrebuilt
     fi
-    if [ "$supported_vanced_wipe" == "true" ] || [ "$TARGET_VANCED_GOOGLE" == "true" ]; then
+    if [ "$supported_vanced_wipe" == "true" ] || [ "$TARGET_VANCED_MICROG" == "true" ]; then
       ui_print "- Uninstall YouTube Vanced"
       rm -rf $SYSTEM_SYSTEM/app/YouTube $SYSTEM_SYSTEM/product/app/YouTube $SYSTEM_SYSTEM/system_ext/app/YouTube
       ui_print "- Uninstall Vanced MicroG"
@@ -3754,8 +3539,9 @@ set_addon_zip_conf() {
       ui_print "- Installing YouTube Vanced"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.vanced" after '# Begin addon properties' "ro.config.vanced"
+        insert_line $SYSTEM/config.prop "ro.config.vancedmicrog" after '# Begin addon properties' "ro.config.vancedmicrog"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/YouTube* $i/Youtube*
+          rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
         done
       fi
       # Wipe additional YouTube Vanced components
@@ -3764,56 +3550,13 @@ set_addon_zip_conf() {
       ADDON_SYS="YouTube.tar.xz"
       PKG_SYS="YouTube"
       target_sys
-      # Set Vanced MicroG
-      TARGET_VANCED_MICROG="true"
-    else
-      ui_print "! Skip installing YouTube Vanced"
-    fi
-    if [ "$TARGET_VANCED_MICROG" == "true" ]; then
       ui_print "- Installing Vanced MicroG"
-      if [ "$supported_module_config" == "false" ]; then
-        insert_line $SYSTEM/config.prop "ro.config.vancedmicrog" after '# Begin addon properties' "ro.config.vancedmicrog"
-        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/MicroG* $i/microg*
-        done
-      fi
       ADDON_SYS="MicroGGMSCore.tar.xz"
       PKG_SYS="MicroGGMSCore"
       target_sys
     else
-      ui_print "! Skip installing Vanced MicroG"
-    fi
-    if [ "$supported_vanced_config" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "false" ]; then
-      # Override default layout
-      if [ "$supported_module_config" == "true" ]; then
-        system_layout
-        override_pathmap
-      fi
-      ui_print "- Installing YouTube Vanced"
-      for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
-        rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
-      done
-      for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-        rm -rf $i/YouTube* $i/Youtube*
-      done
-      # Wipe additional YouTube Vanced components
-      rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
-      ADDON_SYS="YouTubeVanced.tar.xz"
-      PKG_SYS="YouTube"
-      target_sys_adb
-      vanced_config
-      ADDON_SYS="YouTubeStock.tar.xz"
-      PKG_SYS="YouTube"
-      target_sys
-      vanced_boot_patch
-      # Restore default layout
-      if [ "$supported_module_config" == "true" ]; then
-        set_module_path
-        create_module_pathmap
-        system_module_pathmap
-      fi
-    else
       ui_print "! Skip installing YouTube Vanced"
+      ui_print "! Skip installing Vanced MicroG"
     fi
     if [ "$supported_vanced_config" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "true" ]; then
       # Override default layout
@@ -3826,7 +3569,7 @@ set_addon_zip_conf() {
         rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
       done
       for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-        rm -rf $i/YouTube* $i/Youtube*
+        rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
       done
       # Wipe additional YouTube Vanced components
       rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
@@ -3846,6 +3589,38 @@ set_addon_zip_conf() {
         mv -f $ANDROID_DATA/adb/YouTubeStock/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeStock/base.apk
         vanced_config
       fi
+      # Restore default layout
+      if [ "$supported_module_config" == "true" ]; then
+        set_module_path
+        create_module_pathmap
+        system_module_pathmap
+      fi
+    else
+      ui_print "! Skip installing YouTube Vanced"
+    fi
+    if [ "$supported_vanced_config" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "false" ]; then
+      # Override default layout
+      if [ "$supported_module_config" == "true" ]; then
+        system_layout
+        override_pathmap
+      fi
+      ui_print "- Installing YouTube Vanced"
+      for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
+        rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
+      done
+      for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+        rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
+      done
+      # Wipe additional YouTube Vanced components
+      rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
+      ADDON_SYS="YouTubeVanced.tar.xz"
+      PKG_SYS="YouTube"
+      target_sys_adb
+      vanced_config
+      ADDON_SYS="YouTubeStock.tar.xz"
+      PKG_SYS="YouTube"
+      target_sys
+      vanced_boot_patch
       # Restore default layout
       if [ "$supported_module_config" == "true" ]; then
         set_module_path
@@ -4279,12 +4054,13 @@ set_addon_zip_sep() {
       fi
       target_sys
     fi
-    if [ "$TARGET_VANCED_GOOGLE" == "true" ] && [ "$supported_microg_config" == "true" ]; then
+    if [ "$TARGET_VANCED_MICROG" == "true" ]; then
       ui_print "- Installing YouTube Vanced"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.vanced" after '# Begin addon properties' "ro.config.vanced"
+        insert_line $SYSTEM/config.prop "ro.config.vancedmicrog" after '# Begin addon properties' "ro.config.vancedmicrog"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/YouTube* $i/Youtube*
+          rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
         done
       fi
       # Wipe additional YouTube Vanced components
@@ -4299,22 +4075,12 @@ set_addon_zip_sep() {
         PKG_SYS="YouTube"
       fi
       target_sys
-      # Set Vanced MicroG
-      TARGET_VANCED_MICROG="true"
-    fi
-    if [ "$TARGET_VANCED_MICROG" == "true" ]; then
       ui_print "- Installing Vanced MicroG"
-      if [ "$supported_module_config" == "false" ]; then
-        insert_line $SYSTEM/config.prop "ro.config.vancedmicrog" after '# Begin addon properties' "ro.config.vancedmicrog"
-        for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/MicroG* $i/microg*
-        done
-      fi
       ADDON_SYS="MicroGGMSCore.tar.xz"
       PKG_SYS="MicroGGMSCore"
       target_sys
     fi
-    if [ "$TARGET_VANCED_GOOGLE" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "false" ]; then
+    if [ "$TARGET_VANCED_ROOT" == "true" ]; then
       # Override default layout
       if [ "$supported_module_config" == "true" ]; then
         system_layout
@@ -4325,37 +4091,7 @@ set_addon_zip_sep() {
         rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
       done
       for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-        rm -rf $i/YouTube* $i/Youtube*
-      done
-      # Wipe additional YouTube Vanced components
-      rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
-      ADDON_SYS="YouTubeVanced.tar.xz"
-      PKG_SYS="YouTube"
-      target_sys_adb
-      vanced_config
-      ADDON_SYS="YouTubeStock.tar.xz"
-      PKG_SYS="YouTube"
-      target_sys
-      vanced_boot_patch
-      # Restore default layout
-      if [ "$supported_module_config" == "true" ]; then
-        set_module_path
-        create_module_pathmap
-        system_module_pathmap
-      fi
-    fi
-    if [ "$TARGET_VANCED_GOOGLE" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "true" ]; then
-      # Override default layout
-      if [ "$supported_module_config" == "true" ]; then
-        system_layout
-        override_pathmap
-      fi
-      ui_print "- Installing YouTube Vanced"
-      for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
-        rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
-      done
-      for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-        rm -rf $i/YouTube* $i/Youtube*
+        rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
       done
       # Wipe additional YouTube Vanced components
       rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
@@ -4375,6 +4111,36 @@ set_addon_zip_sep() {
         mv -f $ANDROID_DATA/adb/YouTubeStock/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeStock/base.apk
         vanced_config
       fi
+      # Restore default layout
+      if [ "$supported_module_config" == "true" ]; then
+        set_module_path
+        create_module_pathmap
+        system_module_pathmap
+      fi
+    fi
+    if [ "$TARGET_VANCED_NONROOT" == "true" ]; then
+      # Override default layout
+      if [ "$supported_module_config" == "true" ]; then
+        system_layout
+        override_pathmap
+      fi
+      ui_print "- Installing YouTube Vanced"
+      for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
+        rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
+      done
+      for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
+        rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
+      done
+      # Wipe additional YouTube Vanced components
+      rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
+      ADDON_SYS="YouTubeVanced.tar.xz"
+      PKG_SYS="YouTube"
+      target_sys_adb
+      vanced_config
+      ADDON_SYS="YouTubeStock.tar.xz"
+      PKG_SYS="YouTube"
+      target_sys
+      vanced_boot_patch
       # Restore default layout
       if [ "$supported_module_config" == "true" ]; then
         set_module_path
@@ -5506,7 +5272,7 @@ df_system() {
       $TARGET_MAPS_GOOGLE && CAPACITY="110000"; $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
       $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"; $TARGET_PHOTOS_GOOGLE && CAPACITY="92000"
       $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"; $TARGET_TTS_GOOGLE && CAPACITY="30000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="94000"; $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
+      $TARGET_VANCED_MICROG && CAPACITY="94000"; $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
     fi
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
       $TARGET_ASSISTANT_GOOGLE && CAPACITY="170000"; $TARGET_BROMITE_GOOGLE && CAPACITY="374000"
@@ -5518,7 +5284,7 @@ df_system() {
       $TARGET_MAPS_GOOGLE && CAPACITY="116000"; $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
       $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"; $TARGET_PHOTOS_GOOGLE && CAPACITY="107000"
       $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"; $TARGET_TTS_GOOGLE && CAPACITY="35000"
-      $TARGET_VANCED_GOOGLE && CAPACITY="114000"; $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
+      $TARGET_VANCED_MICROG && CAPACITY="114000"; $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
     fi
   fi
   # Get the available space left on the device
