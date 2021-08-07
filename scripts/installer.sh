@@ -952,17 +952,6 @@ on_module_check() {
   fi
 }
 
-# YouTube Vanced MicroG
-on_microg_check() {
-  if [ ! -f "$BITGAPPS_CONFIG" ]; then
-    supported_microg_config="false"
-    supported_data_config="false"
-  else
-    supported_microg_config="$(get_prop "ro.config.microg")"
-    supported_data_config="$(get_prop "ro.config.data")"
-  fi
-}
-
 # Safetynet Config Property
 on_safetynet_check() { supported_safetynet_config="$(get_prop "ro.config.safetynet")"; }
 
@@ -3025,19 +3014,19 @@ set_google_messages_default() {
 vanced_config() {
   ZIP="zip/Vanced.tar.xz"
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
-  if [ "$supported_data_config" == "false" ]; then
-    # Unpack vanced files
-    tar -xf $ZIP_FILE/Vanced.tar.xz --exclude='vanced-root.sh' -C $TMP
-    cp -f $TMP/vanced.sh $SYSTEM_ADB_XBIN/vanced.sh
-    # Set file permission
-    chmod 0755 $SYSTEM_ADB_XBIN/vanced.sh
-  fi
-  if [ "$supported_data_config" == "true" ]; then
+  if [ "$TARGET_VANCED_ROOT" == "true" ]; then
     # Unpack vanced files
     tar -xf $ZIP_FILE/Vanced.tar.xz --exclude='vanced.sh' --exclude='init.vanced.rc' -C $TMP
     cp -f $TMP/vanced-root.sh $ANDROID_DATA/adb/service.d/vanced.sh
     # Set file permission
     chmod 0755 $ANDROID_DATA/adb/service.d/vanced.sh
+  fi
+  if [ "$TARGET_VANCED_NONROOT" == "true" ]; then
+    # Unpack vanced files
+    tar -xf $ZIP_FILE/Vanced.tar.xz --exclude='vanced-root.sh' -C $TMP
+    cp -f $TMP/vanced.sh $SYSTEM_ADB_XBIN/vanced.sh
+    # Set file permission
+    chmod 0755 $SYSTEM_ADB_XBIN/vanced.sh
   fi
 }
 
@@ -3589,6 +3578,9 @@ set_addon_zip_conf() {
         mv -f $ANDROID_DATA/adb/YouTubeStock/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeStock/base.apk
         vanced_config
       fi
+      if [ "$SKIP_VANCED_INSTALL" == "true" ]; then
+        ui_print "! Cannot install YouTube Vanced"
+      fi
       # Restore default layout
       if [ "$supported_module_config" == "true" ]; then
         set_module_path
@@ -4111,6 +4103,9 @@ set_addon_zip_sep() {
         mv -f $ANDROID_DATA/adb/YouTubeStock/$PKG_SYS.apk $ANDROID_DATA/adb/YouTubeStock/base.apk
         vanced_config
       fi
+      if [ "$SKIP_VANCED_INSTALL" == "true" ]; then
+        ui_print "! Cannot install YouTube Vanced"
+      fi
       # Restore default layout
       if [ "$supported_module_config" == "true" ]; then
         set_module_path
@@ -4168,11 +4163,11 @@ set_addon_zip_sep() {
 
 set_addon_install() {
   if [ "$ADDON" == "conf" ]; then
-    if [ "$addon_config" == "true" ] && [ "$addon_wipe" == "false" ]; then pre_installed_pkg; on_microg_check; set_addon_zip_conf; fi
+    if [ "$addon_config" == "true" ] && [ "$addon_wipe" == "false" ]; then pre_installed_pkg; set_addon_zip_conf; fi
     if [ "$addon_config" == "true" ] && [ "$addon_wipe" == "true" ]; then check_backup; pre_restore_pkg; post_restore_pkg; fi
     if [ "$addon_config" == "false" ]; then on_abort "! Skip installing additional packages"; fi
   fi
-  if [ "$ADDON" == "sep" ] && [ "$addon_wipe" == "false" ]; then on_microg_check; set_addon_zip_sep; fi
+  if [ "$ADDON" == "sep" ] && [ "$addon_wipe" == "false" ]; then set_addon_zip_sep; fi
   if [ "$ADDON" == "sep" ] && [ "$addon_wipe" == "true" ]; then check_backup; pre_restore_pkg; post_restore_pkg; fi
 }
 

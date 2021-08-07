@@ -986,7 +986,7 @@ fix_addon_conflict() {
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.calendar)" ]; then
       for i in $S/app $S/priv-app $S/product/app $S/product/priv-app $S/system_ext/app $S/system_ext/priv-app; do
-        (find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'CalendarProvider' -exec rm -rf $i/Calendar $i/calendar $i/Etar \;)
+        ($l/find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'CalendarProvider' -exec rm -rf $i/Calendar $i/calendar $i/Etar \;) 2>/dev/null
       done
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.chrome)" ]; then
@@ -996,7 +996,7 @@ fix_addon_conflict() {
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.contacts)" ]; then
       for i in $S/app $S/priv-app $S/product/app $S/product/priv-app $S/system_ext/app $S/system_ext/priv-app; do
-        (find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'ContactsProvider' -exec rm -rf $i/Contacts $i/contacts \;)
+        ($l/find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'ContactsProvider' -exec rm -rf $i/Contacts $i/contacts \;) 2>/dev/null
       done
       for i in $S/etc/permissions $S/product/etc/permissions $S/system_ext/etc/permissions; do
         rm -rf $i/com.android.contacts.xml
