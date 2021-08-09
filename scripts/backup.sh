@@ -500,7 +500,7 @@ ensure_dir() {
   SYSTEM_ETC_PERM="$SYSTEM/etc/permissions"
   SYSTEM_ETC_PREF="$SYSTEM/etc/preferred-apps"
   SYSTEM_FRAMEWORK="$SYSTEM/framework"
-  SYSTEM_OVERLAY="$SYSTEM/overlay"
+  SYSTEM_OVERLAY="$SYSTEM/product/overlay"
   for i in \
     $SYSTEM_ETC_DEFAULT \
     $SYSTEM_ETC_PREF \
@@ -651,8 +651,8 @@ backupdirSYSAddon() {
     $SYSTEM/framework/com.google.android.maps.jar"
 
   SYS_OVERLAY_ADDON="
-    $SYSTEM/overlay/NexusLauncherOverlay
-    $SYSTEM/overlay/DPSOverlay"
+    $SYSTEM/product/overlay/NexusLauncherOverlay
+    $SYSTEM/product/overlay/DPSOverlay"
 
   SYS_USR_ADDON="
     $SYSTEM/usr/share/ime/google/d3_lms
@@ -661,7 +661,7 @@ backupdirSYSAddon() {
 
 backupdirSYSOverlay() {
   SYS_OVERLAY="
-    $SYSTEM/overlay/PlayStoreOverlay"
+    $SYSTEM/product/overlay/PlayStoreOverlay"
 }
 
 trigger_fboot_backup() {

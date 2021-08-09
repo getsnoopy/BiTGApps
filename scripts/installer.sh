@@ -1312,7 +1312,7 @@ system_pathmap() {
     SYSTEM_ETC_PERM="$SYSTEM/etc/permissions"
     SYSTEM_ETC_PREF="$SYSTEM/etc/preferred-apps"
     SYSTEM_FRAMEWORK="$SYSTEM/framework"
-    SYSTEM_OVERLAY="$SYSTEM/overlay"
+    SYSTEM_OVERLAY="$SYSTEM/product/overlay"
     for i in app xbin; do
       mkdir -p $SYSTEM_ADB/$i
       chmod -R 0755 $SYSTEM_ADB
@@ -1435,7 +1435,7 @@ system_module_pathmap() {
     SYSTEM_ETC_PERM="$SYSTEM/system/etc/permissions"
     SYSTEM_ETC_PREF="$SYSTEM/system/etc/preferred-apps"
     SYSTEM_FRAMEWORK="$SYSTEM/system/framework"
-    SYSTEM_OVERLAY="$SYSTEM/system/overlay"
+    SYSTEM_OVERLAY="$SYSTEM/system/product/overlay"
   fi
 }
 

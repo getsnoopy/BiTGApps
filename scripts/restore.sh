@@ -519,7 +519,7 @@ ensure_dir() {
   SYSTEM_ETC_PERM="$SYSTEM/etc/permissions"
   SYSTEM_ETC_PREF="$SYSTEM/etc/preferred-apps"
   SYSTEM_FRAMEWORK="$SYSTEM/framework"
-  SYSTEM_OVERLAY="$SYSTEM/overlay"
+  SYSTEM_OVERLAY="$SYSTEM/product/overlay"
   for i in \
     $SYSTEM_ETC_DEFAULT \
     $SYSTEM_ETC_PREF \
@@ -937,7 +937,7 @@ trigger_addon_restore() {
       mv $TMP_FIRMWARE_ADDON $S/etc/firmware 2>/dev/null
     fi
     mv $TMP_FRAMEWORK_ADDON $SYSTEM/framework 2>/dev/null
-    mv $TMP_OVERLAY_ADDON $SYSTEM/overlay 2>/dev/null
+    mv $TMP_OVERLAY_ADDON $SYSTEM/product/overlay 2>/dev/null
     if [ -n "$(cat $S/config.prop | grep ro.config.gboard)" ]; then
       mkdir -p $SYSTEM/usr/share/ime/google/d3_lms
       mkdir -p $SYSTEM/usr/srec/en-US
@@ -1145,7 +1145,7 @@ case "$1" in
       restoredirTMPAddon
       trigger_addon_restore
       restoredirTMPOverlay
-      mv $TMP_OVERLAY $SYSTEM/overlay 2>/dev/null
+      mv $TMP_OVERLAY $SYSTEM/product/overlay 2>/dev/null
       copy_ota_script
       sdk_fix
       selinux_fix
