@@ -618,9 +618,6 @@ backupdirSYSAddon() {
     $SYSTEM/app/MessagesGooglePrebuilt
     $SYSTEM/app/PhotosGooglePrebuilt
     $SYSTEM/app/SoundPickerPrebuilt
-    $SYSTEM/app/TrichromeLibrary
-    $SYSTEM/app/WebViewBromite
-    $SYSTEM/app/WebViewGoogle
     $SYSTEM/app/YouTube
     $SYSTEM/app/MicroGGMSCore"
 

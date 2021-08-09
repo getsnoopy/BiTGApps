@@ -864,9 +864,6 @@ restoredirTMPAddon() {
     $TMP/addon/app/MessagesGooglePrebuilt
     $TMP/addon/app/PhotosGooglePrebuilt
     $TMP/addon/app/SoundPickerPrebuilt
-    $TMP/addon/app/TrichromeLibrary
-    $TMP/addon/app/WebViewBromite
-    $TMP/addon/app/WebViewGoogle
     $TMP/addon/app/YouTube
     $TMP/addon/app/MicroGGMSCore"
 
@@ -976,7 +973,7 @@ fix_addon_conflict() {
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.bromite)" ]; then
       for i in $S/app $S/priv-app $S/product/app $S/product/priv-app $S/system_ext/app $S/system_ext/priv-app; do
-        rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle $i/BromitePrebuilt $i/WebViewBromite $i/webview
+        rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle $i/BromitePrebuilt $i/WebViewBromite
       done
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.calculator)" ]; then
@@ -991,7 +988,7 @@ fix_addon_conflict() {
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.chrome)" ]; then
       for i in $S/app $S/priv-app $S/product/app $S/product/priv-app $S/system_ext/app $S/system_ext/priv-app; do
-        rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle $i/webview
+        rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle
       done
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.contacts)" ]; then

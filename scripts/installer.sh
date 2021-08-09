@@ -2390,7 +2390,7 @@ post_restore_pkg() {
   if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$supported_module_config" == "true" ]; then
     if [ "$supported_bromite_wipe" == "true" ] || [ "$TARGET_BROMITE_GOOGLE" == "true" ]; then
       for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
-        rm -rf $i/Jelly $i/webview
+        rm -rf $i/Jelly
       done
     fi
     if [ "$supported_calculator_wipe" == "true" ] || [ "$TARGET_CALCULATOR_GOOGLE" == "true" ]; then
@@ -2405,7 +2405,7 @@ post_restore_pkg() {
     fi
     if [ "$supported_chrome_wipe" == "true" ] || [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
       for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
-        rm -rf $i/Jelly $i/webview
+        rm -rf $i/Jelly
       done
     fi
     if [ "$supported_contacts_wipe" == "true" ] || [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
@@ -3174,19 +3174,16 @@ set_addon_zip_conf() {
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.bromite" after '# Begin addon properties' "ro.config.bromite"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle $i/BromitePrebuilt $i/WebViewBromite $i/webview
+          rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle $i/BromitePrebuilt $i/WebViewBromite
         done
       fi
       if [ "$supported_module_config" == "true" ]; then
         for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
-          (mkdir $i/Jelly $i/webview && touch $i/Jelly/.replace $i/webview/.replace) 2>/dev/null
+          (mkdir $i/Jelly && touch $i/Jelly/.replace) 2>/dev/null
         done
       fi
       ADDON_SYS="BromitePrebuilt.tar.xz"
       PKG_SYS="BromitePrebuilt"
-      target_sys
-      ADDON_SYS="WebViewBromite.tar.xz"
-      PKG_SYS="WebViewBromite"
       target_sys
     else
       ui_print "! Skip installing Bromite Browser"
@@ -3234,22 +3231,16 @@ set_addon_zip_conf() {
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.chrome" after '# Begin addon properties' "ro.config.chrome"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle $i/webview
+          rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle
         done
       fi
       if [ "$supported_module_config" == "true" ]; then
         for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
-          (mkdir $i/Jelly $i/webview && touch $i/Jelly/.replace $i/webview/.replace) 2>/dev/null
+          (mkdir $i/Jelly && touch $i/Jelly/.replace) 2>/dev/null
         done
       fi
       ADDON_SYS="ChromeGooglePrebuilt.tar.xz"
       PKG_SYS="ChromeGooglePrebuilt"
-      target_sys
-      ADDON_SYS="TrichromeLibrary.tar.xz"
-      PKG_SYS="TrichromeLibrary"
-      target_sys
-      ADDON_SYS="WebViewGoogle.tar.xz"
-      PKG_SYS="WebViewGoogle"
       target_sys
     else
       ui_print "! Skip installing Chrome Google"
@@ -3670,28 +3661,22 @@ set_addon_zip_sep() {
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.bromite" after '# Begin addon properties' "ro.config.bromite"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle $i/BromitePrebuilt $i/WebViewBromite $i/webview
+          rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle $i/BromitePrebuilt $i/WebViewBromite
         done
       fi
       if [ "$supported_module_config" == "true" ]; then
         for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
-          (mkdir $i/Jelly $i/webview && touch $i/Jelly/.replace $i/webview/.replace) 2>/dev/null
+          (mkdir $i/Jelly && touch $i/Jelly/.replace) 2>/dev/null
         done
       fi
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         ADDON_SYS="BromitePrebuilt_arm.tar.xz"
         PKG_SYS="BromitePrebuilt"
         target_sys
-        ADDON_SYS="WebViewBromite_arm.tar.xz"
-        PKG_SYS="WebViewBromite"
-        target_sys
       fi
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
         ADDON_SYS="BromitePrebuilt_arm64.tar.xz"
         PKG_SYS="BromitePrebuilt"
-        target_sys
-        ADDON_SYS="WebViewBromite_arm64.tar.xz"
-        PKG_SYS="WebViewBromite"
         target_sys
       fi
     fi
@@ -3734,22 +3719,16 @@ set_addon_zip_sep() {
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.chrome" after '# Begin addon properties' "ro.config.chrome"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle $i/webview
+          rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle
         done
       fi
       if [ "$supported_module_config" == "true" ]; then
         for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
-          (mkdir $i/Jelly $i/webview && touch $i/Jelly/.replace $i/webview/.replace) 2>/dev/null
+          (mkdir $i/Jelly && touch $i/Jelly/.replace) 2>/dev/null
         done
       fi
       ADDON_SYS="ChromeGooglePrebuilt.tar.xz"
       PKG_SYS="ChromeGooglePrebuilt"
-      target_sys
-      ADDON_SYS="TrichromeLibrary.tar.xz"
-      PKG_SYS="TrichromeLibrary"
-      target_sys
-      ADDON_SYS="WebViewGoogle.tar.xz"
-      PKG_SYS="WebViewGoogle"
       target_sys
     fi
     if [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
