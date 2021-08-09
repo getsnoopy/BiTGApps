@@ -20,6 +20,8 @@ Here are feature highlights:
 * Disable Privileged Permissions Allowlisting functionality
 * Installation over Custom OS shipped with GApps
 * Addon packages for supporting additional GApps packages
+* Support YouTube Vanced Root version
+* Ability to install YouTube Vanced Root version as Non-Root
 * Disable Google SetupWizard installation
 * Optimized OTA survival script implementation
 * Install BiTGApps package directly from booted system
