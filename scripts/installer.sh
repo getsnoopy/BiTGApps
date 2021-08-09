@@ -3065,7 +3065,10 @@ vanced_boot_patch() {
     $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
   if [ -f "ramdisk.cpio" ]; then
-    mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk > /dev/null 2>&1
+    mkdir ramdisk && cd ramdisk
+    $l/cat $TMP_AIK/ramdisk.cpio | $l/cpio -i -d > /dev/null 2>&1
+    # Checkout ramdisk path
+    cd ../
   fi
   if [ -f "ramdisk/init.rc" ]; then
     if [ ! -n "$(cat ramdisk/init.rc | grep init.vanced.rc)" ]; then
@@ -3081,7 +3084,7 @@ vanced_boot_patch() {
       chcon -h u:object_r:rootfs:s0 "ramdisk/init.vanced.rc"
     fi
     rm -rf ramdisk.cpio && cd $TMP_AIK/ramdisk
-    $l/find $TMP_AIK/ramdisk | $TMP_AIK/cpio -ov > $TMP_AIK/ramdisk.cpio
+    $l/find . | $l/cpio -H newc -o | cat > $TMP_AIK/ramdisk.cpio
     # Checkout ramdisk path
     cd ../
     ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
@@ -4630,7 +4633,10 @@ patch_bootimg() {
     $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
   if [ -f "ramdisk.cpio" ]; then
-    mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk > /dev/null 2>&1
+    mkdir ramdisk && cd ramdisk
+    $l/cat $TMP_AIK/ramdisk.cpio | $l/cpio -i -d > /dev/null 2>&1
+    # Checkout ramdisk path
+    cd ../
   fi
   if [ -f "ramdisk/init.rc" ]; then
     if [ ! -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
@@ -4646,7 +4652,7 @@ patch_bootimg() {
       chcon -h u:object_r:rootfs:s0 "ramdisk/init.logcat.rc"
     fi
     rm -rf ramdisk.cpio && cd $TMP_AIK/ramdisk
-    $l/find $TMP_AIK/ramdisk | $TMP_AIK/cpio -ov > $TMP_AIK/ramdisk.cpio
+    $l/find . | $l/cpio -H newc -o | cat > $TMP_AIK/ramdisk.cpio
     # Checkout ramdisk path
     cd ../
     ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
@@ -4969,12 +4975,15 @@ boot_whitelist_permission() {
       ;;
   esac
   if [ -f "ramdisk.cpio" ]; then
-    mkdir ramdisk && ./cpio -i < ramdisk.cpio -D ramdisk > /dev/null 2>&1
+    mkdir ramdisk && cd ramdisk
+    $l/cat $TMP_AIK/ramdisk.cpio | $l/cpio -i -d > /dev/null 2>&1
+    # Checkout ramdisk path
+    cd ../
   fi
   if [ -f "ramdisk/default.prop" ] && [ -n "$(cat ramdisk/default.prop | grep control_privapp_permissions)" ]; then
     $l/sed -i '/ro.control_privapp_permissions=enforce/c\ro.control_privapp_permissions=disable' default.prop
     rm -rf ramdisk.cpio && cd $TMP_AIK/ramdisk
-    $l/find $TMP_AIK/ramdisk | $TMP_AIK/cpio -ov > $TMP_AIK/ramdisk.cpio
+    $l/find . | $l/cpio -H newc -o | cat > $TMP_AIK/ramdisk.cpio
     # Checkout ramdisk path
     cd ../
     ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
