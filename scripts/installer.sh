@@ -5214,14 +5214,14 @@ chk_system_Ext() {
 df_system() {
   if [ "$ZIPTYPE" == "basic" ]; then CAPACITY="150000"; fi
   if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$supported_addon_stack" == "false" ]; then
-    [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1567000"
-    [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1834000"
+    [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1082000"
+    [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1191000"
   fi
   if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$supported_addon_stack" == "true" ]; then
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
-      $supported_assistant_config && ASSISTANT="142000" || ASSISTANT="0"; $supported_bromite_config && BROMITE="200000" || BROMITE="0"
+      $supported_assistant_config && ASSISTANT="142000" || ASSISTANT="0"; $supported_bromite_config && BROMITE="91000" || BROMITE="0"
       $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"; $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-      $supported_chrome_config && CHROME="445000" || CHROME="0"; $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
+      $supported_chrome_config && CHROME="163000" || CHROME="0"; $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
       $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"; $supported_dialer_config && DIALER="45000" || DIALER="0"
       $supported_dps_config && DPS="70000" || DPS="0"; $supported_gboard_config && GBOARD="122000" || GBOARD="0"
       $supported_gearhead_config && GEARHEAD="33000" || GEARHEAD="0"; $supported_launcher_config && LAUNCHER="10000" || LAUNCHER="0"
@@ -5231,9 +5231,9 @@ df_system() {
       $supported_vanced_config && VANCED="94000" || VANCED="0"; $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
     fi
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-      $supported_assistant_config && ASSISTANT="170000" || ASSISTANT="0"; $supported_bromite_config && BROMITE="374000" || BROMITE="0"
+      $supported_assistant_config && ASSISTANT="170000" || ASSISTANT="0"; $supported_bromite_config && BROMITE="127000" || BROMITE="0"
       $supported_calculator_config && CALCULATOR="3000" || CALCULATOR="0"; $supported_calendar_config && CALENDAR="24000" || CALENDAR="0"
-      $supported_chrome_config && CHROME="445000" || CHROME="0"; $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
+      $supported_chrome_config && CHROME="163000" || CHROME="0"; $supported_contacts_config && CONTACTS="12000" || CONTACTS="0"
       $supported_deskclock_config && DESKCLOCK="8000" || DESKCLOCK="0"; $supported_dialer_config && DIALER="52000" || DIALER="0"
       $supported_dps_config && DPS="70000" || DPS="0"; $supported_gboard_config && GBOARD="134000" || GBOARD="0"
       $supported_gearhead_config && GEARHEAD="33000" || GEARHEAD="0"; $supported_launcher_config && LAUNCHER="10000" || LAUNCHER="0"
@@ -5246,9 +5246,9 @@ df_system() {
   fi
   if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ]; then
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
-      $TARGET_ASSISTANT_GOOGLE && CAPACITY="142000"; $TARGET_BROMITE_GOOGLE && CAPACITY="200000"
+      $TARGET_ASSISTANT_GOOGLE && CAPACITY="142000"; $TARGET_BROMITE_GOOGLE && CAPACITY="91000"
       $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"; $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="445000"; $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
+      $TARGET_CHROME_GOOGLE && CAPACITY="163000"; $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
       $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"; $TARGET_DIALER_GOOGLE && CAPACITY="45000"
       $TARGET_DPS_GOOGLE && CAPACITY="70000"; $TARGET_GBOARD_GOOGLE && CAPACITY="122000"
       $TARGET_GEARHEAD_GOOGLE && CAPACITY="33000"; $TARGET_LAUNCHER_GOOGLE && CAPACITY="10000"
@@ -5258,9 +5258,9 @@ df_system() {
       $TARGET_VANCED_MICROG && CAPACITY="94000"; $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
     fi
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-      $TARGET_ASSISTANT_GOOGLE && CAPACITY="170000"; $TARGET_BROMITE_GOOGLE && CAPACITY="374000"
+      $TARGET_ASSISTANT_GOOGLE && CAPACITY="170000"; $TARGET_BROMITE_GOOGLE && CAPACITY="127000"
       $TARGET_CALCULATOR_GOOGLE && CAPACITY="3000"; $TARGET_CALENDAR_GOOGLE && CAPACITY="24000"
-      $TARGET_CHROME_GOOGLE && CAPACITY="445000"; $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
+      $TARGET_CHROME_GOOGLE && CAPACITY="163000"; $TARGET_CONTACTS_GOOGLE && CAPACITY="12000"
       $TARGET_DESKCLOCK_GOOGLE && CAPACITY="8000"; $TARGET_DIALER_GOOGLE && CAPACITY="52000"
       $TARGET_DPS_GOOGLE && CAPACITY="70000"; $TARGET_GBOARD_GOOGLE && CAPACITY="134000"
       $TARGET_GEARHEAD_GOOGLE && CAPACITY="33000"; $TARGET_LAUNCHER_GOOGLE && CAPACITY="10000"
@@ -5280,7 +5280,7 @@ df_system() {
   partition="System"
 }
 
-# Check available space is greater than 150MB(150000KB) or 1.567GB(1567000KB)/1.834GB(1834000KB)
+# Check available space is greater than 150MB(150000KB) or 1.082GB(1082000KB)/1.191GB(1191000KB)
 diskfree() {
   if [[ "$size" -gt "$CAPACITY" ]]; then TARGET_ANDROID_PARTITION="true"; else TARGET_ANDROID_PARTITION="false"; fi
   if [ "$TARGET_ANDROID_PARTITION" == "true" ]; then ui_print "- ${partition} Space: $ds_hr"; fi
