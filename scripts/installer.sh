@@ -3060,7 +3060,7 @@ vanced_boot_patch() {
       continue
       ;;
   esac
-  if [ -f "header" ]; then
+  if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
     # Change selinux state to permissive, without this bootlog script failed to execute
     $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
@@ -4625,7 +4625,7 @@ patch_bootimg() {
       continue
       ;;
   esac
-  if [ -f "header" ]; then
+  if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
     # Change selinux state to permissive, without this bootlog script failed to execute
     $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
