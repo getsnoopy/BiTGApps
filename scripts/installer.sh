@@ -1091,9 +1091,7 @@ check_release_tag() {
 chk_release_tag() {
   if [ "$($l/grep -w -o 'ro.gapps.release_tag' $SYSTEM/build.prop)" ]; then
     if [ ! "$android_release" == "$supported_release" ]; then UNSUPPORTED_RELEASE_TAG="true"; fi
-    if [ ! "$TARGET_DIRTY_INSTALL" == "true" ] && [ "$UNSUPPORTED_RELEASE_TAG" == "true" ]; then
-      on_abort "! Unsupported release tag detected. Aborting..."
-    fi
+    if [ "$UNSUPPORTED_RELEASE_TAG" == "true" ]; then on_abort "! Unsupported release tag detected. Aborting..."; fi
   else
     on_abort "! Cannot find release tag. Aborting..."
   fi
