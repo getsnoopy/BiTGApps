@@ -3450,28 +3450,27 @@ set_addon_zip_conf() {
     fi
     if [ "$supported_gboard_config" == "true" ]; then
       ui_print "- Installing Keyboard Google"
-      if [ "$supported_module_config" == "false" ]; then
+      if [ "$supported_module_config" == "false" ] && [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
         insert_line $SYSTEM/config.prop "ro.config.gboard" after '# Begin addon properties' "ro.config.gboard"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/Gboard* $i/gboard* $i/LatinIMEGooglePrebuilt
+          rm -rf $i/Gboard* $i/gboard* $i/LatinIMEGooglePrebuilt $i/LatinIME
         done
-        if [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
-          for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-            rm -rf $i/LatinIME
-          done
-          # Enable wiping of AOSP Keyboard during OTA upgrade
-          insert_line $SYSTEM/config.prop "ro.config.keyboard" after '# Begin addon properties' "ro.config.keyboard"
-        fi
+        # Enable wiping of AOSP Keyboard during OTA upgrade
+        insert_line $SYSTEM/config.prop "ro.config.keyboard" after '# Begin addon properties' "ro.config.keyboard"
       fi
       if [ "$supported_module_config" == "true" ] && [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
         for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
           mkdir $i/LatinIME && touch $i/LatinIME/.replace
         done
       fi
-      ADDON_SYS="GboardGooglePrebuilt.tar.xz"
-      PKG_SYS="GboardGooglePrebuilt"
-      target_sys
-      gboard_usr
+      if [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
+        ADDON_SYS="GboardGooglePrebuilt.tar.xz"
+        PKG_SYS="GboardGooglePrebuilt"
+        target_sys
+        gboard_usr
+      else
+        ui_print "! Cannot install Keyboard Google"
+      fi
     else
       ui_print "! Skip installing Keyboard Google"
     fi
@@ -3941,18 +3940,13 @@ set_addon_zip_sep() {
     fi
     if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
       ui_print "- Installing Keyboard Google"
-      if [ "$supported_module_config" == "false" ]; then
+      if [ "$supported_module_config" == "false" ] && [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
         insert_line $SYSTEM/config.prop "ro.config.gboard" after '# Begin addon properties' "ro.config.gboard"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/Gboard* $i/gboard* $i/LatinIMEGooglePrebuilt
+          rm -rf $i/Gboard* $i/gboard* $i/LatinIMEGooglePrebuilt $i/LatinIME
         done
-        if [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
-          for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-            rm -rf $i/LatinIME
-          done
-          # Enable wiping of AOSP Keyboard during OTA upgrade
-          insert_line $SYSTEM/config.prop "ro.config.keyboard" after '# Begin addon properties' "ro.config.keyboard"
-        fi
+        # Enable wiping of AOSP Keyboard during OTA upgrade
+        insert_line $SYSTEM/config.prop "ro.config.keyboard" after '# Begin addon properties' "ro.config.keyboard"
       fi
       if [ "$supported_module_config" == "true" ] && [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
         for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
@@ -3967,8 +3961,12 @@ set_addon_zip_sep() {
         ADDON_SYS="GboardGooglePrebuilt_arm64.tar.xz"
         PKG_SYS="GboardGooglePrebuilt"
       fi
-      target_sys
-      gboard_usr
+      if [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
+        target_sys
+        gboard_usr
+      else
+        ui_print "! Cannot install Keyboard Google"
+      fi
     fi
     if [ "$TARGET_GEARHEAD_GOOGLE" == "true" ]; then
       ui_print "- Installing Android Auto"
