@@ -740,6 +740,9 @@ chk_inst_pkg() {
   if [ -f $SYSTEM/etc/ng.prop ]; then
     GAPPS_TYPE="NikGApps"
   fi
+  if [ "$ZIPTYPE" == "microg" ] && { [ -f $SYSTEM/etc/g.prop ] && [ -n "$(cat $SYSTEM/etc/g.prop | grep BiTGApps)" ]; }; then
+    GAPPS_TYPE="BiTGApps"
+  fi
 }
 
 on_inst_abort() {
@@ -754,6 +757,10 @@ on_inst_abort() {
       ;;
     NikGApps )
       ui_print "! NikGApps installed. Aborting..."
+      lp_abort
+      ;;
+    BiTGApps )
+      ui_print "! BiTGApps installed. Aborting..."
       lp_abort
       ;;
   esac
@@ -1024,7 +1031,7 @@ on_wipe_check() { supported_wipe_config="$(get_prop "ro.config.wipe")"; }
 
 # Set SDK and Version check property
 on_version_check() {
-  if [ "$ZIPTYPE" == "addon" ]; then android_sdk="$(get_prop "ro.build.version.sdk")"; fi
+  if [ "$ZIPTYPE" == "addon" ] || [ "$ZIPTYPE" == "microg" ]; then android_sdk="$(get_prop "ro.build.version.sdk")"; fi
   if [ "$ZIPTYPE" == "basic" ]; then
     if [ "$TARGET_ANDROID_SDK" == "31" ]; then
       android_sdk="$(get_prop "ro.build.version.sdk")" && supported_sdk="31"
@@ -1094,6 +1101,13 @@ chk_release_tag() {
     if [ "$UNSUPPORTED_RELEASE_TAG" == "true" ]; then on_abort "! Unsupported release tag detected. Aborting..."; fi
   else
     on_abort "! Cannot find release tag. Aborting..."
+  fi
+}
+
+# Avoid installing Additional Packages with microG
+check_addon_install() {
+  if [ "$($l/grep -w -o 'ro.microg.device' $SYSTEM/build.prop)" ] && [ "$supported_addon_config" == "true" ]; then
+    on_abort "! MicroG install detected. Aborting..."
   fi
 }
 
@@ -1218,7 +1232,12 @@ on_unsupported_rwg() {
 # Abort installation for unsupported ROMs; Collectively targeting through playstore
 skip_on_unsupported() {
   if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$TARGET_APP_PLAYSTORE" == "true" ]; then
-    if [ ! -n "$(cat $SYSTEM/etc/g.prop | grep BiTGApps)" ]; then on_abort "! Unsupported RWG device. Aborting..."; fi
+    if [ "$ZIPTYPE" == "basic" ] && [ ! -n "$(cat $SYSTEM/etc/g.prop | grep BiTGApps)" ]; then
+      on_abort "! Unsupported RWG device. Aborting...";
+    fi
+    if [ "$ZIPTYPE" == "microg" ] && [ ! -n "$(cat $SYSTEM/etc/g.prop | grep MicroG)" ]; then
+      on_abort "! Unsupported RWG device. Aborting...";
+    fi
   fi
 }
 
@@ -1557,6 +1576,20 @@ pre_installed_v25() {
   rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay
 }
 
+# Remove pre-installed system files
+pre_installed_microg() {
+  for i in AppleNLPBackend DejaVuNLPBackend F-Droid IchnaeaNLPBackend LocalGSMNLPBackend LocalWiFiNLPBackend MozillaUnifiedNLPBackend NominatimNLPBackend RadioNLPBackend; do
+    rm -rf $SYSTEM_APP/$i
+  done
+  for i in AuroraServices DroidGuard FakeStore MicroGGMSCore MicroGGSFProxy Phonesky; do
+    rm -rf $SYSTEM_PRIV_APP/$i
+  done
+  for i in $SYSTEM_ETC_CONFIG/microg.xml $SYSTEM_ETC_DEFAULT/default-permissions.xml $SYSTEM_ETC_PERM/privapp-permissions-microg.xml; do
+    rm -rf $i
+  done
+  rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay
+}
+
 # Set package install function
 pkg_TMPSys() {
   file_list="$(find "$TMP_SYS/" -mindepth 1 -type f | cut -d/ -f5-)"
@@ -1798,6 +1831,62 @@ sdk_v25_install() {
 }
 
 # Set installation functions
+microg_install() {
+  ui_print "- Installing MicroG"
+  # Set default packages
+  ZIP="zip/core/AuroraServices.tar.xz zip/core/DroidGuard.tar.xz
+       zip/core/FakeStore.tar.xz zip/core/MicroGGMSCore.tar.xz
+       zip/core/MicroGGSFProxy.tar.xz zip/core/Phonesky.tar.xz
+       zip/sys/AppleNLPBackend.tar.xz zip/sys/DejaVuNLPBackend.tar.xz
+       zip/sys/F-Droid.tar.xz zip/sys/IchnaeaNLPBackend.tar.xz
+       zip/sys/LocalGSMNLPBackend.tar.xz zip/sys/LocalWiFiNLPBackend.tar.xz
+       zip/sys/MozillaUnifiedNLPBackend.tar.xz zip/sys/NominatimNLPBackend.tar.xz
+       zip/sys/RadioNLPBackend.tar.xz zip/Sysconfig.tar.xz
+       zip/Default.tar.xz zip/Permissions.tar.xz
+       zip/overlay/PlayStoreOverlay.tar.xz"
+  # Unpack system files
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # Common packages
+  tar -xf $ZIP_FILE/sys/AppleNLPBackend.tar.xz -C $TMP_SYS
+  tar -xf $ZIP_FILE/sys/DejaVuNLPBackend.tar.xz -C $TMP_SYS
+  tar -xf $ZIP_FILE/sys/F-Droid.tar.xz -C $TMP_SYS
+  tar -xf $ZIP_FILE/sys/IchnaeaNLPBackend.tar.xz -C $TMP_SYS
+  tar -xf $ZIP_FILE/sys/LocalGSMNLPBackend.tar.xz -C $TMP_SYS
+  tar -xf $ZIP_FILE/sys/LocalWiFiNLPBackend.tar.xz -C $TMP_SYS
+  tar -xf $ZIP_FILE/sys/MozillaUnifiedNLPBackend.tar.xz -C $TMP_SYS
+  tar -xf $ZIP_FILE/sys/NominatimNLPBackend.tar.xz -C $TMP_SYS
+  tar -xf $ZIP_FILE/sys/RadioNLPBackend.tar.xz -C $TMP_SYS
+  tar -xf $ZIP_FILE/core/AuroraServices.tar.xz -C $TMP_PRIV
+  tar -xf $ZIP_FILE/core/DroidGuard.tar.xz -C $TMP_PRIV
+  tar -xf $ZIP_FILE/core/FakeStore.tar.xz -C $TMP_PRIV
+  tar -xf $ZIP_FILE/core/MicroGGMSCore.tar.xz -C $TMP_PRIV
+  tar -xf $ZIP_FILE/core/MicroGGSFProxy.tar.xz -C $TMP_PRIV
+  tar -xf $ZIP_FILE/core/Phonesky.tar.xz -C $TMP_PRIV
+  tar -xf $ZIP_FILE/Sysconfig.tar.xz -C $TMP_SYSCONFIG
+  tar -xf $ZIP_FILE/Default.tar.xz -C $TMP_DEFAULT
+  tar -xf $ZIP_FILE/Permissions.tar.xz -C $TMP_PERMISSION
+  # API Specific
+  [ "$android_sdk" -ge "30" ] && tar -xf $ZIP_FILE/overlay/PlayStoreOverlay.tar.xz -C $TMP_OVERLAY
+  # Runtime functions
+  pkg_TMPSys
+  pkg_TMPPriv
+  pkg_TMPConfig
+  pkg_TMPDefault
+  pkg_TMPPerm
+  pkg_TMPOverlay
+  # Selinux context
+  for i in \
+    $SYSTEM_APP $SYSTEM_PRIV_APP \
+    $SYSTEM_ETC_CONFIG $SYSTEM_ETC_DEFAULT \
+    $SYSTEM_ETC_PERM $SYSTEM_ETC_PREF \
+    $SYSTEM_OVERLAY; do
+    chcon -hR u:object_r:system_file:s0 "$i"
+  done
+  # Add microG property
+  insert_line $SYSTEM_AS_SYSTEM/build.prop "ro.microg.device=true" after 'net.bt.name=Android' "ro.microg.device=true"
+}
+
+# Set installation functions
 aosp_pkg_install() {
   # Set default packages
   ZIP="zip/aosp/core/Contacts.tar.xz zip/aosp/core/Dialer.tar.xz zip/aosp/core/ManagedProvisioning.tar.xz
@@ -1856,14 +1945,16 @@ ota_prop_file() {
 backup_script() {
   if [ -d "$SYSTEM_ADDOND" ] && [ "$supported_module_config" == "false" ]; then
     ui_print "- Installing OTA survival script"
-    for f in bitgapps.sh backup.sh restore.sh; do
+    [ "$ZIPTYPE" == "basic" ] && ota="bitgapps.sh"
+    [ "$ZIPTYPE" == "microg" ] && ota="microg.sh"
+    for f in ${ota} backup.sh restore.sh; do
       rm -rf $SYSTEM_ADDOND/$f
     done
     ZIP="zip/Addon.tar.xz"
     [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
     tar -xf $ZIP_FILE/Addon.tar.xz -C $TMP_ADDON
     pkg_TMPAddon
-    for f in bitgapps.sh backup.sh restore.sh; do
+    for f in ${ota} backup.sh restore.sh; do
       chcon -h u:object_r:system_file:s0 "$SYSTEM_ADDOND/$f"
     done
   else
@@ -4425,6 +4516,32 @@ post_install_wipe() {
   remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
 }
 
+microg_install_wipe() {
+  for i in \
+    $ANDROID_DATA/app/com.android.vending* \
+    $ANDROID_DATA/app/com.google.android* \
+    $ANDROID_DATA/app/*/com.android.vending* \
+    $ANDROID_DATA/app/*/com.google.android* \
+    $ANDROID_DATA/data/com.android.vending* \
+    $ANDROID_DATA/data/com.google.android*; do
+    rm -rf $i
+  done
+  for i in \
+    AppleNLPBackend DejaVuNLPBackend F-Droid GoogleExtShared IchnaeaNLPBackend \
+    LocalGSMNLPBackend LocalWiFiNLPBackend MozillaUnifiedNLPBackend NominatimNLPBackend RadioNLPBackend \
+    AuroraServices DroidGuard FakeStore MicroGGMSCore MicroGGSFProxy Phonesky; do
+    rm -rf $SYSTEM_APP/$i $SYSTEM_PRIV_APP/$i
+  done
+  for i in microg.xml default-permissions.xml privapp-permissions-microg.xml; do
+    rm -rf $SYSTEM_ETC_CONFIG/$i $SYSTEM_ETC_DEFAULT/$i $SYSTEM_ETC_PERM/$i $SYSTEM_ETC_PREF/$i
+  done
+  rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay
+  rm -rf $SYSTEM_ADDOND/microg.sh $SYSTEM_ADDOND/backup.sh $SYSTEM_ADDOND/restore.sh
+  # Remove properties from system build
+  remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
+  remove_line $SYSTEM/build.prop "ro.microg.device="
+}
+
 # Backup system files before install
 post_backup() {
   if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$supported_module_config" == "false" ]; then
@@ -4533,6 +4650,7 @@ post_restore() {
 }
 
 post_uninstall() {
+  # BiTGApps Uninstall
   if [ "$ZIPTYPE" == "basic" ] && [ "$supported_module_config" == "false" ] && [ "$wipe_config" == "true" ]; then
     on_rwg_check
     if [ "$TARGET_RWG_STATUS" == "false" ]; then
@@ -4572,6 +4690,47 @@ post_uninstall() {
     # Remove properties from system build
     remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
     remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
+    on_installed
+  fi
+  # MicroG Uninstall
+  if [ "$ZIPTYPE" == "microg" ] && [ "$supported_module_config" == "false" ] && [ "$wipe_config" == "true" ]; then
+    on_rwg_check
+    if [ "$TARGET_RWG_STATUS" == "false" ]; then
+      print_title_wipe
+      ext_uninstall
+      microg_install_wipe
+      product_uninstall
+      microg_install_wipe
+      system_uninstall
+      microg_install_wipe
+      on_installed
+    fi
+    if [ "$TARGET_RWG_STATUS" == "true" ]; then
+      ui_print "! Skip uninstall MicroG components"
+      on_installed
+    fi
+  fi
+  if [ "$ZIPTYPE" == "microg" ] && [ "$supported_module_config" == "true" ] && [ "$wipe_config" == "true" ]; then
+    print_title_wipe
+    # Wipe temporary data
+    for i in \
+      $ANDROID_DATA/app/com.android.vending* \
+      $ANDROID_DATA/app/com.google.android* \
+      $ANDROID_DATA/app/*/com.android.vending* \
+      $ANDROID_DATA/app/*/com.google.android* \
+      $ANDROID_DATA/data/com.android.vending* \
+      $ANDROID_DATA/data/com.google.android*; do
+      rm -rf $i
+    done
+    # Wipe module
+    rm -rf $ANDROID_DATA/adb/modules/BiTGApps
+    # Wipe GooglePlayServices from system
+    for gms in $SYSTEM/priv-app $SYSTEM/product/priv-app $SYSTEM/system_ext/priv-app; do
+      rm -rf $gms/MicroGGMSCore
+    done
+    # Remove properties from system build
+    remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
+    remove_line $SYSTEM/build.prop "ro.microg.device="
     on_installed
   fi
 }
@@ -5078,7 +5237,7 @@ on_rwg_systemless() {
 }
 
 set_bitgapps_module() {
-  if [ "$ZIPTYPE" == "basic" ] && [ "$supported_module_config" == "true" ]; then
+  if { [ "$ZIPTYPE" == "basic" ] || [ "$ZIPTYPE" == "microg" ]; } && [ "$supported_module_config" == "true" ]; then
     rm -rf $ANDROID_DATA/adb/modules/BiTGApps
     mkdir $ANDROID_DATA/adb/modules/BiTGApps
     chmod 0755 $ANDROID_DATA/adb/modules/BiTGApps
@@ -5092,7 +5251,7 @@ set_module_path() {
 }
 
 override_module() {
-  if [ "$supported_module_config" == "true" ]; then
+  if [ "$ZIPTYPE" == "basic" ] && [ "$supported_module_config" == "true" ]; then
     mkdir $SYSTEM_SYSTEM/app/ExtShared
     mkdir $SYSTEM_SYSTEM/priv-app/ExtServices
     touch $SYSTEM_SYSTEM/app/ExtShared/.replace
@@ -5105,6 +5264,12 @@ fix_gms_hide() {
     for i in PrebuiltGmsCore PrebuiltGmsCorePix PrebuiltGmsCorePi PrebuiltGmsCoreQt PrebuiltGmsCoreRvc PrebuiltGmsCoreSvc; do
        mv -f $SYSTEM_SYSTEM/priv-app/$i $SYSTEM_AS_SYSTEM/priv-app 2>/dev/null
     done
+  fi
+}
+
+fix_microg_hide() {
+  if [ "$supported_module_config" == "true" ]; then
+    for i in MicroGGMSCore; do mv -f $SYSTEM_SYSTEM/priv-app/$i $SYSTEM_AS_SYSTEM/priv-app 2>/dev/null; done
   fi
 }
 
@@ -5129,6 +5294,10 @@ fix_module_perm() {
 module_info() {
   if [ "$ZIPTYPE" == "basic" ] && [ "$supported_module_config" == "true" ]; then
     echo -e "id=BiTGApps\nname=BiTGApps\nversion=$REL\nversionCode=$TARGET_RELEASE_TAG\nauthor=TheHitMan7\ndescription=Systemless version of BiTGApps" >> $SYSTEM/module.prop
+    chmod 0644 $SYSTEM/module.prop
+  fi
+  if [ "$ZIPTYPE" == "microg" ] && [ "$supported_module_config" == "true" ]; then
+    echo -e "id=MicroG\nname=MicroG\nversion=$REL\nversionCode=$TARGET_RELEASE_TAG\nauthor=TheHitMan7\ndescription=Systemless version of MicroG" >> $SYSTEM/module.prop
     chmod 0644 $SYSTEM/module.prop
   fi
 }
@@ -5186,6 +5355,29 @@ pre_install() {
       set_wipe_config; on_addon_wipe; set_addon_wipe
       on_safetynet_check; }
   fi
+  if [ "$ZIPTYPE" == "microg" ] && [ "$BOOTMODE" == "false" ]; then
+    { on_partition_check; on_fstab_check; ab_partition
+      system_as_root; super_partition; vendor_mnt
+      mount_all; check_rw_status; system_layout
+      mount_status; chk_inst_pkg; on_inst_abort
+      get_bitgapps_config; profile; on_release_tag
+      check_release_tag; on_version_check; on_platform_check
+      on_target_platform; clean_inst; on_config_version
+      config_version; on_module_check; on_wipe_check;
+      set_wipe_config; on_addon_wipe; set_addon_wipe
+      on_safetynet_check; }
+  fi
+  if [ "$ZIPTYPE" == "microg" ] && [ "$BOOTMODE" == "true" ]; then
+    { on_partition_check; ab_partition; system_as_root
+      super_partition; vendor_mnt; mount_BM
+      check_rw_status; system_layout; mount_status
+      chk_inst_pkg; on_inst_abort; get_bitgapps_config
+      profile; on_release_tag; check_release_tag
+      on_version_check; on_platform_check; on_target_platform
+      clean_inst; on_config_version; config_version
+      on_module_check; on_wipe_check; set_wipe_config
+      on_addon_wipe; set_addon_wipe; on_safetynet_check; }
+  fi
 }
 
 # Check availability of Product partition
@@ -5211,6 +5403,7 @@ chk_system_Ext() {
 # Set partitions for checking available space
 df_system() {
   if [ "$ZIPTYPE" == "basic" ]; then CAPACITY="150000"; fi
+  if [ "$ZIPTYPE" == "microg" ]; then CAPACITY="60000"; fi
   if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$supported_addon_stack" == "false" ]; then
     [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1082000"
     [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1191000"
@@ -5291,7 +5484,7 @@ chk_disk() { if [ "$wipe_config" == "false" ]; then chk_product; chk_system_Ext;
 post_install() {
   if [ "$ZIPTYPE" == "addon" ] && [ "$wipe_config" == "false" ]; then
     { on_rwg_check; on_unsupported_rwg; skip_on_unsupported
-      build_defaults; mk_component; system_pathmap
+      build_defaults; mk_component; system_pathmap; check_addon_install
       print_title_module; require_new_magisk; check_modules_path
       on_rwg_systemless; set_bitgapps_module; set_module_path
       create_module_pathmap; system_module_pathmap; on_addon_config
@@ -5311,6 +5504,20 @@ post_install() {
       print_title_setup; on_setup_install; backup_script
       opt_v25; whitelist_patch; sdk_fix; selinux_fix
       fix_gms_hide; fix_module_perm; module_info
+      mk_busybox_backup; boot_image_editor; patch_bootimg
+      on_cts_patch; boot_whitelist_permission; on_installed; }
+  fi
+  if [ "$ZIPTYPE" == "microg" ] && [ "$wipe_config" == "false" ]; then
+    { on_rwg_check; on_unsupported_rwg; skip_on_unsupported
+      post_backup; build_defaults; mk_component
+      system_pathmap; print_title_module; require_new_magisk
+      check_modules_path; on_rwg_systemless; set_bitgapps_module
+      set_module_path; create_module_pathmap; system_module_pathmap
+      override_module; rwg_aosp_install; set_aosp_default
+      lim_aosp_install; pre_installed_microg; microg_install
+      on_aosp_install; build_prop_file; rwg_ota_prop;
+      backup_script; opt_v25; whitelist_patch; sdk_fix;
+      selinux_fix; fix_microg_hide; fix_module_perm; module_info
       mk_busybox_backup; boot_image_editor; patch_bootimg
       on_cts_patch; boot_whitelist_permission; on_installed; }
   fi
