@@ -1298,8 +1298,11 @@ set_aosp_default() {
       install -d "/data/misc_de/0/apexdata/com.android.permission"
       chown -R 1000:9998 "/data/misc_de"
       chmod -R 1771 "/data/misc_de/0"
+      chcon -hR u:object_r:system_data_file:s0 "/data/misc_de"
       chmod 711 "/data/misc_de/0/apexdata"
+      chcon -h u:object_r:apex_module_data_file:s0 "/data/misc_de/0/apexdata"
       chmod 771 "/data/misc_de/0/apexdata/com.android.permission"
+      chcon -h u:object_r:apex_permission_data_file:s0 "/data/misc_de/0/apexdata/com.android.permission"
       { echo -e "<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>\r"
         echo -e '<roles version="-1" packagesHash="1C8E61B7486E56E0D6A43CC8BE8A90E47A87460DDFDE6E414A7764BFE889E625">\r'
         echo -e '  <role name="android.app.role.SMS">\r'
@@ -2877,8 +2880,11 @@ set_google_assistant_default() {
           install -d "/data/misc_de/0/apexdata/com.android.permission"
           chown -R 1000:9998 "/data/misc_de"
           chmod -R 1771 "/data/misc_de/0"
+          chcon -hR u:object_r:system_data_file:s0 "/data/misc_de"
           chmod 711 "/data/misc_de/0/apexdata"
+          chcon -h u:object_r:apex_module_data_file:s0 "/data/misc_de/0/apexdata"
           chmod 771 "/data/misc_de/0/apexdata/com.android.permission"
+          chcon -h u:object_r:apex_permission_data_file:s0 "/data/misc_de/0/apexdata/com.android.permission"
         fi
         { echo -e "<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>\r"
           echo -e '<roles version="-1" packagesHash="1C8E61B7486E56E0D6A43CC8BE8A90E47A87460DDFDE6E414A7764BFE889E625">\r'
@@ -2980,8 +2986,11 @@ set_google_dialer_default() {
           install -d "/data/misc_de/0/apexdata/com.android.permission"
           chown -R 1000:9998 "/data/misc_de"
           chmod -R 1771 "/data/misc_de/0"
+          chcon -hR u:object_r:system_data_file:s0 "/data/misc_de"
           chmod 711 "/data/misc_de/0/apexdata"
+          chcon -h u:object_r:apex_module_data_file:s0 "/data/misc_de/0/apexdata"
           chmod 771 "/data/misc_de/0/apexdata/com.android.permission"
+          chcon -h u:object_r:apex_permission_data_file:s0 "/data/misc_de/0/apexdata/com.android.permission"
         fi
         { echo -e "<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>\r"
           echo -e '<roles version="-1" packagesHash="1C8E61B7486E56E0D6A43CC8BE8A90E47A87460DDFDE6E414A7764BFE889E625">\r'
@@ -3083,8 +3092,11 @@ set_google_messages_default() {
           install -d "/data/misc_de/0/apexdata/com.android.permission"
           chown -R 1000:9998 "/data/misc_de"
           chmod -R 1771 "/data/misc_de/0"
+          chcon -hR u:object_r:system_data_file:s0 "/data/misc_de"
           chmod 711 "/data/misc_de/0/apexdata"
+          chcon -h u:object_r:apex_module_data_file:s0 "/data/misc_de/0/apexdata"
           chmod 771 "/data/misc_de/0/apexdata/com.android.permission"
+          chcon -h u:object_r:apex_permission_data_file:s0 "/data/misc_de/0/apexdata/com.android.permission"
         fi
         { echo -e "<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>\r"
           echo -e '<roles version="-1" packagesHash="1C8E61B7486E56E0D6A43CC8BE8A90E47A87460DDFDE6E414A7764BFE889E625">\r'
