@@ -4605,6 +4605,12 @@ post_backup() {
     # Create dummy file outside of loop function
     touch $ANDROID_DATA/.backup/.backup && chmod 0644 $ANDROID_DATA/.backup/.backup
   fi
+  if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$supported_module_config" == "true" ]; then
+    test -d $ANDROID_DATA/.backup || mkdir -p $ANDROID_DATA/.backup
+    chmod 0755 $ANDROID_DATA/.backup
+    # Create dummy file
+    touch $ANDROID_DATA/.backup/.backup && chmod 0644 $ANDROID_DATA/.backup/.backup
+  fi
   if [ "$TARGET_RWG_STATUS" == "true" ]; then ui_print "! RWG device detected"; fi
 }
 
