@@ -531,13 +531,12 @@ backupdirSYS() {
   SYS_APP="
     $SYSTEM/app/AppleNLPBackend
     $SYSTEM/app/DejaVuNLPBackend
-    $SYSTEM/app/F-Droid
+    $SYSTEM/app/FossDroid
     $SYSTEM/app/IchnaeaNLPBackend
     $SYSTEM/app/LocalGSMNLPBackend
     $SYSTEM/app/LocalWiFiNLPBackend
     $SYSTEM/app/MozillaUnifiedNLPBackend
-    $SYSTEM/app/NominatimNLPBackend
-    $SYSTEM/app/RadioNLPBackend"
+    $SYSTEM/app/NominatimNLPBackend"
 
   SYS_APP_JAR="
     $S/app/GoogleExtShared"
@@ -545,7 +544,6 @@ backupdirSYS() {
   SYS_PRIVAPP="
     $SYSTEM/priv-app/AuroraServices
     $SYSTEM/priv-app/DroidGuard
-    $SYSTEM/priv-app/FakeStore
     $SYSTEM/priv-app/MicroGGMSCore
     $SYSTEM/priv-app/MicroGGSFProxy
     $SYSTEM/priv-app/Phonesky"

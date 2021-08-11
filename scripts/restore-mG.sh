@@ -777,13 +777,12 @@ restoredirTMP() {
   TMP_APP="
     $TMP/app/AppleNLPBackend
     $TMP/app/DejaVuNLPBackend
-    $TMP/app/F-Droid
+    $TMP/app/FossDroid
     $TMP/app/IchnaeaNLPBackend
     $TMP/app/LocalGSMNLPBackend
     $TMP/app/LocalWiFiNLPBackend
     $TMP/app/MozillaUnifiedNLPBackend
-    $TMP/app/NominatimNLPBackend
-    $TMP/app/RadioNLPBackend"
+    $TMP/app/NominatimNLPBackend"
 
   TMP_APP_JAR="
     $TMP/app/GoogleExtShared"
@@ -791,7 +790,6 @@ restoredirTMP() {
   TMP_PRIVAPP="
     $TMP/priv-app/AuroraServices
     $TMP/priv-app/DroidGuard
-    $TMP/priv-app/FakeStore
     $TMP/priv-app/MicroGGMSCore
     $TMP/priv-app/MicroGGSFProxy
     $TMP/priv-app/Phonesky"
