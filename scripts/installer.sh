@@ -912,13 +912,29 @@ get_bitgapps_config() {
   fi
 }
 
-profile() { SYSTEM_PROPFILE="$SYSTEM/build.prop"; VENDOR_PROPFILE="$VENDOR/build.prop"; BITGAPPS_PROPFILE="$BITGAPPS_CONFIG"; }
+get_microg_config() {
+  for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage /data/media/0; do
+    for m in $(find $f -iname "microg-config.prop" 2>/dev/null); do
+      if [ -f "$m" ]; then
+        MICROG_CONFIG="$m"
+      fi
+    done
+  done
+  if [ -f "$MICROG_CONFIG" ]; then
+    ui_print "- Install config detected"
+  fi
+  if [ ! -f "$MICROG_CONFIG" ]; then
+    ui_print "! Install config not found"
+  fi
+}
+
+profile() { SYSTEM_PROPFILE="$SYSTEM/build.prop"; VENDOR_PROPFILE="$VENDOR/build.prop"; BITGAPPS_PROPFILE="$BITGAPPS_CONFIG"; MICROG_PROPFILE="$MICROG_CONFIG"; }
 
 get_file_prop() { grep -m1 "^$2=" "$1" | cut -d= -f2; }
 
 get_prop() {
   # Check known .prop files using get_file_prop
-  for f in $SYSTEM_PROPFILE $VENDOR_PROPFILE $BITGAPPS_PROPFILE; do
+  for f in $SYSTEM_PROPFILE $VENDOR_PROPFILE $BITGAPPS_PROPFILE; $MICROG_PROPFILE; do
     if [ -e "$f" ]; then
       prop="$(get_file_prop "$f" "$1")"
       if [ -n "$prop" ]; then
@@ -942,17 +958,32 @@ on_config_version() { supported_config_version="$(get_prop "ro.config.version")"
 
 # Match config version prior to current release
 config_version() {
-  if [ -f "$BITGAPPS_CONFIG" ] && [ ! -n "$(cat $BITGAPPS_CONFIG | grep ro.config.version)" ]; then
-    on_abort "! Invalid config found. Aborting..."
+  if [ "$ZIPTYPE" == "basic" ]; then
+    if [ -f "$BITGAPPS_CONFIG" ] && [ ! -n "$(cat $BITGAPPS_CONFIG | grep ro.config.version)" ]; then
+      on_abort "! Invalid config found. Aborting..."
+    fi
+    if [ -f "$BITGAPPS_CONFIG" ] && [ ! "$supported_config_version" == "$TARGET_CONFIG_VERSION" ]; then
+      on_abort "! Invalid config version. Aborting..."
+    fi
   fi
-  if [ -f "$BITGAPPS_CONFIG" ] && [ ! "$supported_config_version" == "$TARGET_CONFIG_VERSION" ]; then
-    on_abort "! Invalid config version. Aborting..."
+  if [ "$ZIPTYPE" == "microg" ]; then
+    if [ -f "$MICROG_CONFIG" ] && [ ! -n "$(cat $MICROG_CONFIG | grep ro.config.version)" ]; then
+      on_abort "! Invalid config found. Aborting..."
+    fi
+    if [ -f "$MICROG_CONFIG" ] && [ ! "$supported_config_version" == "$TARGET_CONFIG_VERSION" ]; then
+      on_abort "! Invalid config version. Aborting..."
+    fi
   fi
 }
 
 # Systemless Config Property
 on_module_check() {
-  if [ ! -f "$BITGAPPS_CONFIG" ]; then
+  if [ "$ZIPTYPE" == "basic" ] && [ ! -f "$BITGAPPS_CONFIG" ]; then
+    supported_module_config="false"
+  else
+    supported_module_config="$(get_prop "ro.config.systemless")"
+  fi
+  if [ "$ZIPTYPE" == "microg" ] && [ ! -f "$MICROG_CONFIG" ]; then
     supported_module_config="false"
   else
     supported_module_config="$(get_prop "ro.config.systemless")"
@@ -5372,7 +5403,7 @@ pre_install() {
       system_as_root; super_partition; vendor_mnt
       mount_all; check_rw_status; system_layout
       mount_status; chk_inst_pkg; on_inst_abort
-      get_bitgapps_config; profile; on_release_tag
+      get_microg_config; profile; on_release_tag
       check_release_tag; on_version_check; on_platform_check
       on_target_platform; clean_inst; on_config_version
       config_version; on_module_check; on_wipe_check;
@@ -5383,7 +5414,7 @@ pre_install() {
     { on_partition_check; ab_partition; system_as_root
       super_partition; vendor_mnt; mount_BM
       check_rw_status; system_layout; mount_status
-      chk_inst_pkg; on_inst_abort; get_bitgapps_config
+      chk_inst_pkg; on_inst_abort; get_microg_config
       profile; on_release_tag; check_release_tag
       on_version_check; on_platform_check; on_target_platform
       clean_inst; on_config_version; config_version
