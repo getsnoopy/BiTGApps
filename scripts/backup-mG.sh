@@ -515,7 +515,7 @@ ensure_dir() {
 set_pathmap() { SYSTEM="$S"; ensure_dir; }
 
 # Confirm that backup is done
-conf_addon_backup() { if [ -f $TMP/etc/g.prop ]; then ui_print "BackupTools: MicroG backup created"; else ui_print "BackupTools: Failed to create MicroG backup"; fi; }
+conf_addon_backup() { if [ -f $TMP/config.prop ]; then ui_print "BackupTools: MicroG backup created"; else ui_print "BackupTools: Failed to create MicroG backup"; fi; }
 
 # Check SetupWizard Status
 on_setup_status_check() { setup_install_status="$(get_prop "ro.setup.enabled")"; }

@@ -5558,8 +5558,8 @@ post_install() {
       set_module_path; create_module_pathmap; system_module_pathmap
       override_module; rwg_aosp_install; set_aosp_default
       lim_aosp_install; pre_installed_microg; microg_install
-      on_aosp_install; build_prop_file; rwg_ota_prop;
-      backup_script; opt_v25; whitelist_patch; sdk_fix;
+      on_aosp_install; build_prop_file; ota_prop_file; rwg_ota_prop
+      backup_script; opt_v25; whitelist_patch; sdk_fix
       selinux_fix; fix_microg_hide; fix_module_perm; module_info
       mk_busybox_backup; boot_image_editor; patch_bootimg
       on_cts_patch; boot_whitelist_permission; on_installed; }

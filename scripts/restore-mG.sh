@@ -534,7 +534,7 @@ ensure_dir() {
 set_pathmap() { SYSTEM="$S"; ensure_dir; }
 
 # Confirm that restore is done
-conf_addon_restore() { if [ -f $S/etc/g.prop ]; then ui_print "BackupTools: MicroG backup restored"; else ui_print "BackupTools: Failed to restore MicroG backup"; fi; }
+conf_addon_restore() { if [ -f $S/config.prop ]; then ui_print "BackupTools: MicroG backup restored"; else ui_print "BackupTools: Failed to restore MicroG backup"; fi; }
 
 # Delete existing GMS Doze entry from Android 7.1+
 opt_v25() {
