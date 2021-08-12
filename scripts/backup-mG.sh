@@ -720,9 +720,9 @@ case "$1" in
       # mv $SYS_PREFERREDAPPS $TMP/preferred-apps 2>/dev/null
       mv $SYS_PROPFILE $TMP/etc 2>/dev/null
       # mv $SYS_BUILDFILE $TMP 2>/dev/null
-      # backupdirSYSAddon
-      # on_addon_status_check
-      # trigger_addon_backup
+      backupdirSYSAddon
+      on_addon_status_check
+      trigger_addon_backup
       # backupdirSYSFboot
       # on_setup_status_check
       # trigger_fboot_backup

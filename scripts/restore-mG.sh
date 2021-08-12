@@ -1131,10 +1131,10 @@ case "$1" in
       restoredirTMPRwg
       on_rwg_status_check
       trigger_rwg_restore
-      # on_addon_status_check
+      on_addon_status_check
       # fix_addon_conflict
-      # restoredirTMPAddon
-      # trigger_addon_restore
+      restoredirTMPAddon
+      trigger_addon_restore
       restoredirTMPOverlay
       mv $TMP_OVERLAY $SYSTEM/product/overlay 2>/dev/null
       copy_ota_script
