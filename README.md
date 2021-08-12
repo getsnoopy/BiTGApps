@@ -50,6 +50,7 @@ Here are feature highlights:
 * [Frequently Asked Questions](https://github.com/BiTGApps/BiTGApps/wiki/Frequently-Asked-Questions-(FAQ))
 * [Common Installation Issues](https://github.com/BiTGApps/BiTGApps/wiki/Common-Installation-Issues)
 * [BiTGApps Documentation](https://github.com/BiTGApps/BiTGApps/wiki)
+* [microG Support](https://github.com/BiTGApps/BiTGApps/wiki#microg)
 
 ## Discussion Group
 

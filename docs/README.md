@@ -2,7 +2,7 @@
 <img align="right" src="https://raw.githubusercontent.com/BiTGApps/BiTGApps/master/logo.png" width="330" height="330" alt="BiTGApps" />
 </div>
 
-**Welcome to the BiTGApps wiki!**
+#### Welcome to the BiTGApps wiki!
 
 A collection of information and use of BiTGApps.
 
@@ -32,12 +32,12 @@ A collection of information and use of BiTGApps.
 * [**Distribution Sources**](https://github.com/BiTGApps/BiTGApps/wiki/Distribution-Sources)
 * [**Support Project**](https://github.com/BiTGApps/BiTGApps/wiki/Support-Project)
 
-**Changelogs**
+#### Changelogs
 
 * [**BiTGApps**](https://github.com/BiTGApps/BiTGApps/wiki/BiTGApps)
 * [**Additional Packages**](https://github.com/BiTGApps/BiTGApps/wiki/Additional-Packages)
 
-**microG**
+#### microG
 
 * [**Introduction**](https://github.com/BiTGApps/BiTGApps/wiki/microG)
 * [**Packages**](https://github.com/BiTGApps/BiTGApps/wiki/microG-Packages)
@@ -46,7 +46,7 @@ A collection of information and use of BiTGApps.
 * [**Usage**](https://github.com/BiTGApps/BiTGApps/wiki/microG-Usage)
 * [**Changelogs**](https://github.com/BiTGApps/BiTGApps/wiki/microG-Changelogs)
 
-**Developer Guide**
+#### Developer Guide
 
 * [**OTA Survival**](https://github.com/BiTGApps/BiTGApps/wiki/OTA-Survival)
 * [**OTA Config**](https://github.com/BiTGApps/BiTGApps/wiki/OTA-Config)
