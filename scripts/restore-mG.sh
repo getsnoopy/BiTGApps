@@ -898,6 +898,12 @@ restoredirTMPAddon() {
     $TMP/addon/usr/en-US"
 }
 
+restoredirTMPAddonv2() {
+  TMP_APP_ADDON="
+    $TMP/addon/app/YouTube
+    $TMP/addon/app/MicroGGMSCore"
+}
+
 restoredirTMPOverlay() {
   TMP_OVERLAY="
     $TMP/overlay/PlayStoreOverlay"
@@ -939,6 +945,12 @@ trigger_addon_restore() {
         cp -f $srec $SYSTEM/usr/srec/en-US 2>/dev/null
       done
     fi
+  fi
+}
+
+trigger_addon_restore_v2() {
+  if [ "$addon_install_status" == "true" ]; then
+    mv $TMP_APP_ADDON $SYSTEM/app 2>/dev/null
   fi
 }
 
@@ -1133,8 +1145,10 @@ case "$1" in
       trigger_rwg_restore
       on_addon_status_check
       # fix_addon_conflict
-      restoredirTMPAddon
-      trigger_addon_restore
+      # restoredirTMPAddon
+      restoredirTMPAddonv2
+      # trigger_addon_restore
+      trigger_addon_restore_v2
       restoredirTMPOverlay
       mv $TMP_OVERLAY $SYSTEM/product/overlay 2>/dev/null
       copy_ota_script

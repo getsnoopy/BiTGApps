@@ -650,6 +650,12 @@ backupdirSYSAddon() {
     $SYSTEM/usr/srec/en-US"
 }
 
+backupdirSYSAddonv2() {
+  SYS_APP_ADDON="
+    $SYSTEM/app/YouTube
+    $SYSTEM/app/MicroGGMSCore"
+}
+
 backupdirSYSOverlay() {
   SYS_OVERLAY="
     $SYSTEM/product/overlay/PlayStoreOverlay"
@@ -679,6 +685,12 @@ trigger_addon_backup() {
     mv $SYS_FRAMEWORK_ADDON $TMP/addon/framework 2>/dev/null
     mv $SYS_OVERLAY_ADDON $TMP/addon/overlay 2>/dev/null
     mv $SYS_USR_ADDON $TMP/addon/usr 2>/dev/null
+  fi
+}
+
+trigger_addon_backup_v2() {
+  if [ "$addon_install_status" == "true" ]; then
+    mv $SYS_APP_ADDON $TMP/addon/app 2>/dev/null
   fi
 }
 
@@ -720,9 +732,11 @@ case "$1" in
       # mv $SYS_PREFERREDAPPS $TMP/preferred-apps 2>/dev/null
       mv $SYS_PROPFILE $TMP/etc 2>/dev/null
       # mv $SYS_BUILDFILE $TMP 2>/dev/null
-      backupdirSYSAddon
+      # backupdirSYSAddon
+      backupdirSYSAddonv2
       on_addon_status_check
-      trigger_addon_backup
+      # trigger_addon_backup
+      trigger_addon_backup_v2
       # backupdirSYSFboot
       # on_setup_status_check
       # trigger_fboot_backup
