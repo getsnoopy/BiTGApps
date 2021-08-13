@@ -1993,6 +1993,18 @@ backup_script() {
 
 # Set predefined runtime permissions for microG
 runtime_permissions() {
+  for m in /data/magisk; do
+    if [ -d "$m" ]; then
+      mkdir -p /data/adb/service.d && chmod -R 0755 /data/adb
+      mv -f /data/magisk /data/adb/magisk
+    fi
+  done
+  for m in /data/adb/magisk; do
+    if [ -d "$m" ]; then
+      test -d /data/adb/service.d || mkdir /data/adb/service.d
+      chmod 0755 /data/adb/service.d
+    fi
+  done
   if [ "$ZIPTYPE" == "microg" ] && [ -d "$ANDROID_DATA/adb/service.d" ]; then
     [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "runtime.sh" -d "$TMP"
     cp -f $TMP/runtime.sh $ANDROID_DATA/adb/service.d/runtime.sh
