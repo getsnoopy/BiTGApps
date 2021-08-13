@@ -1992,6 +1992,18 @@ backup_script() {
   fi
 }
 
+# Set predefined runtime permissions for microG
+runtime_permissions() {
+  if [ "$ZIPTYPE" == "microg" ] && [ -d "$ANDROID_DATA/adb/service.d" ]; then
+    [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "runtime.sh" -d "$TMP"
+    cp -f $TMP/runtime.sh $ANDROID_DATA/adb/service.d/runtime.sh
+    chmod 0755 $ANDROID_DATA/adb/service.d/runtime.sh
+    chcon -h u:object_r:adb_data_file:s0 "$ANDROID_DATA/adb/service.d/runtime.sh"
+  else
+    ui_print "! Skip runtime permissions"
+  fi
+}
+
 set_setup_config() {
   setup_config="false"
   if [ "$supported_setup_config" == "true" ]; then
@@ -5559,9 +5571,9 @@ post_install() {
       override_module; rwg_aosp_install; set_aosp_default
       lim_aosp_install; pre_installed_microg; microg_install
       on_aosp_install; build_prop_file; ota_prop_file; rwg_ota_prop
-      backup_script; opt_v25; whitelist_patch; sdk_fix
-      selinux_fix; fix_microg_hide; fix_module_perm; module_info
-      mk_busybox_backup; boot_image_editor; patch_bootimg
+      backup_script; runtime_permissions; opt_v25; whitelist_patch
+      sdk_fix; selinux_fix; fix_microg_hide; fix_module_perm
+      module_info; mk_busybox_backup; boot_image_editor; patch_bootimg
       on_cts_patch; boot_whitelist_permission; on_installed; }
   fi
 }
