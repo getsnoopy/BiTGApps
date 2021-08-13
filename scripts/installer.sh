@@ -3731,8 +3731,12 @@ set_addon_zip_conf() {
         create_module_pathmap
         system_module_pathmap
       fi
+      # Set diskfree target
+      supported_vancedroot_config="true"
     else
       ui_print "! Skip installing YouTube Vanced"
+      # Set diskfree target
+      supported_vancedroot_config="false"
     fi
     if [ "$supported_vanced_config" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "false" ]; then
       # Override default layout
@@ -3763,8 +3767,12 @@ set_addon_zip_conf() {
         create_module_pathmap
         system_module_pathmap
       fi
+      # Set diskfree target
+      supported_vancednonroot_config="true"
     else
       ui_print "! Skip installing YouTube Vanced"
+      # Set diskfree target
+      supported_vancednonroot_config="false"
     fi
     if [ "$supported_wellbeing_config" == "true" ] && [ "$android_sdk" -ge "28" ]; then
       ui_print "- Installing Wellbeing Google"
@@ -5485,6 +5493,7 @@ df_system() {
       $supported_maps_config && MAPS="110000" || MAPS="0"; $supported_markup_config && MARKUP="10000" || MARKUP="0"
       $supported_messages_config && MESSAGES="100000" || MESSAGES="0"; $supported_photos_config && PHOTOS="92000" || PHOTOS="0"
       $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"; $supported_tts_config && TTS="30000" || TTS="0"
+      $supported_vancedroot_config && VANCED="0" || VANCED="0"; $supported_vancednonroot_config && VANCED="183000" || VANCED="0"
       $supported_vanced_config && VANCED="94000" || VANCED="0"; $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
     fi
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
@@ -5497,6 +5506,7 @@ df_system() {
       $supported_maps_config && MAPS="116000" || MAPS="0"; $supported_markup_config && MARKUP="10000" || MARKUP="0"
       $supported_messages_config && MESSAGES="100000" || MESSAGES="0"; $supported_photos_config && PHOTOS="107000" || PHOTOS="0"
       $supported_soundpicker_config && SOUNDPICKER="6000" || SOUNDPICKER="0"; $supported_tts_config && TTS="35000" || TTS="0"
+      $supported_vancedroot_config && VANCED="0" || VANCED="0"; $supported_vancednonroot_config && VANCED="183000" || VANCED="0"
       $supported_vanced_config && VANCED="114000" || VANCED="0"; $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
     fi
     CAPACITY=`expr $ASSISTANT + $BROMITE + $CALCULATOR + $CALENDAR + $CHROME + $CONTACTS + $DESKCLOCK + $DIALER + $DPS + $GBOARD + $GEARHEAD + $LAUNCHER + $MAPS + $MARKUP + $MESSAGES + $PHOTOS + $SOUNDPICKER + $TTS + $VANCED + $WELLBEING`
@@ -5512,6 +5522,7 @@ df_system() {
       $TARGET_MAPS_GOOGLE && CAPACITY="110000"; $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
       $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"; $TARGET_PHOTOS_GOOGLE && CAPACITY="92000"
       $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"; $TARGET_TTS_GOOGLE && CAPACITY="30000"
+      $TARGET_VANCED_ROOT && CAPACITY="0"; $TARGET_VANCED_NONROOT && CAPACITY="183000";
       $TARGET_VANCED_MICROG && CAPACITY="94000"; $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
     fi
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
@@ -5524,6 +5535,7 @@ df_system() {
       $TARGET_MAPS_GOOGLE && CAPACITY="116000"; $TARGET_MARKUP_GOOGLE && CAPACITY="10000"
       $TARGET_MESSAGES_GOOGLE && CAPACITY="100000"; $TARGET_PHOTOS_GOOGLE && CAPACITY="107000"
       $TARGET_SOUNDPICKER_GOOGLE && CAPACITY="6000"; $TARGET_TTS_GOOGLE && CAPACITY="35000"
+      $TARGET_VANCED_ROOT && CAPACITY="0"; $TARGET_VANCED_NONROOT && CAPACITY="183000";
       $TARGET_VANCED_MICROG && CAPACITY="114000"; $TARGET_WELLBEING_GOOGLE && CAPACITY="11000"
     fi
   fi
