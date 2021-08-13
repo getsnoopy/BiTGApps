@@ -5584,7 +5584,8 @@ post_install() {
       on_aosp_install; build_prop_file; ota_prop_file; rwg_ota_prop
       backup_script; runtime_permissions; opt_v25; whitelist_patch
       sdk_fix; selinux_fix; fix_microg_hide; fix_module_perm
-      module_info; mk_busybox_backup; boot_image_editor; patch_bootimg
+      maps_config; maps_framework; module_info
+      mk_busybox_backup; boot_image_editor; patch_bootimg
       on_cts_patch; boot_whitelist_permission; on_installed; }
   fi
 }

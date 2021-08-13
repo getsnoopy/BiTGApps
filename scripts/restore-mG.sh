@@ -131,6 +131,7 @@ tmp_dir() {
   test -d $TMP/permissions || mkdir $TMP/permissions
   test -d $TMP/preferred-apps || mkdir $TMP/preferred-apps
   test -d $TMP/sysconfig || mkdir $TMP/sysconfig
+  test -d $TMP/framework || mkdir $TMP/framework
   test -d $TMP/addon || mkdir $TMP/addon
   test -d $TMP/addon/app || mkdir $TMP/addon/app
   test -d $TMP/addon/priv-app || mkdir $TMP/addon/priv-app
@@ -800,13 +801,17 @@ restoredirTMP() {
     $TMP/sysconfig/microg.xml"
 
   TMP_DEFAULTPERMISSIONS="
-    $TMP/default-permissions/default-permissions.xml"
+    $TMP/default-permissions/default-permissions.xml
+    $TMP/etc/permissions/com.google.android.maps.xml"
 
   TMP_PERMISSIONS="
     $TMP/permissions/privapp-permissions-microg.xml"
 
   TMP_PREFERREDAPPS="
     $TMP/preferred-apps/google.xml"
+
+  TMP_FRAMEWORK="
+    $TMP/framework/com.google.android.maps.jar"
 
   TMP_PROPFILE="
     $TMP/etc/g.prop"
@@ -1128,8 +1133,9 @@ case "$1" in
       mv $TMP_DEFAULTPERMISSIONS $SYSTEM/etc/default-permissions 2>/dev/null
       mv $TMP_PERMISSIONS $SYSTEM/etc/permissions 2>/dev/null
       # mv $TMP_PREFERREDAPPS $SYSTEM/etc/preferred-apps 2>/dev/null
+      mv $TMP_FRAMEWORK $SYSTEM/framework 2>/dev/null
       mv $TMP_PROPFILE $S/etc 2>/dev/null
-      # mv $TMP_BUILDFILE $S 2>/dev/null
+      mv $TMP_BUILDFILE $S 2>/dev/null
       opt_v25
       purge_whitelist_permission
       set_whitelist_permission

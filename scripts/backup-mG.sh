@@ -131,6 +131,7 @@ tmp_dir() {
   test -d $TMP/permissions || mkdir $TMP/permissions
   test -d $TMP/preferred-apps || mkdir $TMP/preferred-apps
   test -d $TMP/sysconfig || mkdir $TMP/sysconfig
+  test -d $TMP/framework || mkdir $TMP/framework
   test -d $TMP/addon || mkdir $TMP/addon
   test -d $TMP/addon/app || mkdir $TMP/addon/app
   test -d $TMP/addon/priv-app || mkdir $TMP/addon/priv-app
@@ -557,10 +558,14 @@ backupdirSYS() {
     $SYSTEM/etc/default-permissions/default-permissions.xml"
 
   SYS_PERMISSIONS="
-    $SYSTEM/etc/permissions/privapp-permissions-microg.xml"
+    $SYSTEM/etc/permissions/privapp-permissions-microg.xml
+    $SYSTEM/etc/permissions/com.google.android.maps.xml"
 
   SYS_PREFERREDAPPS="
     $SYSTEM/etc/preferred-apps/google.xml"
+
+  SYS_FRAMEWORK="
+    $SYSTEM/framework/com.google.android.maps.jar"
 
   SYS_PROPFILE="
     $S/etc/g.prop"
@@ -729,8 +734,9 @@ case "$1" in
       mv $SYS_DEFAULTPERMISSIONS $TMP/default-permissions 2>/dev/null
       mv $SYS_PERMISSIONS $TMP/permissions 2>/dev/null
       # mv $SYS_PREFERREDAPPS $TMP/preferred-apps 2>/dev/null
+      mv $SYS_FRAMEWORK $TMP/framework 2>/dev/null
       mv $SYS_PROPFILE $TMP/etc 2>/dev/null
-      # mv $SYS_BUILDFILE $TMP 2>/dev/null
+      mv $SYS_BUILDFILE $TMP 2>/dev/null
       # backupdirSYSAddon
       backupdirSYSAddonv2
       on_addon_status_check
