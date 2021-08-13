@@ -778,7 +778,6 @@ restoredirTMP() {
     $TMP/app/AppleNLPBackend
     $TMP/app/DejaVuNLPBackend
     $TMP/app/FossDroid
-    $TMP/app/IchnaeaNLPBackend
     $TMP/app/LocalGSMNLPBackend
     $TMP/app/LocalWiFiNLPBackend
     $TMP/app/MozillaUnifiedNLPBackend

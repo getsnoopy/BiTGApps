@@ -532,7 +532,6 @@ backupdirSYS() {
     $SYSTEM/app/AppleNLPBackend
     $SYSTEM/app/DejaVuNLPBackend
     $SYSTEM/app/FossDroid
-    $SYSTEM/app/IchnaeaNLPBackend
     $SYSTEM/app/LocalGSMNLPBackend
     $SYSTEM/app/LocalWiFiNLPBackend
     $SYSTEM/app/MozillaUnifiedNLPBackend
