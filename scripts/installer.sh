@@ -3695,9 +3695,13 @@ set_addon_zip_conf() {
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.vanced" after '# Begin addon properties' "ro.config.vanced"
         insert_line $SYSTEM/config.prop "ro.config.vancedmicrog" after '# Begin addon properties' "ro.config.vancedmicrog"
+        # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
+        mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
           rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
         done
+        # Restore microG GMSCore after wiping
+        mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
       fi
       # Wipe additional YouTube Vanced components
       rm -rf $SYSTEM_AS_SYSTEM/adb $SYSTEM_AS_SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
@@ -3723,9 +3727,13 @@ set_addon_zip_conf() {
       for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
       done
+      # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
+      mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
       for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
       done
+      # Restore microG GMSCore after wiping
+      mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
       # Wipe additional YouTube Vanced components
       rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       # Check magisk
@@ -3766,9 +3774,13 @@ set_addon_zip_conf() {
       for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
       done
+      # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
+      mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
       for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
       done
+      # Restore microG GMSCore after wiping
+      mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
       # Wipe additional YouTube Vanced components
       rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       ADDON_SYS="YouTubeVanced.tar.xz"
@@ -4204,9 +4216,13 @@ set_addon_zip_sep() {
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.vanced" after '# Begin addon properties' "ro.config.vanced"
         insert_line $SYSTEM/config.prop "ro.config.vancedmicrog" after '# Begin addon properties' "ro.config.vancedmicrog"
+        # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
+        mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
           rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
         done
+        # Restore microG GMSCore after wiping
+        mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
       fi
       # Wipe additional YouTube Vanced components
       rm -rf $SYSTEM_AS_SYSTEM/adb $SYSTEM_AS_SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
@@ -4235,9 +4251,13 @@ set_addon_zip_sep() {
       for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
       done
+      # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
+      mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
       for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
       done
+      # Restore microG GMSCore after wiping
+      mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
       # Wipe additional YouTube Vanced components
       rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       # Check magisk
@@ -4276,9 +4296,13 @@ set_addon_zip_sep() {
       for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
       done
+      # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
+      mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
       for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
       done
+      # Restore microG GMSCore after wiping
+      mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
       # Wipe additional YouTube Vanced components
       rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       ADDON_SYS="YouTubeVanced.tar.xz"
