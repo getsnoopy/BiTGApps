@@ -5595,7 +5595,7 @@ diskfree() {
   if [ "$TARGET_ANDROID_PARTITION" == "false" ]; then ui_print "! Insufficient space in ${partition}"; on_abort "! Current space: $ds_hr"; fi
 }
 
-chk_disk() { if [ "$wipe_config" == "false" ]; then chk_product; chk_system_Ext; df_system; diskfree; fi; }
+chk_disk() { if [ "$wipe_config" == "false" ] || [ "$addon_wipe" == "false" ]; then chk_product; chk_system_Ext; df_system; diskfree; fi; }
 
 # Do not merge 'pre_install' functions here
 post_install() {
