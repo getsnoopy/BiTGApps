@@ -45,6 +45,7 @@ A collection of information and use of BiTGApps.
 * [**Permissions**](https://github.com/BiTGApps/BiTGApps/wiki/microG-Permissions)
 * [**Usage**](https://github.com/BiTGApps/BiTGApps/wiki/microG-Usage)
 * [**Changelogs**](https://github.com/BiTGApps/BiTGApps/wiki/microG-Changelogs)
+* [**Downloads**](https://github.com/BiTGApps/microG-release/releases)
 
 #### Developer Guide
 
