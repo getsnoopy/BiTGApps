@@ -934,7 +934,7 @@ get_file_prop() { grep -m1 "^$2=" "$1" | cut -d= -f2; }
 
 get_prop() {
   # Check known .prop files using get_file_prop
-  for f in $SYSTEM_PROPFILE $VENDOR_PROPFILE $BITGAPPS_PROPFILE; $MICROG_PROPFILE; do
+  for f in $SYSTEM_PROPFILE $VENDOR_PROPFILE $BITGAPPS_PROPFILE $MICROG_PROPFILE; do
     if [ -e "$f" ]; then
       prop="$(get_file_prop "$f" "$1")"
       if [ -n "$prop" ]; then

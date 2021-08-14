@@ -3,7 +3,7 @@
 ##############################################################
 # File name       : runtime.sh
 #
-# Description     : Grant runtime permissions
+# Description     : Grant microG runtime permissions
 #
 # Copyright       : Copyright (C) 2018-2021 TheHitMan7
 #
