@@ -1060,6 +1060,28 @@ on_addon_chk() {
 # Wipe Config Property
 on_wipe_check() { supported_wipe_config="$(get_prop "ro.config.wipe")"; }
 
+# Enable free space check against YouTube Vanced Root version
+df_vroot_target() {
+  if [ "$supported_vanced_config" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "true" ]; then
+    # Set diskfree target
+    supported_vancedroot_config="true"
+  else
+    # Skip diskfree target
+    supported_vancedroot_config="false"
+  fi
+}
+
+# Enable free space check against YouTube Vanced Non-Root version
+df_vnonroot_target() {
+  if [ "$supported_vanced_config" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "false" ]; then
+    # Set diskfree target
+    supported_vancednonroot_config="true"
+  else
+    # Skip diskfree target
+    supported_vancednonroot_config="false"
+  fi
+}
+
 # Set SDK and Version check property
 on_version_check() {
   if [ "$ZIPTYPE" == "addon" ] || [ "$ZIPTYPE" == "microg" ]; then android_sdk="$(get_prop "ro.build.version.sdk")"; fi
@@ -3731,12 +3753,8 @@ set_addon_zip_conf() {
         create_module_pathmap
         system_module_pathmap
       fi
-      # Set diskfree target
-      supported_vancedroot_config="true"
     else
       ui_print "! Skip installing YouTube Vanced"
-      # Set diskfree target
-      supported_vancedroot_config="false"
     fi
     if [ "$supported_vanced_config" == "true" ] && [ "$supported_microg_config" == "false" ] && [ "$supported_data_config" == "false" ]; then
       # Override default layout
@@ -3767,12 +3785,8 @@ set_addon_zip_conf() {
         create_module_pathmap
         system_module_pathmap
       fi
-      # Set diskfree target
-      supported_vancednonroot_config="true"
     else
       ui_print "! Skip installing YouTube Vanced"
-      # Set diskfree target
-      supported_vancednonroot_config="false"
     fi
     if [ "$supported_wellbeing_config" == "true" ] && [ "$android_sdk" -ge "28" ]; then
       ui_print "- Installing Wellbeing Google"
@@ -5390,7 +5404,8 @@ pre_install() {
       on_platform_check; on_target_platform; on_config_version
       config_version; on_addon_stack; on_addon_check
       on_module_check; on_wipe_check; set_wipe_config
-      on_addon_wipe; set_addon_wipe; }
+      on_addon_wipe; set_addon_wipe; df_vroot_target
+      df_vnonroot_target; }
   fi
   if [ "$ZIPTYPE" == "addon" ] && [ "$BOOTMODE" == "true" ]; then
     { on_partition_check; ab_partition; system_as_root
@@ -5401,7 +5416,7 @@ pre_install() {
       on_target_platform; on_config_version; config_version
       on_addon_stack; on_addon_check; on_module_check
       on_wipe_check; set_wipe_config; on_addon_wipe
-      set_addon_wipe; }
+      set_addon_wipe; df_vroot_target; df_vnonroot_target; }
   fi
   if [ "$ZIPTYPE" == "basic" ] && [ "$BOOTMODE" == "false" ]; then
     { on_partition_check; on_fstab_check; ab_partition
