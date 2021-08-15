@@ -740,6 +740,9 @@ chk_inst_pkg() {
   if [ -f $SYSTEM/etc/ng.prop ]; then
     GAPPS_TYPE="NikGApps"
   fi
+  if [ "$ZIPTYPE" == "basic" ] && [ -n "$(cat $SYSTEM/build.prop | grep ro.microg.device)" ]; then
+    GAPPS_TYPE="MicroG"
+  fi
   if [ "$ZIPTYPE" == "microg" ] && { [ -f $SYSTEM/etc/g.prop ] && [ -n "$(cat $SYSTEM/etc/g.prop | grep BiTGApps)" ]; }; then
     GAPPS_TYPE="BiTGApps"
   fi
@@ -761,6 +764,10 @@ on_inst_abort() {
       ;;
     BiTGApps )
       ui_print "! BiTGApps installed. Aborting..."
+      lp_abort
+      ;;
+    MicroG )
+      ui_print "! MicroG installed. Aborting..."
       lp_abort
       ;;
   esac
