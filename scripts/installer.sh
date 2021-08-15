@@ -4539,7 +4539,8 @@ set_wipe_config() {
 print_title_wipe() {
   if [ "$wipe_config" == "true" ]; then
     ui_print "- Wipe config detected"
-    ui_print "- Uninstall BiTGApps components"
+    [ "$ZIPTYPE" == "basic" ] && ui_print "- Uninstall BiTGApps components"
+    [ "$ZIPTYPE" == "microg" ] && ui_print "- Uninstall MicroG components"
   fi
 }
 
@@ -4639,20 +4640,28 @@ microg_install_wipe() {
     $ANDROID_DATA/data/com.google.android*; do
     rm -rf $i
   done
+  for d in \
+    Exactcalculator Calendar Etar DeskClock Gallery2 Jelly LatinIME webview Launcher3 \
+    Launcher3QuickStep NexusLauncherRelease QuickAccessWallet QuickStep QuickStepLauncher \
+    TrebuchetQuickStep OneTimeInitializer ManagedProvisioning Provision LineageSetupWizard \
+    messaging Contacts Dialer; do
+    rm -rf $SYSTEM_APP/$d $SYSTEM_PRIV_APP/$d
+  done
   for i in \
     AppleNLPBackend DejaVuNLPBackend FossDroid LocalGSMNLPBackend \
     LocalWiFiNLPBackend MozillaUnifiedNLPBackend NominatimNLPBackend \
-    AuroraServices DroidGuard MicroGGMSCore MicroGGSFProxy Phonesky; do
+    AuroraServices DroidGuard MicroGGMSCore MicroGGSFProxy Phonesky YouTube; do
     rm -rf $SYSTEM_APP/$i $SYSTEM_PRIV_APP/$i
   done
   for i in microg.xml default-permissions.xml privapp-permissions-microg.xml; do
     rm -rf $SYSTEM_ETC_CONFIG/$i $SYSTEM_ETC_DEFAULT/$i $SYSTEM_ETC_PERM/$i $SYSTEM_ETC_PREF/$i
   done
-  rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay
+  rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay $ANDROID_DATA/adb/service.d/runtime.sh
   rm -rf $SYSTEM_ADDOND/microg.sh $SYSTEM_ADDOND/backup.sh $SYSTEM_ADDOND/restore.sh
   # Remove properties from system build
   remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
   remove_line $SYSTEM/build.prop "ro.microg.device="
+  remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
 }
 
 # Backup system files before install
@@ -4781,6 +4790,7 @@ post_uninstall() {
       system_uninstall
       post_install_wipe
       post_restore
+      clean_inst
       on_installed
     fi
     if [ "$TARGET_RWG_STATUS" == "true" ]; then
@@ -4809,6 +4819,8 @@ post_uninstall() {
     # Remove properties from system build
     remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
     remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
+    # Runtime permissions
+    clean_inst
     on_installed
   fi
   # MicroG Uninstall
@@ -4822,6 +4834,8 @@ post_uninstall() {
       microg_install_wipe
       system_uninstall
       microg_install_wipe
+      post_restore
+      clean_inst
       on_installed
     fi
     if [ "$TARGET_RWG_STATUS" == "true" ]; then
@@ -4842,7 +4856,7 @@ post_uninstall() {
       rm -rf $i
     done
     # Wipe module
-    rm -rf $ANDROID_DATA/adb/modules/BiTGApps
+    rm -rf $ANDROID_DATA/adb/modules/BiTGApps $ANDROID_DATA/adb/service.d/runtime.sh
     # Wipe GooglePlayServices from system
     for gms in $SYSTEM/priv-app $SYSTEM/product/priv-app $SYSTEM/system_ext/priv-app; do
       rm -rf $gms/MicroGGMSCore
@@ -4850,6 +4864,8 @@ post_uninstall() {
     # Remove properties from system build
     remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
     remove_line $SYSTEM/build.prop "ro.microg.device="
+    # Runtime permissions
+    clean_inst
     on_installed
   fi
 }
