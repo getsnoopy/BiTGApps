@@ -985,12 +985,12 @@ config_version() {
 
 # Systemless Config Property
 on_module_check() {
-  if [ "$ZIPTYPE" == "basic" ] && [ ! -f "$BITGAPPS_CONFIG" ]; then
+  if { [ "$ZIPTYPE" == "basic" ] || [ "$ZIPTYPE" == "addon" ]; } && [ ! -f "$BITGAPPS_CONFIG" ]; then
     supported_module_config="false"
   else
     supported_module_config="$(get_prop "ro.config.systemless")"
   fi
-  if [ "$ZIPTYPE" == "microg" ] && [ ! -f "$MICROG_CONFIG" ]; then
+  if { [ "$ZIPTYPE" == "microg" ] || [ "$ZIPTYPE" == "addon" ]; } && [ ! -f "$MICROG_CONFIG" ]; then
     supported_module_config="false"
   else
     supported_module_config="$(get_prop "ro.config.systemless")"
@@ -3705,7 +3705,7 @@ set_addon_zip_conf() {
         # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
         mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
+          rm -rf $i/YouTube* $i/Youtube* $i/MicroGGMSCore $i/microg*
         done
         # Restore microG GMSCore after wiping
         mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
@@ -3737,7 +3737,7 @@ set_addon_zip_conf() {
       # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
       mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
       for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-        rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
+        rm -rf $i/YouTube* $i/Youtube* $i/MicroGGMSCore $i/microg*
       done
       # Restore microG GMSCore after wiping
       mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
@@ -3784,7 +3784,7 @@ set_addon_zip_conf() {
       # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
       mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
       for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-        rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
+        rm -rf $i/YouTube* $i/Youtube* $i/MicroGGMSCore $i/microg*
       done
       # Restore microG GMSCore after wiping
       mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
@@ -4226,7 +4226,7 @@ set_addon_zip_sep() {
         # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
         mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
+          rm -rf $i/YouTube* $i/Youtube* $i/MicroGGMSCore $i/microg*
         done
         # Restore microG GMSCore after wiping
         mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
@@ -4261,7 +4261,7 @@ set_addon_zip_sep() {
       # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
       mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
       for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-        rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
+        rm -rf $i/YouTube* $i/Youtube* $i/MicroGGMSCore $i/microg*
       done
       # Restore microG GMSCore after wiping
       mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
@@ -4306,7 +4306,7 @@ set_addon_zip_sep() {
       # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
       mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
       for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-        rm -rf $i/YouTube* $i/Youtube* $i/MicroG* $i/microg*
+        rm -rf $i/YouTube* $i/Youtube* $i/MicroGGMSCore $i/microg*
       done
       # Restore microG GMSCore after wiping
       mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
