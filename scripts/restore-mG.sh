@@ -153,7 +153,7 @@ tmp_dir() {
 
 # Wipe temporary dir
 del_tmp_dir() {
-  for i in app priv-app etc default-permissions permissions preferred-apps sysconfig addon rwg fboot overlay SYS* PRO*; do
+  for i in app priv-app etc default-permissions permissions preferred-apps sysconfig framework addon rwg fboot overlay SYS* PRO*; do
     rm -rf $TMP/$i
   done
 }
@@ -540,12 +540,12 @@ conf_addon_restore() { if [ -f $S/config.prop ]; then ui_print "BackupTools: Mic
 # Delete existing GMS Doze entry from Android 7.1+
 opt_v25() {
   if [ "$android_sdk" -ge "25" ]; then
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/permissions/*.xml
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/sysconfig/*.xml
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/product/etc/permissions/*.xml
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/product/etc/sysconfig/*.xml
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/system_ext/etc/permissions/*.xml
-    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/system_ext/etc/sysconfig/*.xml
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/permissions/*.xml 2>/dev/null
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/etc/sysconfig/*.xml 2>/dev/null
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/product/etc/permissions/*.xml 2>/dev/null
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/product/etc/sysconfig/*.xml 2>/dev/null
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/system_ext/etc/permissions/*.xml 2>/dev/null
+    sed -i '/allow-in-power-save package="com.google.android.gms"/d' $S/system_ext/etc/sysconfig/*.xml 2>/dev/null
   fi
 }
 
@@ -640,6 +640,9 @@ purge_whitelist_permission() {
 
 # Add Whitelist property with flag disable
 set_whitelist_permission() { insert_line $S/build.prop "ro.control_privapp_permissions=disable" after 'net.bt.name=Android' 'ro.control_privapp_permissions=disable'; }
+
+# Set microG property
+set_microg_device() { insert_line $S/build.prop "ro.microg.device=true" after 'net.bt.name=Android' 'ro.microg.device=true'; }
 
 # Enable Google Assistant
 set_assistant() { insert_line $S/build.prop "ro.opa.eligible_device=true" after 'net.bt.name=Android' 'ro.opa.eligible_device=true'; }
@@ -801,11 +804,11 @@ restoredirTMP() {
     $TMP/sysconfig/microg.xml"
 
   TMP_DEFAULTPERMISSIONS="
-    $TMP/default-permissions/default-permissions.xml
-    $TMP/etc/permissions/com.google.android.maps.xml"
+    $TMP/default-permissions/default-permissions.xml"
 
   TMP_PERMISSIONS="
-    $TMP/permissions/privapp-permissions-microg.xml"
+    $TMP/permissions/privapp-permissions-microg.xml
+    $TMP/permissions/com.google.android.maps.xml"
 
   TMP_PREFERREDAPPS="
     $TMP/preferred-apps/google.xml"
@@ -1139,6 +1142,7 @@ case "$1" in
       opt_v25
       purge_whitelist_permission
       set_whitelist_permission
+      set_microg_device
       # set_assistant
       set_release_tag
       # restoredirTMPFboot
