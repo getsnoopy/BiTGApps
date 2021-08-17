@@ -987,10 +987,7 @@ config_version() {
 on_module_check() {
   if { [ "$ZIPTYPE" == "basic" ] || [ "$ZIPTYPE" == "addon" ]; } && [ ! -f "$BITGAPPS_CONFIG" ]; then
     supported_module_config="false"
-  else
-    supported_module_config="$(get_prop "ro.config.systemless")"
-  fi
-  if { [ "$ZIPTYPE" == "microg" ] || [ "$ZIPTYPE" == "addon" ]; } && [ ! -f "$MICROG_CONFIG" ]; then
+  elif { [ "$ZIPTYPE" == "microg" ] || [ "$ZIPTYPE" == "addon" ]; } && [ ! -f "$MICROG_CONFIG" ]; then
     supported_module_config="false"
   else
     supported_module_config="$(get_prop "ro.config.systemless")"
