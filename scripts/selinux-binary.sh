@@ -166,6 +166,13 @@ cd $TMP
 [ -z $RECOVERYMODE ] && RECOVERYMODE=false
 find_boot_image
 dd if="$block" of="boot.img" > /dev/null 2>&1
+if [ -z $block ]; then
+  ui_print "! Unable to detect target image"
+  ui_print "! Installation failed"
+  ui_print " "
+  exit 1
+fi
+ui_print "- Target image: $block"
 # Set CHROMEOS status
 CHROMEOS=false
 # Unpack boot image
