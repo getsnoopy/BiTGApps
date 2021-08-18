@@ -31,6 +31,79 @@ if [ "$ARCH" == "x86" ] || [ "$ARCH" == "x86_64" ]; then
   exit 1
 fi
 
+toupper() {
+  echo "$@" | tr '[:lower:]' '[:upper:]'
+}
+
+grep_cmdline() {
+  local REGEX="s/^$1=//p"
+  cat /proc/cmdline | tr '[:space:]' '\n' | $l/sed -n "$REGEX" 2>/dev/null
+}
+
+grep_prop() {
+  local REGEX="s/^$1=//p"
+  shift
+  local FILES=$@
+  [ -z "$FILES" ] && FILES="$SYSTEM/build.prop"
+  cat $FILES 2>/dev/null | dos2unix | $l/sed -n "$REGEX" | head -n 1
+}
+
+# find_block [partname...]
+find_block() {
+  local BLOCK DEV DEVICE DEVNAME PARTNAME UEVENT
+  for BLOCK in "$@"; do
+    DEVICE=`find /dev/block \( -type b -o -type c -o -type l \) -iname $BLOCK | head -n 1` 2>/dev/null
+    if [ ! -z $DEVICE ]; then
+      readlink -f $DEVICE
+      return 0
+    fi
+  done
+  # Fallback by parsing sysfs uevents
+  for UEVENT in /sys/dev/block/*/uevent; do
+    DEVNAME=`grep_prop DEVNAME $UEVENT`
+    PARTNAME=`grep_prop PARTNAME $UEVENT`
+    for BLOCK in "$@"; do
+      if [ "$(toupper $BLOCK)" = "$(toupper $PARTNAME)" ]; then
+        echo /dev/block/$DEVNAME
+        return 0
+      fi
+    done
+  done
+  # Look just in /dev in case we're dealing with MTD/NAND without /dev/block devices/links
+  for DEV in "$@"; do
+    DEVICE=`find /dev \( -type b -o -type c -o -type l \) -maxdepth 1 -iname $DEV | head -n 1` 2>/dev/null
+    if [ ! -z $DEVICE ]; then
+      readlink -f $DEVICE
+      return 0
+    fi
+  done
+  return 1
+}
+
+find_boot_image() {
+  block=
+  if $RECOVERYMODE; then
+    block=`find_block recovery_ramdisk$SLOT recovery$SLOT sos`
+  elif [ ! -z $SLOT ]; then
+    block=`find_block ramdisk$SLOT recovery_ramdisk$SLOT boot$SLOT`
+  else
+    block=`find_block ramdisk recovery_ramdisk kern-a android_boot kernel bootimg boot lnx boot_a`
+  fi
+  if [ -z $block ]; then
+    # Lets see what fstabs tells me
+    block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
+  fi
+}
+
+sign_chromeos() {
+  echo > empty
+  ./chromeos/futility vbutil_kernel --pack mboot.img.signed \
+  --keyblock ./chromeos/kernel.keyblock --signprivate ./chromeos/kernel_data_key.vbprivk \
+  --version 1 --vmlinuz mboot.img --config empty --arch arm --bootloader empty --flags 0x1
+  rm -f empty mboot.img
+  mv mboot.img.signed mboot.img
+}
+
 # Output function
 ui_print() { echo -n -e "ui_print $1\n" >> /proc/self/fd/$OUTFD; echo -n -e "ui_print\n" >> /proc/self/fd/$OUTFD; }
 
@@ -78,11 +151,20 @@ unzip -o "$ZIPFILE" "AIK.tar.xz" -d "$TMP"
 tar -xf $TMP/AIK.tar.xz -C $TMP
 chmod +x $TMP/chromeos/* $TMP/cpio $TMP/magiskboot
 
+# Check A/B slot
+SLOT=`grep_cmdline androidboot.slot_suffix`
+if [ -z $SLOT ]; then
+  SLOT=`grep_cmdline androidboot.slot`
+  [ -z $SLOT ] || SLOT=_${SLOT}
+fi
+[ -z $SLOT ] || ui_print "- Current boot slot: $SLOT"
+
 ui_print "- Set SELinux enforcing"
 # Switch path to AIK
 cd $TMP
-# Lets see what fstab tells me
-block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
+# Extract boot image
+[ -z $RECOVERYMODE ] && RECOVERYMODE=false
+find_boot_image
 dd if="$block" of="boot.img" > /dev/null 2>&1
 # Set CHROMEOS status
 CHROMEOS=false
