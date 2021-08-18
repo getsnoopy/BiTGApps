@@ -1670,10 +1670,10 @@ pre_installed_v25() {
 
 # Remove pre-installed system files
 pre_installed_microg() {
-  for i in AppleNLPBackend DejaVuNLPBackend FossDroid LocalGSMNLPBackend LocalWiFiNLPBackend MozillaUnifiedNLPBackend NominatimNLPBackend; do
+  for i in AppleNLPBackend DejaVuNLPBackend ExtShared FossDroid LocalGSMNLPBackend LocalWiFiNLPBackend MozillaUnifiedNLPBackend NominatimNLPBackend; do
     rm -rf $SYSTEM_APP/$i
   done
-  for i in AuroraServices DroidGuard MicroGGMSCore MicroGGSFProxy Phonesky; do
+  for i in AuroraServices DroidGuard ExtServices MicroGGMSCore MicroGGSFProxy Phonesky; do
     rm -rf $SYSTEM_PRIV_APP/$i
   done
   for i in $SYSTEM_ETC_CONFIG/microg.xml $SYSTEM_ETC_DEFAULT/default-permissions.xml $SYSTEM_ETC_PERM/privapp-permissions-microg.xml; do
@@ -1976,8 +1976,8 @@ microg_install() {
 # Set installation functions
 aosp_pkg_install() {
   # Set default packages
-  ZIP="zip/aosp/core/Contacts.tar.xz zip/aosp/core/Dialer.tar.xz zip/aosp/core/ManagedProvisioning.tar.xz
-       zip/aosp/core/Provision.tar.xz zip/aosp/sys/Messaging.tar.xz zip/aosp/Permissions.tar.xz"
+  ZIP="zip/aosp/core/Contacts.tar.xz zip/aosp/core/Dialer.tar.xz zip/aosp/core/ExtServices.tar.xz zip/aosp/core/ManagedProvisioning.tar.xz
+       zip/aosp/core/Provision.tar.xz zip/aosp/sys/ExtShared.tar.xz zip/aosp/sys/Messaging.tar.xz zip/aosp/Permissions.tar.xz"
   # Unpack system files
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Common packages
@@ -1987,6 +1987,9 @@ aosp_pkg_install() {
   tar -xf $ZIP_FILE/aosp/core/ManagedProvisioning.tar.xz -C $TMP_PRIV_AOSP
   tar -xf $ZIP_FILE/aosp/core/Provision.tar.xz -C $TMP_PRIV_AOSP
   tar -xf $ZIP_FILE/aosp/Permissions.tar.xz -C $TMP_PERMISSION_AOSP
+  # Ext Module
+  [ "$ZIPTYPE" == "microg" ] && tar -xf $ZIP_FILE/aosp/sys/ExtShared.tar.xz -C $TMP_SYS_AOSP
+  [ "$ZIPTYPE" == "microg" ] && tar -xf $ZIP_FILE/aosp/core/ExtServices.tar.xz -C $TMP_PRIV_AOSP
   # Runtime functions
   pkg_TMPSysAosp
   pkg_TMPPrivAosp
