@@ -1559,7 +1559,10 @@ pkg_System() {
     YouTube Abstruct BasicDreams BlissPapers BookmarkProvider Browser* Camera* Chromium ColtPapers \
     EasterEgg* EggGame Email* ExactCalculator Exchange2 Gallery* GugelClock HTMLViewer Jelly \
     messaging MiXplorer* Music* Partnerbookmark* PartnerBookmark* Phonograph PhotoTable RetroMusic* \
-    VanillaMusic Via* QPGallery QuickSearchBox; do
+    VanillaMusic Via* QPGallery QuickSearchBox GoogleContacts* GoogleExtShared GoogleGalleryGo \
+    LocationHistory* MicropaperPrebuilt PrebuiltBugle PrebuiltClockGoogle PrebuiltDeskClockGoogle \
+    SoundAmplifierPrebuilt YouTube* AboutBliss BlissStatistics Calendar* Dashboard DeskClock EmergencyInfo \
+    Etar HTMLViewer Jelly Messaging messaging PhotoTable* Recorder* SimpleGallery WallpaperZone; do
     rm -rf $SYSTEM_AS_SYSTEM/app/$i $SYSTEM_AS_SYSTEM/product/app/$i $SYSTEM_AS_SYSTEM/system_ext/app/$i
   done
   for i in \
@@ -1569,7 +1572,9 @@ pkg_System() {
     GoogleExtservices GoogleExtServicesPrebuilt GoogleFeedback GoogleOneTimeInitializer GooglePartnerSetup GoogleRestore \
     GoogleServicesFramework HotwordEnrollment* HotWordEnrollment* matchmaker* Matchmaker* Phonesky PixelLive* PrebuiltGmsCore* \
     PixelSetupWizard* SetupWizard* Tag* Tips* Turbo* Velvet Wellbeing* AudioFX Camera* Eleven MatLog MusicFX OmniSwitch \
-    Snap* Tag* Via* VinylMusicPlayer; do
+    Snap* Tag* Via* VinylMusicPlayer ConnMetrics GoogleContacts* GoogleDialer GoogleExtServices MaestroPrebuilt SCONE Scribe* \
+    RecorderPrebuilt WallpaperPickerGoogleRelease AncientWallpaperZone Contacts crDroidMusic Dialer EmergencyInfo Gallery2 \
+    Recorder*; do
     rm -rf $SYSTEM_AS_SYSTEM/priv-app/$i $SYSTEM_AS_SYSTEM/product/priv-app/$i $SYSTEM_AS_SYSTEM/system_ext/priv-app/$i
   done
   for i in \
@@ -1615,7 +1620,7 @@ pkg_System() {
     rm -rf $SYSTEM_AS_SYSTEM/etc/$i $SYSTEM_AS_SYSTEM/product/etc/$i $SYSTEM_AS_SYSTEM/system_ext/etc/$i
   done
   for i in $SYSTEM_AS_SYSTEM/overlay $SYSTEM_AS_SYSTEM/product/overlay $SYSTEM_AS_SYSTEM/system_ext/overlay; do
-    rm -rf $i/PixelConfigOverlay*
+    rm -rf $i/GoogleConfigOverlay* Gms* PixelConfigOverlay* ChromeOverlay TelegramOverlay WhatsAppOverlay
   done
   for i in $SYSTEM_AS_SYSTEM/usr $SYSTEM_AS_SYSTEM/product/usr $SYSTEM_AS_SYSTEM/system_ext/usr; do
     rm -rf $i/share/ime $i/srec
