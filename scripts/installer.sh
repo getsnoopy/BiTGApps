@@ -741,7 +741,7 @@ system_layout() {
 }
 
 # Check existence of build property
-on_build_prop() { if [ "$($l/grep -w -o 'ro.gapps.release_tag' $SYSTEM/build.prop)" ] && [ ! -f "$SYSTEM/etc/g.prop" ]; then BUILDPROP="false"; else BUILDPROP="true"; fi; }
+on_build_prop() { if [ ! "$($l/grep -w -o 'ro.gapps.release_tag' $SYSTEM/build.prop)" ] && [ ! -f "$SYSTEM/etc/g.prop" ]; then BUILDPROP="false"; else BUILDPROP="true"; fi; }
 
 check_build_prop() {
   if $TARGET_DIRTY_INSTALL; then
