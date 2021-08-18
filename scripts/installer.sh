@@ -770,7 +770,7 @@ chk_inst_pkg() {
   if [ "$ZIPTYPE" == "basic" ] && [ -n "$(cat $SYSTEM/build.prop | grep ro.microg.device)" ]; then
     GAPPS_TYPE="MicroG"
   fi
-  if [ "$ZIPTYPE" == "microg" ] && [ -n "$(cat $SYSTEM/etc/g.prop | grep BiTGApps)" ]; then
+  if [ "$ZIPTYPE" == "microg" ] && { [ -f $SYSTEM/etc/g.prop ] && [ -n "$(cat $SYSTEM/etc/g.prop | grep BiTGApps)" ]; }; then
     GAPPS_TYPE="BiTGApps"
   fi
 }
