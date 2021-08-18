@@ -740,6 +740,21 @@ system_layout() {
   export SYSTEM_AS_SYSTEM="$SYSTEM"
 }
 
+# Check existence of build property
+on_build_prop() { if [ "$($l/grep -w -o 'ro.gapps.release_tag' $SYSTEM/build.prop)" ] && [ ! -f "$SYSTEM/etc/g.prop" ]; then BUILDPROP="false"; else BUILDPROP="true"; fi; }
+
+check_build_prop() {
+  if $TARGET_DIRTY_INSTALL; then
+    on_build_prop
+  fi
+  case $BUILDPROP in
+    false )
+      ui_print "! Unable to detect build property. Aborting..."
+      lp_abort
+      ;;
+  esac
+}
+
 # Check pre-installed GApps package
 chk_inst_pkg() {
   GAPPS_TYPE="$?"
@@ -3234,13 +3249,13 @@ vanced_boot_patch() {
   case $? in
     0 ) ;;
     1 )
-      continue
+      ui_print "! Unsupported/Unknown image format"
       ;;
     2 )
       CHROMEOS=true
       ;;
     * )
-      continue
+      ui_print "! Unable to unpack boot image"
       ;;
   esac
   if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
@@ -4955,13 +4970,13 @@ patch_bootimg() {
   case $? in
     0 ) ;;
     1 )
-      continue
+      ui_print "! Unsupported/Unknown image format"
       ;;
     2 )
       CHROMEOS=true
       ;;
     * )
-      continue
+      ui_print "! Unable to unpack boot image"
       ;;
   esac
   if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
@@ -5072,13 +5087,13 @@ spl_update_boot() {
   case $? in
     0 ) ;;
     1 )
-      continue
+      ui_print "! Unsupported/Unknown image format"
       ;;
     2 )
       CHROMEOS=true
       ;;
     * )
-      continue
+      ui_print "! Unable to unpack boot image"
       ;;
   esac
   if [ -f "header" ]; then
@@ -5289,13 +5304,13 @@ boot_whitelist_permission() {
   case $? in
     0 ) ;;
     1 )
-      continue
+      ui_print "! Unsupported/Unknown image format"
       ;;
     2 )
       CHROMEOS=true
       ;;
     * )
-      continue
+      ui_print "! Unable to unpack boot image"
       ;;
   esac
   if [ -f "ramdisk.cpio" ]; then
@@ -5501,7 +5516,20 @@ pre_install() {
     { on_partition_check; on_fstab_check; ab_partition
       system_as_root; super_partition; vendor_mnt
       mount_all; check_rw_status; system_layout
-      mount_status; chk_inst_pkg; on_inst_abort
+      mount_status; check_build_prop; chk_inst_pkg
+      on_inst_abort; get_bitgapps_config; profile
+      on_release_tag; check_release_tag; on_version_check
+      check_sdk; check_version; on_platform_check
+      on_target_platform; build_platform; check_platform
+      clean_inst; on_config_version; config_version
+      on_module_check; on_wipe_check; set_wipe_config
+      on_addon_wipe; set_addon_wipe; on_safetynet_check; }
+  fi
+  if [ "$ZIPTYPE" == "basic" ] && [ "$BOOTMODE" == "true" ]; then
+    { on_partition_check; ab_partition; system_as_root
+      super_partition; vendor_mnt; mount_BM
+      check_rw_status; system_layout; mount_status
+      check_build_prop; chk_inst_pkg; on_inst_abort
       get_bitgapps_config; profile; on_release_tag
       check_release_tag; on_version_check; check_sdk
       check_version; on_platform_check; on_target_platform
@@ -5510,41 +5538,29 @@ pre_install() {
       on_wipe_check; set_wipe_config; on_addon_wipe
       set_addon_wipe; on_safetynet_check; }
   fi
-  if [ "$ZIPTYPE" == "basic" ] && [ "$BOOTMODE" == "true" ]; then
-    { on_partition_check; ab_partition; system_as_root
-      super_partition; vendor_mnt; mount_BM
-      check_rw_status; system_layout; mount_status
-      chk_inst_pkg; on_inst_abort; get_bitgapps_config
-      profile; on_release_tag; check_release_tag
-      on_version_check; check_sdk; check_version
-      on_platform_check; on_target_platform; build_platform
-      check_platform; clean_inst; on_config_version
-      config_version; on_module_check; on_wipe_check
-      set_wipe_config; on_addon_wipe; set_addon_wipe
-      on_safetynet_check; }
-  fi
   if [ "$ZIPTYPE" == "microg" ] && [ "$BOOTMODE" == "false" ]; then
     { on_partition_check; on_fstab_check; ab_partition
       system_as_root; super_partition; vendor_mnt
       mount_all; check_rw_status; system_layout
-      mount_status; chk_inst_pkg; on_inst_abort
-      get_microg_config; profile; on_release_tag
-      check_release_tag; on_version_check; on_platform_check
-      on_target_platform; clean_inst; on_config_version
-      config_version; on_module_check; on_wipe_check;
-      set_wipe_config; on_addon_wipe; set_addon_wipe
-      on_safetynet_check; }
+      mount_status; check_build_prop; chk_inst_pkg
+      on_inst_abort; get_microg_config; profile
+      on_release_tag; check_release_tag; on_version_check
+      on_platform_check; on_target_platform; clean_inst
+      on_config_version; config_version; on_module_check
+      on_wipe_check; set_wipe_config; on_addon_wipe
+      set_addon_wipe; on_safetynet_check; }
   fi
   if [ "$ZIPTYPE" == "microg" ] && [ "$BOOTMODE" == "true" ]; then
     { on_partition_check; ab_partition; system_as_root
       super_partition; vendor_mnt; mount_BM
       check_rw_status; system_layout; mount_status
-      chk_inst_pkg; on_inst_abort; get_microg_config
-      profile; on_release_tag; check_release_tag
-      on_version_check; on_platform_check; on_target_platform
-      clean_inst; on_config_version; config_version
-      on_module_check; on_wipe_check; set_wipe_config
-      on_addon_wipe; set_addon_wipe; on_safetynet_check; }
+      check_build_prop; chk_inst_pkg; on_inst_abort
+      get_microg_config; profile; on_release_tag
+      check_release_tag; on_version_check; on_platform_check
+      on_target_platform; clean_inst; on_config_version
+      config_version; on_module_check; on_wipe_check
+      set_wipe_config; on_addon_wipe; set_addon_wipe
+      on_safetynet_check; }
   fi
 }
 
