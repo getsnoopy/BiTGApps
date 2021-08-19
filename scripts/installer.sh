@@ -845,6 +845,7 @@ set_install_logs() {
    cp -f $VENDOR/odm_dlkm/etc/build.prop $TMP/bitgapps/odm_dlkm.prop
    cp -f $VENDOR/vendor_dlkm/etc/build.prop $TMP/bitgapps/vendor_dlkm.prop
    cp -f $SYSTEM/etc/prop.default $TMP/bitgapps/system.default
+   cp -f $SYSTEM/etc/g.prop $TMP/bitgapps/g.prop
    cp -f $BITGAPPS_CONFIG $TMP/bitgapps/bitgapps-config.prop) > /dev/null 2>&1
 }
 
@@ -1305,17 +1306,19 @@ on_rwg_check() {
 on_unsupported_rwg() {
   for f in $SYSTEM/priv-app $SYSTEM/product/priv-app $SYSTEM/system_ext/priv-app; do
     # Add playstore in detection
-    if [ -d "$f/Phonesky" ]; then
-      TARGET_APP_PLAYSTORE="true"
-    else
-      TARGET_APP_PLAYSTORE="false"
-    fi
+    for p in $f/Phonesky; do TARGET_APP_PLAYSTORE="true"; done
   done
+  # Set target outside of loop function
+  if [ -z "$TARGET_APP_PLAYSTORE" ]; then TARGET_APP_PLAYSTORE="false"; fi
 }
 
 # Abort installation for unsupported ROMs; Collectively targeting through playstore
 skip_on_unsupported() {
   if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$TARGET_APP_PLAYSTORE" == "true" ]; then
+    # Create dummy build property, if not present and use it for aborting installation
+    if [ ! -f "$SYSTEM/etc/g.prop" ]; then
+      echo "! Unsupported RWG device" >> $SYSTEM/etc/g.prop
+    fi
     if [ "$ZIPTYPE" == "basic" ] && [ ! -n "$(cat $SYSTEM/etc/g.prop | grep BiTGApps)" ]; then
       on_abort "! Unsupported RWG device. Aborting...";
     fi
