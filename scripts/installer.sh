@@ -1116,8 +1116,8 @@ df_vnonroot_target() {
 
 # Set SDK and Version check property
 on_version_check() {
-  if [ "$ZIPTYPE" == "addon" ] || [ "$ZIPTYPE" == "microg" ]; then android_sdk="$(get_prop "ro.build.version.sdk")"; fi
-  if [ "$ZIPTYPE" == "basic" ]; then
+  if [ "$ZIPTYPE" == "addon" ]; then android_sdk="$(get_prop "ro.build.version.sdk")"; fi
+  if [ "$ZIPTYPE" == "basic" ] || [ "$ZIPTYPE" == "microg" ]; then
     if [ "$TARGET_ANDROID_SDK" == "31" ]; then
       android_sdk="$(get_prop "ro.build.version.sdk")" && supported_sdk="31"
       android_version="$(get_prop "ro.build.version.release")" && supported_version="12"
@@ -5566,10 +5566,11 @@ pre_install() {
       mount_status; check_build_prop; chk_inst_pkg
       on_inst_abort; get_microg_config; profile
       on_release_tag; check_release_tag; on_version_check
-      on_platform_check; on_target_platform; clean_inst
-      on_config_version; config_version; on_module_check
-      on_wipe_check; set_wipe_config; on_addon_wipe
-      set_addon_wipe; on_safetynet_check; }
+      check_sdk; check_version; on_platform_check
+      on_target_platform; build_platform; check_platform
+      clean_inst; on_config_version; config_version
+      on_module_check; on_wipe_check; set_wipe_config
+      on_addon_wipe; set_addon_wipe; on_safetynet_check; }
   fi
   if [ "$ZIPTYPE" == "microg" ] && [ "$BOOTMODE" == "true" ]; then
     { on_partition_check; ab_partition; system_as_root
@@ -5577,11 +5578,12 @@ pre_install() {
       check_rw_status; system_layout; mount_status
       check_build_prop; chk_inst_pkg; on_inst_abort
       get_microg_config; profile; on_release_tag
-      check_release_tag; on_version_check; on_platform_check
-      on_target_platform; clean_inst; on_config_version
-      config_version; on_module_check; on_wipe_check
-      set_wipe_config; on_addon_wipe; set_addon_wipe
-      on_safetynet_check; }
+      check_release_tag; on_version_check; check_sdk
+      check_version; on_platform_check; on_target_platform
+      build_platform; check_platform; clean_inst
+      on_config_version; config_version; on_module_check
+      on_wipe_check; set_wipe_config; on_addon_wipe
+      set_addon_wipe; on_safetynet_check; }
   fi
 }
 
