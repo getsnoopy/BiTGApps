@@ -31,6 +31,35 @@ if [ "$ARCH" == "x86" ] || [ "$ARCH" == "x86_64" ]; then
   exit 1
 fi
 
+# Set auto-generated fstab
+fstab="/etc/fstab"
+
+# Set partition and boot slot property
+system_as_root=`getprop ro.build.system_root_image`
+slot_suffix=`getprop ro.boot.slot_suffix`
+AB_OTA_UPDATER=`getprop ro.build.ab_update`
+dynamic_partitions=`getprop ro.boot.dynamic_partitions`
+
+# Detect A/B partition layout https://source.android.com/devices/tech/ota/ab_updates
+device_abpartition="false"
+if [ ! -z "$slot_suffix" ] || [ "$AB_OTA_UPDATER" == "true" ]; then
+  device_abpartition="true"
+fi
+
+# Detect system-as-root https://source.android.com/devices/bootloader/system-as-root
+SYSTEM_ROOT="false"
+if [ "$system_as_root" == "true" ]; then
+  SYSTEM_ROOT="true"
+fi
+
+# Detect dynamic partition layout https://source.android.com/devices/tech/ota/dynamic_partitions/implement
+SUPER_PARTITION="false"
+if [ "$dynamic_partitions" == "true" ]; then
+  SUPER_PARTITION="true"
+fi
+
+is_mounted() { grep -q " $(readlink -f $1) " /proc/mounts 2>/dev/null; return $?; }
+
 toupper() {
   echo "$@" | tr '[:lower:]' '[:upper:]'
 }
@@ -138,6 +167,20 @@ if [ -e "$bb" ]; then
   export PATH="$l:$PATH"
 fi
 
+# Extract boot image modification tool
+unzip -o "$ZIPFILE" "AIK.tar.xz" -d "$TMP"
+tar -xf $TMP/AIK.tar.xz -C $TMP
+chmod +x $TMP/chromeos/* $TMP/cpio $TMP/magiskboot
+
+# Extract grep utility
+unzip -o "$ZIPFILE" "grep" -d "$TMP"
+chmod +x $TMP/grep
+
+# Unmount partitions
+for i in /system_root /system /product /system_ext /vendor /persist /metadata; do
+  umount -l $i > /dev/null 2>&1
+done
+
 # Unset predefined environmental variable
 OLD_LD_LIB=$LD_LIBRARY_PATH
 OLD_LD_PRE=$LD_PRELOAD
@@ -146,11 +189,26 @@ unset LD_LIBRARY_PATH
 unset LD_PRELOAD
 unset LD_CONFIG_FILE
 
-# Extract boot image modification tool
-unzip -o "$ZIPFILE" "AIK.tar.xz" -d "$TMP"
-tar -xf $TMP/AIK.tar.xz -C $TMP
-chmod +x $TMP/chromeos/* $TMP/cpio $TMP/magiskboot
-
+# Mount partitions
+mount -o bind /dev/urandom /dev/random
+if ! is_mounted /data; then
+  mount /data
+  if [ -z "$(ls -A /sdcard)" ]; then
+    mount -o bind /data/media/0 /sdcard
+  fi
+fi
+if [ -n "$(cat $fstab | grep /cache)" ]; then
+  mount -o ro -t auto /cache > /dev/null 2>&1
+  mount -o rw,remount -t auto /cache > /dev/null 2>&1
+fi
+mount -o ro -t auto /persist > /dev/null 2>&1
+mount -o rw,remount -t auto /persist > /dev/null 2>&1
+if [ -n "$(cat $fstab | grep /metadata)" ]; then
+  mount -o ro -t auto /metadata > /dev/null 2>&1
+  mount -o rw,remount -t auto /metadata > /dev/null 2>&1
+fi
+$SYSTEM_ROOT && ui_print "- Device is system-as-root"
+$SUPER_PARTITION && ui_print "- Super partition detected"
 # Check A/B slot
 SLOT=`grep_cmdline androidboot.slot_suffix`
 if [ -z $SLOT ]; then
@@ -158,6 +216,109 @@ if [ -z $SLOT ]; then
   [ -z $SLOT ] || SLOT=_${SLOT}
 fi
 [ -z $SLOT ] || ui_print "- Current boot slot: $SLOT"
+# Unset predefined environmental variable
+OLD_ANDROID_ROOT=$ANDROID_ROOT && unset ANDROID_ROOT
+# Wipe conflicting layout
+rm -rf /system_root
+# Do not wipe system, if it create symlinks in root
+if [ ! "$(readlink -f "/bin")" = "/system/bin" ] && [ ! "$(readlink -f "/etc")" = "/system/etc" ]; then
+  rm -rf /system
+fi
+# Create initial path and set ANDROID_ROOT in the global environment
+if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then mkdir /system_root; export ANDROID_ROOT="/system_root"; fi
+if [ "$($TMP/grep -w -o /system $fstab)" ]; then mkdir /system; export ANDROID_ROOT="/system"; fi
+# Set '/system_root' as mount point, if previous check failed. This adaption,
+# for recoveries using "/" as mount point in auto-generated fstab but not,
+# actually mounting to "/" and using some other mount location. At this point,
+# we can mount system using its block device to any location.
+if [ -z "$ANDROID_ROOT" ]; then
+  mkdir /system_root && export ANDROID_ROOT="/system_root"
+fi
+# Set A/B slot property
+local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
+if [ "$SUPER_PARTITION" == "true" ]; then
+  if [ "$device_abpartition" == "true" ]; then
+    for slot in "" _a _b; do
+      blockdev --setrw /dev/block/mapper/system$slot > /dev/null 2>&1
+    done
+    ui_print "- Mounting /system"
+    mount -o ro -t auto /dev/block/mapper/system$slot $ANDROID_ROOT > /dev/null 2>&1
+    mount -o rw,remount -t auto /dev/block/mapper/system$slot $ANDROID_ROOT > /dev/null 2>&1
+    is_mounted $ANDROID_ROOT || SYSTEM_DM_MOUNT="true"
+    if [ "$SYSTEM_DM_MOUNT" == "true" ]; then
+      if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then
+        SYSTEM_MAPPER=`$TMP/grep -v '#' $fstab | $TMP/grep -E '/system_root' | $TMP/grep -oE '/dev/block/dm-[0-9]' | head -n 1`
+      fi
+      if [ "$($TMP/grep -w -o /system $fstab)" ]; then
+        SYSTEM_MAPPER=`$TMP/grep -v '#' $fstab | $TMP/grep -E '/system' | $TMP/grep -oE '/dev/block/dm-[0-9]' | head -n 1`
+      fi
+      mount -o ro -t auto $SYSTEM_MAPPER $ANDROID_ROOT > /dev/null 2>&1
+      mount -o rw,remount -t auto $SYSTEM_MAPPER $ANDROID_ROOT > /dev/null 2>&1
+    fi
+  fi
+  if [ "$device_abpartition" == "false" ]; then
+    blockdev --setrw /dev/block/mapper/system > /dev/null 2>&1
+    ui_print "- Mounting /system"
+    mount -o ro -t auto /dev/block/mapper/system $ANDROID_ROOT > /dev/null 2>&1
+    mount -o rw,remount -t auto /dev/block/mapper/system $ANDROID_ROOT > /dev/null 2>&1
+  fi
+fi
+if [ "$SUPER_PARTITION" == "false" ]; then
+  if [ "$device_abpartition" == "false" ]; then
+    ui_print "- Mounting /system"
+    mount -o ro -t auto $ANDROID_ROOT > /dev/null 2>&1
+    mount -o rw,remount -t auto $ANDROID_ROOT > /dev/null 2>&1
+    is_mounted $ANDROID_ROOT || NEED_BLOCK_MOUNT="true"
+    if [ "$NEED_BLOCK_MOUNT" == "true" ]; then
+      if [ -e "/dev/block/by-name/system" ]; then
+        BLK="/dev/block/by-name/system"
+      elif [ -e "/dev/block/bootdevice/by-name/system" ]; then
+        BLK="/dev/block/bootdevice/by-name/system"
+      elif [ -e "/dev/block/platform/*/by-name/system" ]; then
+        BLK="/dev/block/platform/*/by-name/system"
+      elif [ -e "/dev/block/platform/*/*/by-name/system" ]; then
+        BLK="/dev/block/platform/*/*/by-name/system"
+      else
+        ui_print "! Cannot find system block"
+      fi
+      # Mount using block device
+      mount $BLK $ANDROID_ROOT > /dev/null 2>&1
+    fi
+  fi
+  if [ "$device_abpartition" == "true" ] && [ "$system_as_root" == "true" ]; then
+    ui_print "- Mounting /system"
+    if [ "$ANDROID_ROOT" == "/system_root" ]; then
+      mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
+      mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
+    fi
+    if [ "$ANDROID_ROOT" == "/system" ]; then
+      mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
+      mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
+    fi
+  fi
+fi
+
+# Set installation layout
+if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($TMP/grep -w -o /system_root $fstab)" ]; then
+  export SYSTEM="/system_root/system"
+fi
+if [ -f $ANDROID_ROOT/build.prop ] && [ "$($TMP/grep -w -o /system $fstab)" ]; then
+  export SYSTEM="/system"
+fi
+if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($TMP/grep -w -o /system $fstab)" ]; then
+  export SYSTEM="/system/system"
+fi
+if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($TMP/grep -w -o /system_root /proc/mounts)" ]; then
+  export SYSTEM="/system_root/system"
+fi
+
+# Check mount status
+if ! is_mounted $ANDROID_ROOT; then
+  ui_print "! Cannot mount $ANDROID_ROOT. Aborting..."
+  ui_print "! Installation failed"
+  ui_print " "
+  exit 1
+fi
 
 ui_print "- Set SELinux enforcing"
 # Switch path to AIK
