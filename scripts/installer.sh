@@ -1633,7 +1633,7 @@ pkg_System() {
     rm -rf $SYSTEM_AS_SYSTEM/etc/$i $SYSTEM_AS_SYSTEM/product/etc/$i $SYSTEM_AS_SYSTEM/system_ext/etc/$i
   done
   for i in $SYSTEM_AS_SYSTEM/overlay $SYSTEM_AS_SYSTEM/product/overlay $SYSTEM_AS_SYSTEM/system_ext/overlay; do
-    rm -rf $i/GoogleConfigOverlay* Gms* PixelConfigOverlay* ChromeOverlay TelegramOverlay WhatsAppOverlay
+    rm -rf $i/GoogleConfigOverlay* $i/Gms* $i/PixelConfigOverlay* $i/ChromeOverlay $i/TelegramOverlay $i/WhatsAppOverlay
   done
   for i in $SYSTEM_AS_SYSTEM/usr $SYSTEM_AS_SYSTEM/product/usr $SYSTEM_AS_SYSTEM/system_ext/usr; do
     rm -rf $i/share/ime $i/srec
@@ -1683,16 +1683,18 @@ pre_installed_v25() {
 
 # Remove pre-installed system files
 pre_installed_microg() {
-  for i in AppleNLPBackend DejaVuNLPBackend ExtShared FossDroid LocalGSMNLPBackend LocalWiFiNLPBackend MozillaUnifiedNLPBackend NominatimNLPBackend; do
+  for i in AppleNLPBackend DejaVuNLPBackend FossDroid LocalGSMNLPBackend LocalWiFiNLPBackend MozillaUnifiedNLPBackend NominatimNLPBackend; do
     rm -rf $SYSTEM_APP/$i
   done
-  for i in AuroraServices DroidGuard ExtServices MicroGGMSCore MicroGGSFProxy Phonesky; do
+  for i in AuroraServices DroidGuard MicroGGMSCore MicroGGSFProxy Phonesky; do
     rm -rf $SYSTEM_PRIV_APP/$i
   done
   for i in $SYSTEM_ETC_CONFIG/microg.xml $SYSTEM_ETC_DEFAULT/default-permissions.xml $SYSTEM_ETC_PERM/privapp-permissions-microg.xml; do
     rm -rf $i
   done
   rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay
+  # Remove RWG Ext Module
+  if [ "$TARGET_RWG_STATUS" == "true" ]; then rm -rf $SYSTEM_APP/ExtShared $SYSTEM_PRIV_APP/ExtServices; fi
 }
 
 # Set package install function
