@@ -1306,7 +1306,7 @@ on_rwg_check() {
 on_unsupported_rwg() {
   for f in $SYSTEM/priv-app $SYSTEM/product/priv-app $SYSTEM/system_ext/priv-app; do
     # Add playstore in detection
-    for p in $f/Phonesky; do TARGET_APP_PLAYSTORE="true"; done
+    if [ -d "$f/Phonesky" ]; then TARGET_APP_PLAYSTORE="true"; fi
   done
   # Set target outside of loop function
   if [ -z "$TARGET_APP_PLAYSTORE" ]; then TARGET_APP_PLAYSTORE="false"; fi
