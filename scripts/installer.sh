@@ -744,7 +744,7 @@ system_layout() {
 on_build_prop() { if [ ! "$($l/grep -w -o 'ro.gapps.release_tag' $SYSTEM/build.prop)" ] && [ ! -f "$SYSTEM/etc/g.prop" ]; then BUILDPROP="false"; else BUILDPROP="true"; fi; }
 
 check_build_prop() {
-  if $TARGET_DIRTY_INSTALL; then
+  if "$TARGET_DIRTY_INSTALL" && [ -f "$ANDROID_DATA/.backup/.backup" ]; then
     on_build_prop
   fi
   case $BUILDPROP in
@@ -1322,6 +1322,16 @@ skip_on_unsupported() {
     if [ "$ZIPTYPE" == "microg" ] && [ ! -n "$(cat $SYSTEM/etc/g.prop | grep MicroG)" ]; then
       on_abort "! Unsupported RWG device. Aborting...";
     fi
+  fi
+}
+
+# Skip systemless dependency here
+rwg_dummy_backup() {
+  if [ "$TARGET_RWG_STATUS" == "true" ] && [ "$supported_module_config" == "false" ]; then
+    test -d $ANDROID_DATA/.backup || mkdir -p $ANDROID_DATA/.backup
+    chmod 0755 $ANDROID_DATA/.backup
+    # Create dummy file for detection over dirty installation
+    touch $ANDROID_DATA/.backup/.backup && chmod 0644 $ANDROID_DATA/.backup/.backup
   fi
 }
 
@@ -5699,7 +5709,7 @@ post_install() {
       rwg_ota_prop; on_setup_check; set_setup_config
       print_title_setup; on_setup_install; backup_script
       opt_v25; whitelist_patch; sdk_fix; selinux_fix
-      fix_gms_hide; fix_module_perm; module_info
+      fix_gms_hide; fix_module_perm; module_info; rwg_dummy_backup
       mk_busybox_backup; boot_image_editor; patch_bootimg
       on_cts_patch; boot_whitelist_permission; on_installed; }
   fi
@@ -5714,7 +5724,7 @@ post_install() {
       on_aosp_install; build_prop_file; ota_prop_file; rwg_ota_prop
       backup_script; runtime_permissions; opt_v25; whitelist_patch
       sdk_fix; selinux_fix; fix_microg_hide; fix_module_perm
-      maps_config; maps_framework; module_info
+      maps_config; maps_framework; module_info; rwg_dummy_backup
       mk_busybox_backup; boot_image_editor; patch_bootimg
       on_cts_patch; boot_whitelist_permission; on_installed; }
   fi
