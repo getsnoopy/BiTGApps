@@ -1331,6 +1331,7 @@ skip_on_unsupported() {
 # Skip systemless dependency here
 rwg_dummy_backup() {
   if [ "$TARGET_RWG_STATUS" == "true" ] && [ "$supported_module_config" == "false" ]; then
+    ui_print "- Backup Non-GApps components"
     test -d $ANDROID_DATA/.backup || mkdir -p $ANDROID_DATA/.backup
     chmod 0755 $ANDROID_DATA/.backup
     # Create dummy file for detection over dirty installation
@@ -4763,6 +4764,7 @@ post_backup() {
     touch $ANDROID_DATA/.backup/.backup && chmod 0644 $ANDROID_DATA/.backup/.backup
   fi
   if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$supported_module_config" == "true" ]; then
+    ui_print "- Backup Non-GApps components"
     test -d $ANDROID_DATA/.backup || mkdir -p $ANDROID_DATA/.backup
     chmod 0755 $ANDROID_DATA/.backup
     # Create dummy file
@@ -4860,6 +4862,8 @@ post_uninstall() {
     # Remove properties from system build
     remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
     remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
+    # Remove backup after restore done
+    rm -rf $ANDROID_DATA/.backup
     # Runtime permissions
     clean_inst
     on_installed
@@ -4905,6 +4909,8 @@ post_uninstall() {
     # Remove properties from system build
     remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
     remove_line $SYSTEM/build.prop "ro.microg.device="
+    # Remove backup after restore done
+    rm -rf $ANDROID_DATA/.backup
     # Runtime permissions
     clean_inst
     on_installed
