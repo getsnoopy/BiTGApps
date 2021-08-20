@@ -740,7 +740,7 @@ system_layout() {
   export SYSTEM_AS_SYSTEM="$SYSTEM"
 }
 
-backup_target() {
+on_backup_target() {
   if [ -z "$(ls -A $ANDROID_DATA/.backup)" ]; then
     BACKUP_V1="true"
   fi
@@ -756,6 +756,8 @@ backup_target() {
   $BACKUP_V2 && ui_print "- Target backup: v2"
   $BACKUP_V3 && ui_print "- Target backup: v3"
 }
+
+backup_target() { if [ ! -d "$ANDROID_DATA/.backup" ]; then ui_print "- Target backup: v1"; else on_backup_target; fi; }
 
 # Check existence of build property
 on_build_prop() { if [ ! "$($l/grep -w -o 'ro.gapps.release_tag' $SYSTEM/build.prop)" ] && [ ! -f "$SYSTEM/etc/g.prop" ]; then BUILDPROP="false"; else BUILDPROP="true"; fi; }
