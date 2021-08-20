@@ -740,6 +740,23 @@ system_layout() {
   export SYSTEM_AS_SYSTEM="$SYSTEM"
 }
 
+backup_target() {
+  if [ -z "$(ls -A $ANDROID_DATA/.backup)" ]; then
+    BACKUP_V1="true"
+  fi
+  if "$BACKUP_V1"; then rm -rf $ANDROID_DATA/.backup/.backup; fi
+  if [ -z "$(ls -A $ANDROID_DATA/.backup)" ]; then
+    BACKUP_V2="true"
+  else
+    BACKUP_V3="true"
+  fi
+  # Re-create dummy file for detection over dirty installation
+  touch $ANDROID_DATA/.backup/.backup && chmod 0644 $ANDROID_DATA/.backup/.backup
+  # Print backup type
+  $BACKUP_V2 && ui_print "- Target backup: v2"
+  $BACKUP_V3 && ui_print "- Target backup: v3"
+}
+
 # Check existence of build property
 on_build_prop() { if [ ! "$($l/grep -w -o 'ro.gapps.release_tag' $SYSTEM/build.prop)" ] && [ ! -f "$SYSTEM/etc/g.prop" ]; then BUILDPROP="false"; else BUILDPROP="true"; fi; }
 
@@ -5554,7 +5571,21 @@ pre_install() {
     { on_partition_check; on_fstab_check; ab_partition
       system_as_root; super_partition; vendor_mnt
       mount_all; check_rw_status; system_layout
-      mount_status; check_build_prop; chk_inst_pkg
+      mount_status; backup_target; check_build_prop
+      chk_inst_pkg; on_inst_abort; get_bitgapps_config
+      profile; on_release_tag; check_release_tag
+      on_version_check; check_sdk; check_version
+      on_platform_check; on_target_platform; build_platform
+      check_platform; clean_inst; on_config_version
+      config_version; on_module_check; on_wipe_check
+      set_wipe_config; on_addon_wipe; set_addon_wipe
+      on_safetynet_check; }
+  fi
+  if [ "$ZIPTYPE" == "basic" ] && [ "$BOOTMODE" == "true" ]; then
+    { on_partition_check; ab_partition; system_as_root
+      super_partition; vendor_mnt; mount_BM
+      check_rw_status; system_layout; mount_status
+      backup_target; check_build_prop; chk_inst_pkg
       on_inst_abort; get_bitgapps_config; profile
       on_release_tag; check_release_tag; on_version_check
       check_sdk; check_version; on_platform_check
@@ -5563,24 +5594,25 @@ pre_install() {
       on_module_check; on_wipe_check; set_wipe_config
       on_addon_wipe; set_addon_wipe; on_safetynet_check; }
   fi
-  if [ "$ZIPTYPE" == "basic" ] && [ "$BOOTMODE" == "true" ]; then
-    { on_partition_check; ab_partition; system_as_root
-      super_partition; vendor_mnt; mount_BM
-      check_rw_status; system_layout; mount_status
-      check_build_prop; chk_inst_pkg; on_inst_abort
-      get_bitgapps_config; profile; on_release_tag
-      check_release_tag; on_version_check; check_sdk
-      check_version; on_platform_check; on_target_platform
-      build_platform; check_platform; clean_inst
-      on_config_version; config_version; on_module_check
-      on_wipe_check; set_wipe_config; on_addon_wipe
-      set_addon_wipe; on_safetynet_check; }
-  fi
   if [ "$ZIPTYPE" == "microg" ] && [ "$BOOTMODE" == "false" ]; then
     { on_partition_check; on_fstab_check; ab_partition
       system_as_root; super_partition; vendor_mnt
       mount_all; check_rw_status; system_layout
-      mount_status; check_build_prop; chk_inst_pkg
+      mount_status; backup_target; check_build_prop
+      chk_inst_pkg; on_inst_abort; get_microg_config
+      profile; on_release_tag; check_release_tag
+      on_version_check; check_sdk; check_version
+      on_platform_check; on_target_platform; build_platform
+      check_platform; clean_inst; on_config_version
+      config_version; on_module_check; on_wipe_check
+      set_wipe_config; on_addon_wipe; set_addon_wipe
+      on_safetynet_check; }
+  fi
+  if [ "$ZIPTYPE" == "microg" ] && [ "$BOOTMODE" == "true" ]; then
+    { on_partition_check; ab_partition; system_as_root
+      super_partition; vendor_mnt; mount_BM
+      check_rw_status; system_layout; mount_status
+      backup_target; check_build_prop; chk_inst_pkg
       on_inst_abort; get_microg_config; profile
       on_release_tag; check_release_tag; on_version_check
       check_sdk; check_version; on_platform_check
@@ -5588,19 +5620,6 @@ pre_install() {
       clean_inst; on_config_version; config_version
       on_module_check; on_wipe_check; set_wipe_config
       on_addon_wipe; set_addon_wipe; on_safetynet_check; }
-  fi
-  if [ "$ZIPTYPE" == "microg" ] && [ "$BOOTMODE" == "true" ]; then
-    { on_partition_check; ab_partition; system_as_root
-      super_partition; vendor_mnt; mount_BM
-      check_rw_status; system_layout; mount_status
-      check_build_prop; chk_inst_pkg; on_inst_abort
-      get_microg_config; profile; on_release_tag
-      check_release_tag; on_version_check; check_sdk
-      check_version; on_platform_check; on_target_platform
-      build_platform; check_platform; clean_inst
-      on_config_version; config_version; on_module_check
-      on_wipe_check; set_wipe_config; on_addon_wipe
-      set_addon_wipe; on_safetynet_check; }
   fi
 }
 
