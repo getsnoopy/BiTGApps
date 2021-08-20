@@ -25,6 +25,7 @@ A collection of information and use of BiTGApps.
 * [**Common Installation Issues**](https://github.com/BiTGApps/BiTGApps/wiki/Common-Installation-Issues)
 * [**Bugs Report Format**](https://github.com/BiTGApps/BiTGApps/wiki/Bugs-Report-Format)
 * [**Installation Logs**](https://github.com/BiTGApps/BiTGApps/wiki/Installation-Logs)
+* [**Installation Status**](https://github.com/BiTGApps/BiTGApps/wiki/Installation-Status)
 * [**Known Bugs**](https://github.com/BiTGApps/BiTGApps/wiki/Known-Bugs)
 * [**YouTube Vanced**](https://github.com/BiTGApps/BiTGApps/wiki/YouTube-Vanced)
 * [**SELinux State**](https://github.com/BiTGApps/BiTGApps/wiki/SELinux-State)
