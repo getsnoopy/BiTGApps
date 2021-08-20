@@ -3282,6 +3282,10 @@ vanced_boot_patch() {
       ui_print "! Unable to unpack boot image"
       ;;
   esac
+  if [ -f "header" ] && [ "$($l/grep -w -o 'androidboot.selinux=enforcing' header)" ]; then
+    # Change selinux state to permissive from enforcing
+    sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
+  fi
   if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
     # Change selinux state to permissive, without this bootlog script failed to execute
     $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
@@ -4909,6 +4913,7 @@ post_uninstall() {
     # Remove properties from system build
     remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
     remove_line $SYSTEM/build.prop "ro.microg.device="
+    remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
     # Remove backup after restore done
     rm -rf $ANDROID_DATA/.backup
     # Runtime permissions
@@ -5008,6 +5013,10 @@ patch_bootimg() {
       ui_print "! Unable to unpack boot image"
       ;;
   esac
+  if [ -f "header" ] && [ "$($l/grep -w -o 'androidboot.selinux=enforcing' header)" ]; then
+    # Change selinux state to permissive from enforcing
+    sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
+  fi
   if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
     # Change selinux state to permissive, without this bootlog script failed to execute
     $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
