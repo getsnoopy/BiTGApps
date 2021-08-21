@@ -5071,6 +5071,12 @@ patch_bootimg() {
     replace_line ramdisk/etc/prop.default 'ro.debuggable=0' 'ro.debuggable=1'
     replace_line ramdisk/etc/prop.default 'persist.sys.usb.config=none' 'persist.sys.usb.config=adb'
   fi
+  if [ ! "$(readlink -f "ramdisk/default.prop")" = "ramdisk/etc/prop.default" ]; then
+    replace_line ramdisk/default.prop 'ro.secure=1' 'ro.secure=0'
+    replace_line ramdisk/default.prop 'ro.adb.secure=1' 'ro.adb.secure=0'
+    replace_line ramdisk/default.prop 'ro.debuggable=0' 'ro.debuggable=1'
+    replace_line ramdisk/default.prop 'persist.sys.usb.config=none' 'persist.sys.usb.config=adb'
+  fi
   if [ -f "ramdisk/init.rc" ]; then
     if [ ! -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
       $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' ramdisk/init.rc
