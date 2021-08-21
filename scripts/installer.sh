@@ -789,8 +789,14 @@ chk_inst_pkg() {
   if [ "$ZIPTYPE" == "basic" ] && [ -n "$(cat $SYSTEM/build.prop | grep ro.microg.device)" ]; then
     GAPPS_TYPE="MicroG"
   fi
-  if [ "$ZIPTYPE" == "microg" ] && { [ -f $SYSTEM/etc/g.prop ] && [ -n "$(cat $SYSTEM/etc/g.prop | grep BiTGApps)" ]; }; then
+  if [ "$ZIPTYPE" == "microg" ] && { [ -f "$SYSTEM/etc/g.prop" ] && [ -n "$(cat $SYSTEM/etc/g.prop | grep BiTGApps)" ]; }; then
     GAPPS_TYPE="BiTGApps"
+  fi
+  if { [ "$ZIPTYPE" == "basic" ] || [ "$ZIPTYPE" == "microg" ]; } && [ -f "$SYSTEM/bin/npem" ]; then
+    GAPPS_TYPE="MinMicroG"
+  fi
+  if { [ "$ZIPTYPE" == "basic" ] || [ "$ZIPTYPE" == "microg" ]; } && [ -f "$SYSTEM/bin/nanodroid-perm" ]; then
+    GAPPS_TYPE="NanoDroid"
   fi
 }
 
@@ -814,6 +820,14 @@ on_inst_abort() {
       ;;
     MicroG )
       ui_print "! MicroG installed. Aborting..."
+      lp_abort
+      ;;
+    MinMicroG )
+      ui_print "! MinMicroG installed. Aborting..."
+      lp_abort
+      ;;
+    NanoDroid )
+      ui_print "! NanoDroid installed. Aborting..."
       lp_abort
       ;;
   esac
