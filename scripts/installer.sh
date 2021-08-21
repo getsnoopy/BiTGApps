@@ -879,7 +879,8 @@ set_install_logs() {
    cp -f $VENDOR/vendor_dlkm/etc/build.prop $TMP/bitgapps/vendor_dlkm.prop
    cp -f $SYSTEM/etc/prop.default $TMP/bitgapps/system.default
    cp -f $SYSTEM/etc/g.prop $TMP/bitgapps/g.prop
-   cp -f $BITGAPPS_CONFIG $TMP/bitgapps/bitgapps-config.prop) > /dev/null 2>&1
+   cp -f $BITGAPPS_CONFIG $TMP/bitgapps/bitgapps-config.prop
+   cp -f $MICROG_CONFIG $TMP/bitgapps/microg-config.prop) > /dev/null 2>&1
 }
 
 on_install_failed() {
@@ -5373,6 +5374,7 @@ on_cts_patch() {
   if [ "$supported_safetynet_config" == "true" ]; then
     spl_update_boot
     if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
+      ui_print "- Apply safetynet patch"
       set_cts_patch
       usf_v26
     fi
