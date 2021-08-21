@@ -1323,9 +1323,11 @@ on_rwg_check() {
 
 # Check presence of playstore
 on_unsupported_rwg() {
-  for f in $SYSTEM/priv-app $SYSTEM/product/priv-app $SYSTEM/system_ext/priv-app; do
+  for APP in $SYSTEM/priv-app $SYSTEM/product/priv-app $SYSTEM/system_ext/priv-app; do
     # Add playstore in detection
-    if [ -d "$f/Phonesky" ]; then TARGET_APP_PLAYSTORE="true"; fi
+    for GPS in $(find $APP -iname "Phonesky" 2>/dev/null); do
+      if [ -d "$GPS" ]; then TARGET_APP_PLAYSTORE="true"; fi
+    done
   done
   # Set target outside of loop function
   if [ -z "$TARGET_APP_PLAYSTORE" ]; then TARGET_APP_PLAYSTORE="false"; fi
