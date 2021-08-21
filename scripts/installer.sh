@@ -4487,15 +4487,6 @@ purge_whitelist_permission() {
     ln -sfnv $SYSTEM_AS_SYSTEM/etc/prop.default $ANDROID_ROOT/default.prop
     rm -rf $TMP/prop.default
   fi
-  if [ -f "$SYSTEM_AS_SYSTEM/etc/prop.default" ] && [ -f "/default.prop" ] && [ -n "$(cat $SYSTEM_AS_SYSTEM/etc/prop.default | grep control_privapp_permissions)" ]; then
-    rm -rf /default.prop
-    grep -v "ro.control_privapp_permissions" $SYSTEM_AS_SYSTEM/etc/prop.default > $TMP/prop.default
-    rm -rf $SYSTEM_AS_SYSTEM/etc/prop.default
-    cp -f $TMP/prop.default $SYSTEM_AS_SYSTEM/etc/prop.default
-    chmod 0644 $SYSTEM_AS_SYSTEM/etc/prop.default
-    ln -sfnv $SYSTEM_AS_SYSTEM/etc/prop.default /default.prop
-    rm -rf $TMP/prop.default
-  fi
   if [ "$device_vendorpartition" == "false" ]; then
     if [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep control_privapp_permissions)" ]; then
       grep -v "ro.control_privapp_permissions" $SYSTEM_AS_SYSTEM/vendor/build.prop > $TMP/build.prop
