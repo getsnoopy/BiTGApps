@@ -4562,6 +4562,16 @@ set_whitelist_permission() { insert_line $SYSTEM_AS_SYSTEM/build.prop "ro.contro
 # Apply Privileged permission patch
 whitelist_patch() { purge_whitelist_permission; whitelist_vendor_overlay; set_whitelist_permission; }
 
+# Make adb insecure, so that adb logcat work during boot
+adb_secure() {
+  if [ -f "$SYSTEM_AS_SYSTEM/etc/prop.default" ] && [ -f "$ANDROID_ROOT/default.prop" ]; then
+    replace_line $SYSTEM_AS_SYSTEM/etc/prop.default 'ro.secure=1' 'ro.secure=0'
+    replace_line $SYSTEM_AS_SYSTEM/etc/prop.default 'ro.adb.secure=1' 'ro.adb.secure=0'
+    replace_line $SYSTEM_AS_SYSTEM/etc/prop.default 'ro.debuggable=0' 'ro.debuggable=1'
+    replace_line $SYSTEM_AS_SYSTEM/etc/prop.default 'persist.sys.usb.config=none' 'persist.sys.usb.config=adb'
+  fi
+}
+
 # API fixes
 sdk_fix() {
   if [ "$android_sdk" -ge "26" ]; then # Android 8.0+ uses 0600 for its permission on build.prop
@@ -5048,6 +5058,13 @@ patch_bootimg() {
     # Checkout ramdisk path
     cd ../
   fi
+  # Make adb insecure, so that adb logcat work during boot
+  if [ -f "ramdisk/etc/prop.default" ]; then
+    replace_line ramdisk/etc/prop.default 'ro.secure=1' 'ro.secure=0'
+    replace_line ramdisk/etc/prop.default 'ro.adb.secure=1' 'ro.adb.secure=0'
+    replace_line ramdisk/etc/prop.default 'ro.debuggable=0' 'ro.debuggable=1'
+    replace_line ramdisk/etc/prop.default 'persist.sys.usb.config=none' 'persist.sys.usb.config=adb'
+  fi
   if [ -f "ramdisk/init.rc" ]; then
     if [ ! -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
       $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' ramdisk/init.rc
@@ -5378,8 +5395,8 @@ boot_whitelist_permission() {
     # Checkout ramdisk path
     cd ../
   fi
-  if [ -f "ramdisk/default.prop" ] && [ -n "$(cat ramdisk/default.prop | grep control_privapp_permissions)" ]; then
-    $l/sed -i '/ro.control_privapp_permissions=enforce/c\ro.control_privapp_permissions=disable' default.prop
+  if [ -f "ramdisk/etc/prop.default" ] && [ -n "$(cat ramdisk/etc/prop.default | grep control_privapp_permissions)" ]; then
+    $l/sed -i '/ro.control_privapp_permissions=enforce/c\ro.control_privapp_permissions=disable' ramdisk/etc/prop.default
     rm -rf ramdisk.cpio && cd $TMP_AIK/ramdisk
     $l/find . | $l/cpio -H newc -o | cat > $TMP_AIK/ramdisk.cpio
     # Checkout ramdisk path
@@ -5753,7 +5770,7 @@ post_install() {
       on_aosp_install; build_prop_file; ota_prop_file
       rwg_ota_prop; on_setup_check; set_setup_config
       print_title_setup; on_setup_install; backup_script
-      opt_v25; whitelist_patch; sdk_fix; selinux_fix
+      opt_v25; whitelist_patch; adb_secure; sdk_fix; selinux_fix
       fix_gms_hide; fix_module_perm; module_info; rwg_dummy_backup
       mk_busybox_backup; boot_image_editor; patch_bootimg
       on_cts_patch; boot_whitelist_permission; on_installed; }
@@ -5768,10 +5785,11 @@ post_install() {
       lim_aosp_install; pre_installed_microg; microg_install
       on_aosp_install; build_prop_file; ota_prop_file; rwg_ota_prop
       backup_script; runtime_permissions; opt_v25; whitelist_patch
-      sdk_fix; selinux_fix; fix_microg_hide; fix_module_perm
-      maps_config; maps_framework; module_info; rwg_dummy_backup
-      mk_busybox_backup; boot_image_editor; patch_bootimg
-      on_cts_patch; boot_whitelist_permission; on_installed; }
+      adb_secure; sdk_fix; selinux_fix; fix_microg_hide
+      fix_module_perm; maps_config; maps_framework; module_info
+      rwg_dummy_backup; mk_busybox_backup; boot_image_editor
+      patch_bootimg; on_cts_patch; boot_whitelist_permission
+      on_installed; }
   fi
 }
 
