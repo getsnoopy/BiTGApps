@@ -5408,8 +5408,13 @@ boot_whitelist_permission() {
     # Checkout ramdisk path
     cd ../
   fi
+  if [ ! "$(readlink -f "ramdisk/default.prop")" = "ramdisk/etc/prop.default" ]; then
+    $l/sed -i '/ro.control_privapp_permissions=enforce/c\ro.control_privapp_permissions=disable' ramdisk/default.prop; RAMDISKCOMP="true"
+  fi
   if [ -f "ramdisk/etc/prop.default" ] && [ -n "$(cat ramdisk/etc/prop.default | grep control_privapp_permissions)" ]; then
-    $l/sed -i '/ro.control_privapp_permissions=enforce/c\ro.control_privapp_permissions=disable' ramdisk/etc/prop.default
+    $l/sed -i '/ro.control_privapp_permissions=enforce/c\ro.control_privapp_permissions=disable' ramdisk/etc/prop.default; RAMDISKCOMP="true"
+  fi
+  if [ "$RAMDISKCOMP" == "true" ]; then
     rm -rf ramdisk.cpio && cd $TMP_AIK/ramdisk
     $l/find . | $l/cpio -H newc -o | cat > $TMP_AIK/ramdisk.cpio
     # Checkout ramdisk path
