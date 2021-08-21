@@ -48,7 +48,7 @@ ui_print "***************************"
 ui_print "- Wipe duplicate configs"
 ui_print "- Wipe deprecated configs"
 for d in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage /data/media/0; do
-  for f in addon-config.prop bitgapps-config.prop cts-config.prop setup-config.prop wipe-config.prop; do
+  for f in addon-config.prop bitgapps-config.prop cts-config.prop microg-config.prop setup-config.prop wipe-config.prop; do
     for i in $($TMP/find $d -iname "$f" 2>/dev/null); do
       rm -rf $i
     done
