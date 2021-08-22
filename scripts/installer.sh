@@ -741,15 +741,10 @@ system_layout() {
 }
 
 on_backup_target() {
-  if [ -z "$(ls -A $ANDROID_DATA/.backup)" ]; then
-    BACKUP_V1="true"
-  fi
-  if "$BACKUP_V1"; then rm -rf $ANDROID_DATA/.backup/.backup; fi
-  if [ -z "$(ls -A $ANDROID_DATA/.backup)" ]; then
-    BACKUP_V2="true"
-  else
-    BACKUP_V3="true"
-  fi
+  if [ -z "$(ls -A $ANDROID_DATA/.backup)" ]; then BACKUP_V1="false"; else BACKUP_V1="true"; fi
+  if [ "$BACKUP_V1" == "true" ]; then rm -rf $ANDROID_DATA/.backup/.backup; fi
+  if [ -z "$(ls -A $ANDROID_DATA/.backup)" ]; then BACKUP_V2="false"; else BACKUP_V2="true"; fi
+  if [ "$BACKUP_V2" == "false" ]; then BACKUP_V3="true"; else BACKUP_V3="false"; fi
   # Re-create dummy file for detection over dirty installation
   touch $ANDROID_DATA/.backup/.backup && chmod 0644 $ANDROID_DATA/.backup/.backup
   # Print backup type
@@ -5082,7 +5077,7 @@ patch_bootimg() {
     replace_line ramdisk/etc/prop.default 'ro.debuggable=0' 'ro.debuggable=1'
     replace_line ramdisk/etc/prop.default 'persist.sys.usb.config=none' 'persist.sys.usb.config=adb'
   fi
-  if [ ! "$(readlink -f "ramdisk/default.prop")" = "ramdisk/etc/prop.default" ]; then
+  if [ -f "ramdisk/default.prop" ] && [ ! "$(readlink -f "ramdisk/default.prop")" = "ramdisk/etc/prop.default" ]; then
     replace_line ramdisk/default.prop 'ro.secure=1' 'ro.secure=0'
     replace_line ramdisk/default.prop 'ro.adb.secure=1' 'ro.adb.secure=0'
     replace_line ramdisk/default.prop 'ro.debuggable=0' 'ro.debuggable=1'
@@ -5419,7 +5414,7 @@ boot_whitelist_permission() {
     # Checkout ramdisk path
     cd ../
   fi
-  if [ ! "$(readlink -f "ramdisk/default.prop")" = "ramdisk/etc/prop.default" ]; then
+  if [ -f "ramdisk/default.prop" ] && [ ! "$(readlink -f "ramdisk/default.prop")" = "ramdisk/etc/prop.default" ]; then
     $l/sed -i '/ro.control_privapp_permissions=enforce/c\ro.control_privapp_permissions=disable' ramdisk/default.prop; RAMDISKCOMP="true"
   fi
   if [ -f "ramdisk/etc/prop.default" ] && [ -n "$(cat ramdisk/etc/prop.default | grep control_privapp_permissions)" ]; then
