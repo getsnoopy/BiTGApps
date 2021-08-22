@@ -1321,6 +1321,21 @@ mk_component() {
   done
 }
 
+# Remove conflicting packages after false RWG response
+pre_installed_rwg() {
+  for i in \
+    arcore CalendarGooglePrebuilt GoogleContacts GoogleContactsSyncAdapter GoogleTTS LatinIMEGooglePrebuilt MarkupGoogle \
+    Photos PrebuiltBugle PrebuiltDeskClockGoogle PrebuiltGoogleTelemetryTvp AndroidAutoStubPrebuilt AndroidMigratePrebuilt \
+    CarrierServices ConfigUpdater ConnMetrics ConnMO DevicePersonalizationPrebuiltPixel2020 FilesPrebuilt GoogleDialer \
+    PartnerSetupPrebuilt Phonesky PixelLiveWallpaperPrebuilt PrebuiltGmsCore SafetyHubPrebuilt ScribePrebuilt Showcase \
+    SettingsIntelligenceGoogle* SetupWizardPrebuilt TetheringEntitlement TurboPrebuilt USCCDM Velvet SoundPickerPrebuilt \
+    WellbeingPrebuilt WallpapersBReel2020 Flipendo CarrierSetup CbrsNetworkMonitor WallpaperPickerGoogleRelease TurboAdapter \
+    GoogleFeedback GoogleOneTimeInitializer GoogleServicesFramework PixelSetupWizard StorageManagerGoogle; do
+    rm -rf $SYSTEM_AS_SYSTEM/app/$i $SYSTEM_AS_SYSTEM/product/app/$i $SYSTEM_AS_SYSTEM/system_ext/app/$i
+    rm -rf $SYSTEM_AS_SYSTEM/priv-app/$i $SYSTEM_AS_SYSTEM/product/priv-app/$i $SYSTEM_AS_SYSTEM/system_ext/priv-app/$i
+  done
+}
+
 # Check RWG status
 on_rwg_check() {
   # Set RWG Status
@@ -1352,6 +1367,8 @@ on_fake_rwg_check() {
   done
   # Set target outside of loop function
   if [ -z "$TARGET_APP_PLAYSTORE_APK" ]; then TARGET_APP_PLAYSTORE_APK="false"; fi
+  # Wipe conflicting packages
+  if [ "$TARGET_APP_PLAYSTORE" == "true" ] && [ "$TARGET_APP_PLAYSTORE_APK" == "false" ]; then pre_installed_rwg; fi
 }
 
 # Abort installation for unsupported ROMs; Collectively targeting through playstore
