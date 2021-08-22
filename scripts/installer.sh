@@ -1348,18 +1348,29 @@ on_unsupported_rwg() {
   if [ -z "$TARGET_APP_PLAYSTORE" ]; then TARGET_APP_PLAYSTORE="false"; fi
 }
 
+on_fake_rwg_check() {
+  for APP in $SYSTEM/priv-app/Phonesky $SYSTEM/product/priv-app/Phonesky $SYSTEM/system_ext/priv-app/Phonesky; do
+    # Add playstore APK in detection
+    for GPS in $(find $APP -iname "Phonesky.apk" -iname "*.apk" 2>/dev/null); do
+      if [ -f "$GPS" ]; then TARGET_APP_PLAYSTORE_APK="true"; fi
+    done
+  done
+  # Set target outside of loop function
+  if [ -z "$TARGET_APP_PLAYSTORE_APK" ]; then TARGET_APP_PLAYSTORE_APK="false"; fi
+}
+
 # Abort installation for unsupported ROMs; Collectively targeting through playstore
 skip_on_unsupported() {
   if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$TARGET_APP_PLAYSTORE" == "true" ]; then
     # Create dummy build property, if not present and use it for aborting installation
-    if [ ! -f "$SYSTEM/etc/g.prop" ]; then
+    if [ "$TARGET_APP_PLAYSTORE_APK" == "true" ] && [ ! -f "$SYSTEM/etc/g.prop" ]; then
       echo "! Unsupported RWG device" >> $SYSTEM/etc/g.prop
     fi
-    if [ "$ZIPTYPE" == "basic" ] && [ ! -n "$(cat $SYSTEM/etc/g.prop | grep BiTGApps)" ]; then
-      on_abort "! Unsupported RWG device. Aborting...";
+    if [ "$ZIPTYPE" == "basic" ] && [ -f "$SYSTEM/etc/g.prop" ]; then
+      [ ! -n "$(cat $SYSTEM/etc/g.prop | grep BiTGApps)" ] && on_abort "! Unsupported RWG device. Aborting...";
     fi
-    if [ "$ZIPTYPE" == "microg" ] && [ ! -n "$(cat $SYSTEM/etc/g.prop | grep MicroG)" ]; then
-      on_abort "! Unsupported RWG device. Aborting...";
+    if [ "$ZIPTYPE" == "microg" ] && [ -f "$SYSTEM/etc/g.prop" ]; then
+      [ ! -n "$(cat $SYSTEM/etc/g.prop | grep MicroG)" ] && on_abort "! Unsupported RWG device. Aborting...";
     fi
   fi
 }
@@ -5778,8 +5789,8 @@ post_install() {
       on_addon_install; fix_module_perm; module_info; on_installed; }
   fi
   if [ "$ZIPTYPE" == "basic" ] && [ "$wipe_config" == "false" ]; then
-    { on_rwg_check; on_unsupported_rwg; skip_on_unsupported
-      post_backup; build_defaults; mk_component
+    { on_rwg_check; on_unsupported_rwg; on_fake_rwg_check
+      skip_on_unsupported; post_backup; build_defaults; mk_component
       system_pathmap; print_title_module; require_new_magisk
       check_modules_path; on_rwg_systemless; set_bitgapps_module
       set_module_path; create_module_pathmap; system_module_pathmap
@@ -5794,8 +5805,8 @@ post_install() {
       on_cts_patch; boot_whitelist_permission; on_installed; }
   fi
   if [ "$ZIPTYPE" == "microg" ] && [ "$wipe_config" == "false" ]; then
-    { on_rwg_check; on_unsupported_rwg; skip_on_unsupported
-      post_backup; build_defaults; mk_component
+    { on_rwg_check; on_unsupported_rwg; on_fake_rwg_check
+      skip_on_unsupported; post_backup; build_defaults; mk_component
       system_pathmap; print_title_module; require_new_magisk
       check_modules_path; on_rwg_systemless; set_bitgapps_module
       set_module_path; create_module_pathmap; system_module_pathmap
