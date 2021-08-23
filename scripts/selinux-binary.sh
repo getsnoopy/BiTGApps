@@ -372,4 +372,4 @@ ui_print "- Installation complete"
 ui_print " "
 
 # Cleanup
-rm -rf $TMP/AIK.tar.xz $TMP/chromeos $TMP/cpio $TMP/magiskboot $TMP/updater
+rm -rf $TMP/AIK.tar.xz $TMP/chromeos $TMP/cpio $TMP/grep $TMP/magiskboot $TMP/updater
