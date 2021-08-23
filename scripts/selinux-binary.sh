@@ -341,13 +341,13 @@ CHROMEOS=false
 case $? in
   0 ) ;;
   1 )
-    continue
+    ui_print "! Unsupported/Unknown image format"
     ;;
   2 )
     CHROMEOS=true
     ;;
   * )
-    continue
+    ui_print "! Unable to unpack boot image"
     ;;
 esac
 if [ -f "header" ] && [ "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
