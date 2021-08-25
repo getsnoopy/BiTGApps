@@ -35,6 +35,9 @@ ro.config.setupwizard=false
 # Property for installing Safetynet patch
 ro.config.safetynet=false
 
+# Property for installing Bootlog patch
+ro.config.bootlog=false
+
 # Property for enabling Addons installation
 ro.config.addon=false
 

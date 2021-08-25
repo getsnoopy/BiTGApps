@@ -1054,6 +1054,9 @@ on_module_check() {
 # Safetynet Config Property
 on_safetynet_check() { supported_safetynet_config="$(get_prop "ro.config.safetynet")"; }
 
+# Bootlog Config Property
+on_bootlog_check() { supported_bootlog_config="$(get_prop "ro.config.bootlog")"; }
+
 # SetupWizard Config Property
 on_setup_check() { supported_setup_config="$(get_prop "ro.config.setupwizard")"; }
 
@@ -4592,7 +4595,7 @@ set_whitelist_permission() { insert_line $SYSTEM_AS_SYSTEM/build.prop "ro.contro
 whitelist_patch() { purge_whitelist_permission; whitelist_vendor_overlay; set_whitelist_permission; }
 
 # Make adb insecure, so that adb logcat work during boot
-adb_secure() {
+on_adb_secure() {
   if [ -f "$SYSTEM_AS_SYSTEM/etc/prop.default" ] && [ -f "$ANDROID_ROOT/default.prop" ]; then
     replace_line $SYSTEM_AS_SYSTEM/etc/prop.default 'ro.secure=1' 'ro.secure=0'
     replace_line $SYSTEM_AS_SYSTEM/etc/prop.default 'ro.adb.secure=1' 'ro.adb.secure=0'
@@ -4600,6 +4603,8 @@ adb_secure() {
     replace_line $SYSTEM_AS_SYSTEM/etc/prop.default 'persist.sys.usb.config=none' 'persist.sys.usb.config=adb'
   fi
 }
+
+adb_secure() { [ "$supported_bootlog_config" == "true" ] && on_adb_secure; }
 
 # API fixes
 sdk_fix() {
@@ -5048,7 +5053,7 @@ find_boot_image() {
 }
 
 # Bootlog function, trigger at 'on fs' stage
-patch_bootimg() {
+on_patch_bootimg() {
   # Extract logcat script
   [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "init.logcat.rc" -d "$TMP"
   # Switch path to AIK
@@ -5183,6 +5188,9 @@ patch_bootimg() {
   fi
 }
 
+# Make bootlog patch config dependent
+patch_bootimg() { [ "$supported_bootlog_config" == "true" ] && on_patch_bootimg; }
+
 # Update boot image security patch level
 spl_update_boot() {
   # Switch path to AIK
@@ -5216,12 +5224,12 @@ spl_update_boot() {
     rm -rf boot.img mboot.img
     ./magiskboot cleanup > /dev/null 2>&1
     cd ../../..
-    export TARGET_SPLIT_IMAGE="true"
+    TARGET_SPLIT_IMAGE="true"
   else
     ./magiskboot cleanup > /dev/null 2>&1
     rm -rf boot.img
     cd ../../..
-    export TARGET_SPLIT_IMAGE="false"
+    TARGET_SPLIT_IMAGE="false"
   fi
 }
 
@@ -5641,7 +5649,7 @@ pre_install() {
       check_platform; clean_inst; on_config_version
       config_version; on_module_check; on_wipe_check
       set_wipe_config; on_addon_wipe; set_addon_wipe
-      on_safetynet_check; }
+      on_safetynet_check; on_bootlog_check; }
   fi
   if [ "$ZIPTYPE" == "basic" ] && [ "$BOOTMODE" == "true" ]; then
     { on_partition_check; ab_partition; system_as_root
@@ -5654,7 +5662,8 @@ pre_install() {
       on_target_platform; build_platform; check_platform
       clean_inst; on_config_version; config_version
       on_module_check; on_wipe_check; set_wipe_config
-      on_addon_wipe; set_addon_wipe; on_safetynet_check; }
+      on_addon_wipe; set_addon_wipe; on_safetynet_check
+      on_bootlog_check; }
   fi
   if [ "$ZIPTYPE" == "microg" ] && [ "$BOOTMODE" == "false" ]; then
     { on_partition_check; on_fstab_check; ab_partition
@@ -5668,7 +5677,7 @@ pre_install() {
       check_platform; clean_inst; on_config_version
       config_version; on_module_check; on_wipe_check
       set_wipe_config; on_addon_wipe; set_addon_wipe
-      on_safetynet_check; }
+      on_safetynet_check; on_bootlog_check; }
   fi
   if [ "$ZIPTYPE" == "microg" ] && [ "$BOOTMODE" == "true" ]; then
     { on_partition_check; ab_partition; system_as_root
@@ -5681,7 +5690,8 @@ pre_install() {
       on_target_platform; build_platform; check_platform
       clean_inst; on_config_version; config_version
       on_module_check; on_wipe_check; set_wipe_config
-      on_addon_wipe; set_addon_wipe; on_safetynet_check; }
+      on_addon_wipe; set_addon_wipe; on_safetynet_check
+      on_bootlog_check; }
   fi
 }
 
