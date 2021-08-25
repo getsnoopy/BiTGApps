@@ -25,6 +25,9 @@ export ZIPFILE="$3"
 export OUTFD="$2"
 export TMP="/tmp"
 
+# Change selinux state to permissive
+setenforce 0
+
 # Check unsupported architecture and abort installation
 ARCH=$(uname -m)
 if [ "$ARCH" == "x86" ] || [ "$ARCH" == "x86_64" ]; then

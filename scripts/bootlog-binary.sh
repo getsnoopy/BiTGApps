@@ -3,7 +3,7 @@
 ##############################################################
 # File name       : update-binary
 #
-# Description     : Set SELinux state to enforcing
+# Description     : Install Bootlog Patch
 #
 # Copyright       : Copyright (C) 2018-2021 TheHitMan7
 #
@@ -61,6 +61,14 @@ if [ "$dynamic_partitions" == "true" ]; then
   SUPER_PARTITION="true"
 fi
 
+# replace_line <file> <line replace string> <replacement line>
+replace_line() {
+  if grep -q "$2" $1; then
+    local line=$(grep -n "$2" $1 | head -n1 | cut -d: -f1)
+    $l/sed -i "${line}s;.*;${3};" $1
+  fi
+}
+
 is_mounted() { grep -q " $(readlink -f $1) " /proc/mounts 2>/dev/null; return $?; }
 
 toupper() {
@@ -78,6 +86,14 @@ grep_prop() {
   local FILES=$@
   [ -z "$FILES" ] && FILES="$SYSTEM/build.prop"
   cat $FILES 2>/dev/null | dos2unix | $l/sed -n "$REGEX" | head -n 1
+}
+
+setup_mountpoint() {
+  test -L $1 && mv -f $1 ${1}_link
+  if [ ! -d $1 ]; then
+    rm -f $1
+    mkdir $1
+  fi
 }
 
 # find_block [partname...]
@@ -141,9 +157,9 @@ ui_print() { echo -n -e "ui_print $1\n" >> /proc/self/fd/$OUTFD; echo -n -e "ui_
 
 # Title
 ui_print " "
-ui_print "****************************"
-ui_print " BiTGApps SELinux Enforcing "
-ui_print "****************************"
+ui_print "************************"
+ui_print " BiTGApps Bootlog Patch "
+ui_print "************************"
 
 # Extract busybox
 unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
@@ -178,6 +194,9 @@ chmod +x $TMP/chromeos/* $TMP/cpio $TMP/magiskboot
 # Extract grep utility
 unzip -o "$ZIPFILE" "grep" -d "$TMP"
 chmod +x $TMP/grep
+
+# Extract logcat script
+unzip -o "$ZIPFILE" "init.logcat.rc" -d "$TMP"
 
 # Unmount partitions
 for i in /system_root /system /product /system_ext /vendor /persist /metadata; do
@@ -301,6 +320,66 @@ if [ "$SUPER_PARTITION" == "false" ]; then
   fi
 fi
 
+# Mount APEX
+if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then SYSTEM="/system_root/system"; fi
+if [ "$($TMP/grep -w -o /system $fstab)" ]; then SYSTEM="/system"; fi
+if [ "$($TMP/grep -w -o /system $fstab)" ] && [ -d "/system/system" ]; then SYSTEM="/system/system"; fi
+# Set hardcoded system layout
+if [ -z "$SYSTEM" ]; then
+  SYSTEM="/system_root/system"
+fi
+test -d "$SYSTEM/apex" || return 1
+ui_print "- Mounting /apex"
+local apex dest loop minorx num
+setup_mountpoint /apex
+test -e /dev/block/loop1 && minorx=$(ls -l /dev/block/loop1 | awk '{ print $6 }') || minorx="1"
+num="0"
+for apex in $SYSTEM/apex/*; do
+  dest=/apex/$(basename $apex .apex)
+  test "$dest" == /apex/com.android.runtime.release && dest=/apex/com.android.runtime
+  mkdir -p $dest
+  case $apex in
+    *.apex)
+      unzip -qo $apex apex_payload.img -d /apex
+      mv -f /apex/apex_payload.img $dest.img
+      mount -t ext4 -o ro,noatime $dest.img $dest 2>/dev/null
+      if [ $? != 0 ]; then
+        while [ $num -lt 64 ]; do
+          loop=/dev/block/loop$num
+          (mknod $loop b 7 $((num * minorx))
+          losetup $loop $dest.img) 2>/dev/null
+          num=$((num + 1))
+          losetup $loop | grep -q $dest.img && break
+        done
+        mount -t ext4 -o ro,loop,noatime $loop $dest
+        if [ $? != 0 ]; then
+          losetup -d $loop 2>/dev/null
+        fi
+      fi
+    ;;
+    *) mount -o bind $apex $dest;;
+  esac
+done
+export ANDROID_RUNTIME_ROOT="/apex/com.android.runtime"
+export ANDROID_TZDATA_ROOT="/apex/com.android.tzdata"
+export ANDROID_ART_ROOT="/apex/com.android.art"
+export ANDROID_I18N_ROOT="/apex/com.android.i18n"
+local APEXJARS=$(find /apex -name '*.jar' | sort | tr '\n' ':')
+local FWK=$SYSTEM/framework
+export BOOTCLASSPATH="${APEXJARS}\
+$FWK/framework.jar:\
+$FWK/framework-graphics.jar:\
+$FWK/ext.jar:\
+$FWK/telephony-common.jar:\
+$FWK/voip-common.jar:\
+$FWK/ims-common.jar:\
+$FWK/framework-atb-backward-compatibility.jar:\
+$FWK/android.test.base.jar"
+[ ! -d "$SYSTEM/apex" ] && ui_print "! Cannot mount /apex"
+
+# Wipe SYSTEM variable that is set using 'Mount APEX'
+unset SYSTEM
+
 # Set installation layout
 if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($TMP/grep -w -o /system_root $fstab)" ]; then
   export SYSTEM="/system_root/system"
@@ -323,7 +402,32 @@ if ! is_mounted $ANDROID_ROOT; then
   exit 1
 fi
 
-ui_print "- Set SELinux enforcing"
+# Check installation layout
+if [ ! -f "$SYSTEM/build.prop" ]; then
+  ui_print "! Unable to find installation layout. Aborting..."
+  ui_print "! Installation failed"
+  ui_print " "
+  exit 1
+fi
+
+# Check RW status
+if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then
+  system_as_rw=`$TMP/grep -v '#' /proc/mounts | $TMP/grep -E '/system_root?[^a-zA-Z]' | $TMP/grep -oE 'rw' | head -n 1`
+fi
+if [ "$($TMP/grep -w -o /system_root /proc/mounts)" ]; then
+  system_as_rw=`$TMP/grep -v '#' /proc/mounts | $TMP/grep -E '/system_root?[^a-zA-Z]' | $TMP/grep -oE 'rw' | head -n 1`
+fi
+if [ "$($TMP/grep -w -o /system $fstab)" ]; then
+  system_as_rw=`$TMP/grep -v '#' /proc/mounts | $TMP/grep -E '/system?[^a-zA-Z]' | $TMP/grep -oE 'rw' | head -n 1`
+fi
+if [ ! "$system_as_rw" == "rw" ]; then
+  ui_print "! Read-only /system partition. Aborting..."
+  ui_print "! Installation failed"
+  ui_print " "
+  exit 1
+fi
+
+ui_print "- Set SELinux permissive"
 # Switch path to AIK
 cd $TMP
 # Extract boot image
@@ -353,18 +457,155 @@ case $? in
     ui_print "! Unable to unpack boot image"
     ;;
 esac
-if [ -f "header" ] && [ "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
-  # Change selinux state to enforcing
-  sed -i 's/androidboot.selinux=permissive/androidboot.selinux=enforcing/g' header
+if [ -f "header" ] && [ "$($TMP/grep -w -o 'androidboot.selinux=enforcing' header)" ]; then
+  # Change selinux state to permissive from enforcing
+  sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
+  fi
+if [ -f "header" ] && [ ! "$($TMP/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
+  # Change selinux state to permissive, without this bootlog script failed to execute
+  $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
 fi
-./magiskboot repack boot.img mboot.img
-# Sign ChromeOS boot image
-[ "$CHROMEOS" == "true" ] && sign_chromeos
-dd if="mboot.img" of="$block"
-# Wipe boot dump
-rm -rf boot.img mboot.img
-./magiskboot cleanup > /dev/null 2>&1
-cd ../
+ui_print "- Patch ramdisk image"
+if [ -f "ramdisk.cpio" ]; then
+  mkdir ramdisk && cd ramdisk
+  $l/cat $TMP/ramdisk.cpio | $l/cpio -i -d > /dev/null 2>&1
+  # Checkout ramdisk path
+  cd ../
+fi
+# Make adb insecure, so that adb logcat work during boot
+if [ -f "ramdisk/etc/prop.default" ]; then
+  ui_print "- Set ADB insecure"
+  replace_line ramdisk/etc/prop.default 'ro.secure=1' 'ro.secure=0'
+  replace_line ramdisk/etc/prop.default 'ro.adb.secure=1' 'ro.adb.secure=0'
+  replace_line ramdisk/etc/prop.default 'ro.debuggable=0' 'ro.debuggable=1'
+  replace_line ramdisk/etc/prop.default 'persist.sys.usb.config=none' 'persist.sys.usb.config=adb'
+fi
+if [ -f "ramdisk/default.prop" ] && [ ! "$(readlink -f "ramdisk/default.prop")" = "ramdisk/etc/prop.default" ]; then
+  ui_print "- Set ADB insecure"
+  replace_line ramdisk/default.prop 'ro.secure=1' 'ro.secure=0'
+  replace_line ramdisk/default.prop 'ro.adb.secure=1' 'ro.adb.secure=0'
+  replace_line ramdisk/default.prop 'ro.debuggable=0' 'ro.debuggable=1'
+  replace_line ramdisk/default.prop 'persist.sys.usb.config=none' 'persist.sys.usb.config=adb'
+fi
+if [ -f "ramdisk/init.rc" ]; then
+  if [ -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
+    ui_print "- Update logcat script"
+    rm -rf ramdisk/init.logcat.rc
+    cp -f $TMP/init.logcat.rc ramdisk/init.logcat.rc
+    chmod 0750 ramdisk/init.logcat.rc
+    chcon -h u:object_r:rootfs:s0 "ramdisk/init.logcat.rc"
+  fi
+  if [ ! -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
+    ui_print "- Install logcat script"
+    $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' ramdisk/init.rc
+    cp -f $TMP/init.logcat.rc ramdisk/init.logcat.rc
+    chmod 0750 ramdisk/init.logcat.rc
+    chcon -h u:object_r:rootfs:s0 "ramdisk/init.logcat.rc"
+  fi
+  rm -rf ramdisk.cpio && cd $TMP/ramdisk
+  $l/find . | $l/cpio -H newc -o | cat > $TMP/ramdisk.cpio
+  # Checkout ramdisk path
+  cd ../
+  ./magiskboot repack boot.img mboot.img
+  # Sign ChromeOS boot image
+  [ "$CHROMEOS" == "true" ] && sign_chromeos
+  dd if="mboot.img" of="$block"
+  # Wipe boot dump
+  rm -rf boot.img mboot.img ramdisk
+  ./magiskboot cleanup > /dev/null 2>&1
+  cd ../
+fi
+if [ ! -f "ramdisk/init.rc" ]; then
+  ./magiskboot repack boot.img mboot.img
+  # Sign ChromeOS boot image
+  [ "$CHROMEOS" == "true" ] && sign_chromeos
+  dd if="mboot.img" of="$block"
+  # Wipe boot dump
+  rm -rf boot.img mboot.img
+  ./magiskboot cleanup > /dev/null 2>&1
+  cd ../
+fi
+# Wipe ramdisk dump
+rm -rf $TMP/ramdisk
+# Patch root file system component
+if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/init.rc" ] && [ -n "$(cat /system_root/init.rc | grep ro.zygote)" ]; }; then
+  if [ -n "$(cat /system_root/init.rc | grep init.logcat.rc)" ]; then
+    ui_print "- Update logcat script"
+    rm -rf /system_root/init.logcat.rc
+    cp -f $TMP/init.logcat.rc /system_root/init.logcat.rc
+    chmod 0750 /system_root/init.logcat.rc
+    chcon -h u:object_r:rootfs:s0 "/system_root/init.logcat.rc"
+  fi
+  if [ ! -n "$(cat /system_root/init.rc | grep init.logcat.rc)" ]; then
+    ui_print "- Install logcat script"
+    $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' /system_root/init.rc
+    cp -f $TMP/init.logcat.rc /system_root/init.logcat.rc
+    chmod 0750 /system_root/init.logcat.rc
+    chcon -h u:object_r:rootfs:s0 "/system_root/init.logcat.rc"
+  fi
+fi
+if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+  if [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
+    ui_print "- Update logcat script"
+    rm -rf /system_root/system/etc/init/hw/init.logcat.rc
+    cp -f $TMP/init.logcat.rc /system_root/system/etc/init/hw/init.logcat.rc
+    chmod 0644 /system_root/system/etc/init/hw/init.logcat.rc
+    chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.logcat.rc"
+  fi
+  if [ ! -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
+    ui_print "- Install logcat script"
+    $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' /system_root/system/etc/init/hw/init.rc
+    cp -f $TMP/init.logcat.rc /system_root/system/etc/init/hw/init.logcat.rc
+    chmod 0644 /system_root/system/etc/init/hw/init.logcat.rc
+    chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.logcat.rc"
+  fi
+fi
+if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+  if [ -n "$(cat /system/system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
+    ui_print "- Update logcat script"
+    rm -rf /system/system/etc/init/hw/init.logcat.rc
+    cp -f $TMP/init.logcat.rc /system/system/etc/init/hw/init.logcat.rc
+    chmod 0644 /system/system/etc/init/hw/init.logcat.rc
+    chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.logcat.rc"
+  fi
+  if [ ! -n "$(cat /system/system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
+    ui_print "- Install logcat script"
+    $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' /system/system/etc/init/hw/init.rc
+    cp -f $TMP/init.logcat.rc /system/system/etc/init/hw/init.logcat.rc
+    chmod 0644 /system/system/etc/init/hw/init.logcat.rc
+    chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.logcat.rc"
+  fi
+fi
+# Make adb insecure, so that adb logcat work during boot
+if [ -f "$SYSTEM/etc/prop.default" ] && [ -f "$ANDROID_ROOT/default.prop" ]; then
+  ui_print "- Set ADB insecure"
+  replace_line $SYSTEM/etc/prop.default 'ro.secure=1' 'ro.secure=0'
+  replace_line $SYSTEM/etc/prop.default 'ro.adb.secure=1' 'ro.adb.secure=0'
+  replace_line $SYSTEM/etc/prop.default 'ro.debuggable=0' 'ro.debuggable=1'
+  replace_line $SYSTEM/etc/prop.default 'persist.sys.usb.config=none' 'persist.sys.usb.config=adb'
+fi
+
+# Unmount APEX
+test -d /apex || return 1
+local dest loop
+for dest in $(find /apex -type d -mindepth 1 -maxdepth 1); do
+  if [ -f $dest.img ]; then
+    loop=$(mount | grep $dest | cut -d" " -f1)
+  fi
+  (umount -l $dest
+  losetup -d $loop) 2>/dev/null
+done
+rm -rf /apex 2>/dev/null
+unset ANDROID_RUNTIME_ROOT
+unset ANDROID_TZDATA_ROOT
+unset ANDROID_ART_ROOT
+unset ANDROID_I18N_ROOT
+unset BOOTCLASSPATH
+
+ui_print "- Unmounting partitions"
+umount $ANDROID_ROOT > /dev/null 2>&1
+umount /persist > /dev/null 2>&1
+umount /metadata > /dev/null 2>&1
 
 # Restore predefined environmental variable
 [ -z $OLD_LD_LIB ] || export LD_LIBRARY_PATH=$OLD_LD_LIB
@@ -375,4 +616,4 @@ ui_print "- Installation complete"
 ui_print " "
 
 # Cleanup
-rm -rf $TMP/AIK.tar.xz $TMP/chromeos $TMP/cpio $TMP/grep $TMP/magiskboot $TMP/updater
+rm -rf $TMP/AIK.tar.xz $TMP/chromeos $TMP/cpio $TMP/grep $TMP/init.logcat.rc $TMP/magiskboot $TMP/updater
