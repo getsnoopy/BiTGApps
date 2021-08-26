@@ -4,6 +4,7 @@
 # Description     : Install BiTGApps systemless
 #                   Install SetupWizard components
 #                   Install Safetynet patch
+#                   Install Bootlog patch
 #                   Install Additional GApps packages
 #                   Uninstall Additional GApps packages
 #                   Uninstall BiTGApps components

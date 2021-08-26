@@ -3,6 +3,7 @@
 #
 # Description     : Install MicroG systemless
 #                   Install Safetynet patch
+#                   Install Bootlog patch
 #                   Uninstall Additional GApps packages
 #                   Uninstall MicroG components
 #
