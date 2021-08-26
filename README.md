@@ -2,6 +2,20 @@
 
 ![](banner.png)
 
+<div align="center">
+  <!-- Version -->
+    <img src="https://img.shields.io/badge/Revision-37-blue.svg?longCache=true&style=flat-square"
+      alt="Version" />
+  <!-- Last Updated -->
+    <img src="https://img.shields.io/badge/Updated-August 19, 2021-orange.svg?longCache=true&style=flat-square"
+      alt="_time_stamp_" />
+  <!-- License -->
+    <a href="https://www.gnu.org/licenses/gpl-3.0" target="_blank"><img src="https://img.shields.io/badge/License-GPLv3-yellow.svg?longCache=true&style=flat-square"></a>
+  <!-- Status -->
+    <img src="https://img.shields.io/badge/Status-Stable-green.svg?longCache=true&style=flat-square"
+      alt="_time_stamp_" />
+</div>
+
 ## Introduction
 
 A custom GApps package which contain minimal, But has all the required Google Applications to get Google Services functionality. BiTGApps support many custom features.
