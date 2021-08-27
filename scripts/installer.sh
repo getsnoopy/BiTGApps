@@ -4459,7 +4459,8 @@ set_addon_install() {
   if [ "$ADDON" == "conf" ]; then
     if [ "$addon_config" == "true" ] && [ "$addon_wipe" == "false" ]; then pre_installed_pkg; set_addon_zip_conf; fi
     if [ "$addon_config" == "true" ] && [ "$addon_wipe" == "true" ]; then check_backup; pre_restore_pkg; post_restore_pkg; fi
-    if [ "$addon_config" == "false" ]; then on_abort "! Skip installing additional packages"; fi
+    if [ "$addon_config" == "false" ] && [ "$addon_wipe" == "false" ]; then on_abort "! Skip installing additional packages"; fi
+    if [ "$addon_config" == "false" ] && [ "$addon_wipe" == "true" ]; then on_abort "! Skip uninstall additional packages"; fi
   fi
   if [ "$ADDON" == "sep" ] && [ "$addon_wipe" == "false" ]; then set_addon_zip_sep; fi
   if [ "$ADDON" == "sep" ] && [ "$addon_wipe" == "true" ]; then check_backup; pre_restore_pkg; post_restore_pkg; fi
