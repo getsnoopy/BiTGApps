@@ -749,9 +749,13 @@ unset BOOTCLASSPATH
 
 ui_print "- Unmounting partitions"
 umount $ANDROID_ROOT > /dev/null 2>&1
-umount $VENDOR > /dev/null 2>&1
 umount /persist > /dev/null 2>&1
 umount /metadata > /dev/null 2>&1
+
+# Unmount VENDOR
+if [ "$device_vendorpartition" == "true" ]; then
+  umount $VENDOR > /dev/null 2>&1
+fi
 
 # Restore predefined environmental variable
 [ -z $OLD_LD_LIB ] || export LD_LIBRARY_PATH=$OLD_LD_LIB
