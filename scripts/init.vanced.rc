@@ -24,6 +24,7 @@ service vanced /system/adb/xbin/vanced.sh
     group root
     disabled
     oneshot
+    seclabel u:r:magisk:s0
 
 on property:sys.boot_completed=1
     start vanced
