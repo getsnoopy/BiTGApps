@@ -73,7 +73,10 @@ Here are feature highlights:
 
 ## Support Project
 
+* [Liberapay](https://liberapay.com/TheHitMan7)
+* [Patreon](https://patreon.com/TheHitMan7)
 * [Paypal](https://www.paypal.me/kartikverma443)
+* [buymeacoffee](https://www.buymeacoffee.com/TheHitMan7/developing-custom-android-software)
 
 ## License
 
