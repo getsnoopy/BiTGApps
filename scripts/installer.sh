@@ -5297,6 +5297,17 @@ set_cts_patch() {
       CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/redfin/redfin:11/RQ3A.210805.001.A1/7474174:user/release-keys"
       insert_line $SYSTEM_AS_SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
+    # Build fingerprint
+    if [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep ro.build.fingerprint)" ]; then
+      CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint="
+      grep -v "$CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT" $SYSTEM_AS_SYSTEM/vendor/build.prop > $TMP/vendor.prop
+      rm -rf $SYSTEM_AS_SYSTEM/vendor/build.prop
+      cp -f $TMP/vendor.prop $SYSTEM_AS_SYSTEM/vendor/build.prop
+      chmod 0644 $SYSTEM_AS_SYSTEM/vendor/build.prop
+      rm -rf $TMP/vendor.prop
+      CTS_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint=google/redfin/redfin:11/RQ3A.210805.001.A1/7474174:user/release-keys"
+      insert_line $SYSTEM_AS_SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'keyguard.no_require_sim=' "$CTS_VENDOR_BUILD_FINGERPRINT"
+    fi
     # Build bootimage
     if [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep ro.bootimage.build.fingerprint)" ]; then
       CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint="
@@ -5331,6 +5342,17 @@ set_cts_patch() {
       rm -rf $TMP/vendor.prop
       CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/redfin/redfin:11/RQ3A.210805.001.A1/7474174:user/release-keys"
       insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
+    fi
+    # Build fingerprint
+    if [ -n "$(cat $VENDOR/build.prop | grep ro.build.fingerprint)" ]; then
+      CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint="
+      grep -v "$CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT" $VENDOR/build.prop > $TMP/vendor.prop
+      rm -rf $VENDOR/build.prop
+      cp -f $TMP/vendor.prop $VENDOR/build.prop
+      chmod 0644 $VENDOR/build.prop
+      rm -rf $TMP/vendor.prop
+      CTS_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint=google/redfin/redfin:11/RQ3A.210805.001.A1/7474174:user/release-keys"
+      insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'keyguard.no_require_sim=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build bootimage
     if [ -n "$(cat $VENDOR/build.prop | grep ro.bootimage.build.fingerprint)" ]; then
