@@ -1373,7 +1373,10 @@ on_fake_rwg_check() {
   # Set target outside of loop function
   if [ -z "$TARGET_APP_PLAYSTORE_APK" ]; then TARGET_APP_PLAYSTORE_APK="false"; fi
   # Wipe conflicting packages
-  if [ "$TARGET_APP_PLAYSTORE" == "true" ] && [ "$TARGET_APP_PLAYSTORE_APK" == "false" ]; then pre_installed_rwg; fi
+  if [ "$TARGET_APP_PLAYSTORE" == "true" ] && [ "$TARGET_APP_PLAYSTORE_APK" == "false" ]; then
+    ui_print "! Invalid RWG device"
+    pre_installed_rwg
+  fi
 }
 
 # Abort installation for unsupported ROMs; Collectively targeting through playstore
