@@ -284,10 +284,12 @@ if [ -e "$SYSTEM/bin/keystore2" ]; then
   chmod 0755 $SYSTEM/bin/keystore2
   chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore2"
 fi
-rm -rf $SYSTEM/lib64/libkeystore-attestation-application-id.so
-cp -f /data/.backup/libkeystore $SYSTEM/lib64/libkeystore-attestation-application-id.so
-chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so
-chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
+if [ -e "$SYSTEM/lib64/libkeystore-attestation-application-id.so" ]; then
+  rm -rf $SYSTEM/lib64/libkeystore-attestation-application-id.so
+  cp -f /data/.backup/libkeystore $SYSTEM/lib64/libkeystore-attestation-application-id.so
+  chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so
+  chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
+fi
 
 ui_print "- Unmounting partitions"
 umount $ANDROID_ROOT > /dev/null 2>&1
