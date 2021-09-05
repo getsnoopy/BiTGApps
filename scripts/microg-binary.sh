@@ -739,13 +739,60 @@ if [ -n "$(cat $fstab | grep /system_ext)" ]; then
   fi
 fi
 
+# Set SDK check property
+android_sdk="$(get_prop "ro.build.version.sdk")"
+ui_print "- Android SDK version: $android_sdk"
+
 # Check backup type
 if [ -z "$(ls -A $ANDROID_DATA/.backup)" ]; then BACKUP_V1="false"; else BACKUP_V1="true"; fi
 if [ "$BACKUP_V1" == "true" ]; then rm -rf $ANDROID_DATA/.backup/.backup; fi
+# Set keystore status
+KEYSTORE_v29="false"
+# Up-to Android SDK 29, patched keystore executable required
+if [ ! "$android_sdk" == "25" ]; then
+  if [ "$android_sdk" -le "29" ] && [ -f "$ANDROID_DATA/.backup/keystore" ]; then
+    # Move patched keystore
+    mv -f $ANDROID_DATA/.backup/keystore $TMP/keystore
+    # Set keystore status
+    KEYSTORE_v29="true"
+  fi
+fi
+# Set keystore status
+KEYSTORE_v30="false"
+# For Android SDK 30, patched keystore executable and library required
+if [ "$android_sdk" == "30" ] && [ -f "$ANDROID_DATA/.backup/keystore" ] && [ -f "$ANDROID_DATA/.backup/libkeystore" ]; then
+  # Move patched keystore
+  mv -f $ANDROID_DATA/.backup/keystore $TMP/keystore
+  mv -f $ANDROID_DATA/.backup/libkeystore $TMP/libkeystore
+  # Set keystore status
+  KEYSTORE_v30="true"
+fi
+# Set keystore status
+KEYSTORE_v31="false"
+# For Android SDK 31, patched keystore executable and library required
+if [ "$android_sdk" == "31" ] && [ -f "$ANDROID_DATA/.backup/keystore2" ] && [ -f "$ANDROID_DATA/.backup/libkeystore" ]; then
+  # Move patched keystore
+  mv -f $ANDROID_DATA/.backup/keystore2 $TMP/keystore2
+  mv -f $ANDROID_DATA/.backup/libkeystore $TMP/libkeystore
+  # Set keystore status
+  KEYSTORE_v31="true"
+fi
 if [ -z "$(ls -A $ANDROID_DATA/.backup)" ]; then BACKUP_V2="false"; else BACKUP_V2="true"; fi
 if [ "$BACKUP_V2" == "false" ]; then BACKUP_V3="true"; else BACKUP_V3="false"; fi
 # Re-create dummy file for detection over dirty installation
 touch $ANDROID_DATA/.backup/.backup && chmod 0644 $ANDROID_DATA/.backup/.backup
+# Move patched keystore
+if [ ! "$android_sdk" == "25" ] && [ "$KEYSTORE_v29" == "true" ]; then
+  mv -f $TMP/keystore $ANDROID_DATA/.backup/keystore
+fi
+if [ "$KEYSTORE_v30" == "true" ]; then
+  mv -f $TMP/keystore $ANDROID_DATA/.backup/keystore
+  mv -f $TMP/libkeystore $ANDROID_DATA/.backup/libkeystore
+fi
+if [ "$KEYSTORE_v31" == "true" ]; then
+  mv -f $TMP/keystore2 $ANDROID_DATA/.backup/keystore2
+  mv -f $TMP/libkeystore $ANDROID_DATA/.backup/libkeystore
+fi
 # Print backup type
 $BACKUP_V2 && ui_print "- Target backup: v2"
 $BACKUP_V3 && ui_print "- Target backup: v3"
@@ -766,10 +813,6 @@ if [ ! -f "$ANDROID_DATA/.backup/.backup" ]; then
   ui_print " "
   exit 1
 fi
-
-# Set SDK check property
-android_sdk="$(get_prop "ro.build.version.sdk")"
-ui_print "- Android SDK version: $android_sdk"
 
 ui_print "- Uninstall MicroG components"
 if [ ! -f "$ANDROID_DATA/adb/modules/BiTGApps/etc/g.prop" ]; then
