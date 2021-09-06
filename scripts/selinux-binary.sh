@@ -238,7 +238,7 @@ if [ -z "$ANDROID_ROOT" ]; then
   mkdir /system_root && export ANDROID_ROOT="/system_root"
 fi
 # Set A/B slot property
-local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
+local_slot() { local slot=$(getprop ro.boot.slot_suffix 2>/dev/null); }; local_slot
 if [ "$SUPER_PARTITION" == "true" ]; then
   if [ "$device_abpartition" == "true" ]; then
     for slot in "" _a _b; do

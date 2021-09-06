@@ -257,7 +257,7 @@ if [ -z "$ANDROID_ROOT" ]; then
   mkdir /system_root && export ANDROID_ROOT="/system_root"
 fi
 # Set A/B slot property
-local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
+local_slot() { local slot=$(getprop ro.boot.slot_suffix 2>/dev/null); }; local_slot
 if [ "$SUPER_PARTITION" == "true" ]; then
   if [ "$device_abpartition" == "true" ]; then
     for slot in "" _a _b; do
@@ -330,7 +330,7 @@ if [ -z "$SYSTEM" ]; then
 fi
 test -d "$SYSTEM/apex" || return 1
 ui_print "- Mounting /apex"
-local apex dest loop minorx num
+local_apex() { local apex dest loop minorx num; }; local_apex
 setup_mountpoint /apex
 test -e /dev/block/loop1 && minorx=$(ls -l /dev/block/loop1 | awk '{ print $6 }') || minorx="1"
 num="0"
@@ -364,8 +364,8 @@ export ANDROID_RUNTIME_ROOT="/apex/com.android.runtime"
 export ANDROID_TZDATA_ROOT="/apex/com.android.tzdata"
 export ANDROID_ART_ROOT="/apex/com.android.art"
 export ANDROID_I18N_ROOT="/apex/com.android.i18n"
-local APEXJARS=$(find /apex -name '*.jar' | sort | tr '\n' ':')
-local FWK=$SYSTEM/framework
+local_jar() { local APEXJARS=$(find /apex -name '*.jar' | sort | tr '\n' ':'); }; local_jar
+local_fwk() { local FWK=$SYSTEM/framework; }; local_fwk
 export BOOTCLASSPATH="${APEXJARS}\
 $FWK/framework.jar:\
 $FWK/framework-graphics.jar:\
@@ -587,7 +587,7 @@ fi
 
 # Unmount APEX
 test -d /apex || return 1
-local dest loop
+local_dest() { local dest loop; }; local_dest
 for dest in $(find /apex -type d -mindepth 1 -maxdepth 1); do
   if [ -f $dest.img ]; then
     loop=$(mount | grep $dest | cut -d" " -f1)
