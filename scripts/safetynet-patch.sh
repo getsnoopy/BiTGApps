@@ -600,7 +600,7 @@ ui_print "- Target image: $block"
 # Set CHROMEOS status
 CHROMEOS=false
 # Unpack boot image
-./magiskboot unpack -h boot.img
+./magiskboot unpack -h boot.img > /dev/null 2>&1
 case $? in
   0 ) ;;
   1 )
@@ -615,10 +615,10 @@ case $? in
 esac
 if [ -f "header" ]; then $l/sed -i '/os_patch_level/c\os_patch_level=2021-08' header; fi
 [ -f "header" ] && TARGET_SPLIT_IMAGE="true" || TARGET_SPLIT_IMAGE="false"
-./magiskboot repack boot.img mboot.img
+./magiskboot repack boot.img mboot.img > /dev/null 2>&1
 # Sign ChromeOS boot image
 [ "$CHROMEOS" == "true" ] && sign_chromeos
-dd if="mboot.img" of="$block"
+dd if="mboot.img" of="$block" > /dev/null 2>&1
 # Wipe boot dump
 rm -rf boot.img mboot.img
 ./magiskboot cleanup > /dev/null 2>&1
