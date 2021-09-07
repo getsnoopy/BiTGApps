@@ -782,12 +782,12 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
   # Mount keystore
   if [ "$BOOTMODE" == "true" ]; then
     # Mount independent system block
-    mount -o rw,remount,errors=continue /dev/*/.magisk/block/system_root
+    mount -o rw,remount,errors=continue /dev/*/.magisk/block/system_root > /dev/null 2>&1
     # Mount magisk based symlink
-    mount -o rw,remount $SYSTEM/bin
-    mount -o rw,remount $SYSTEM/bin/keystore
+    mount -o rw,remount $SYSTEM/bin > /dev/null 2>&1
+    mount -o rw,remount $SYSTEM/bin/keystore > /dev/null 2>&1
     # Unmount keystore for upgrade
-    umount -l $SYSTEM/bin/keystore
+    umount -l $SYSTEM/bin/keystore > /dev/null 2>&1
   fi
   # Do not install, if Android SDK 25 detected
   if [ ! "$android_sdk" == "25" ]; then
