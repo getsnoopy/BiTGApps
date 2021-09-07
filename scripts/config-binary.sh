@@ -1,7 +1,7 @@
 #!/sbin/sh
 #
 ##############################################################
-# File name       : update-binary
+# File name       : installer.sh
 #
 # Description     : Remove duplicate and old configs
 #
@@ -20,32 +20,52 @@
 # GNU General Public License for more details.
 ##############################################################
 
-# Set environmental variables in the global environment
-export ZIPFILE="$3"
-export OUTFD="$2"
-export TMP="/tmp"
+# Check boot state
+BOOTMODE=false
+ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
+$BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
+
+# Set boot state
+BOOTMODE="$BOOTMODE"
 
 # Change selinux state to permissive
 setenforce 0
 
-# Check unsupported architecture and abort installation
-ARCH=$(uname -m)
-if [ "$ARCH" == "x86" ] || [ "$ARCH" == "x86_64" ]; then
-  exit 1
-fi
-
-# Extract find utility
-unzip -o "$ZIPFILE" "find" -d "$TMP"
-chmod +x "$TMP/find"
+# Load install functions from utility script
+. $TMP/util_functions.sh
 
 # Output function
-ui_print() { echo -n -e "ui_print $1\n" >> /proc/self/fd/$OUTFD; echo -n -e "ui_print\n" >> /proc/self/fd/$OUTFD; }
+ui_print() {
+  if [ "$BOOTMODE" == "true" ]; then
+    echo "$1"
+  fi
+  if [ "$BOOTMODE" == "false" ]; then
+    echo -n -e "ui_print $1\n" >> /proc/self/fd/$OUTFD
+    echo -n -e "ui_print\n" >> /proc/self/fd/$OUTFD
+  fi
+}
+
+# Extract find utility
+if [ "$BOOTMODE" == "false" ]; then
+  unzip -o "$ZIPFILE" "find" -d "$TMP"
+fi
+chmod +x "$TMP/find"
 
 # Print title
 ui_print " "
 ui_print "***************************"
 ui_print " BiTGApps Duplicate Config "
 ui_print "***************************"
+
+# Check device architecture
+ARCH=$(uname -m)
+ui_print "- Device platform: $ARCH"
+if [ "$ARCH" == "x86" ] || [ "$ARCH" == "x86_64" ]; then
+  ui_print "! Wrong architecture detected. Aborting..."
+  ui_print "! Installation failed"
+  ui_print " "
+  exit 1
+fi
 
 # Remove duplicated and deprecated configs
 ui_print "- Wipe duplicate configs"

@@ -1,7 +1,7 @@
 #!/sbin/sh
 #
 ##############################################################
-# File name       : update-binary
+# File name       : installer.sh
 #
 # Description     : Install recovery tool for BiTGApps
 #
@@ -20,22 +20,30 @@
 # GNU General Public License for more details.
 ##############################################################
 
-# Set environmental variables in the global environment
-export ZIPFILE="$3"
-export OUTFD="$2"
-export TMP="/tmp"
+# Check boot state
+BOOTMODE=false
+ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
+$BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
+
+# Set boot state
+BOOTMODE="$BOOTMODE"
 
 # Change selinux state to permissive
 setenforce 0
 
-# Check unsupported architecture and abort installation
-ARCH=$(uname -m)
-if [ "$ARCH" == "x86" ] || [ "$ARCH" == "x86_64" ]; then
-  exit 1
-fi
+# Load install functions from utility script
+. $TMP/util_functions.sh
 
 # Output function
-ui_print() { echo -n -e "ui_print $1\n" >> /proc/self/fd/$OUTFD; echo -n -e "ui_print\n" >> /proc/self/fd/$OUTFD; }
+ui_print() {
+  if [ "$BOOTMODE" == "true" ]; then
+    echo "$1"
+  fi
+  if [ "$BOOTMODE" == "false" ]; then
+    echo -n -e "ui_print $1\n" >> /proc/self/fd/$OUTFD
+    echo -n -e "ui_print\n" >> /proc/self/fd/$OUTFD
+  fi
+}
 
 # Print title
 ui_print " "
@@ -43,9 +51,21 @@ ui_print "************************"
 ui_print " BiTGApps Recovery Tool "
 ui_print "************************"
 
+# Check device architecture
+ARCH=$(uname -m)
+ui_print "- Device platform: $ARCH"
+if [ "$ARCH" == "x86" ] || [ "$ARCH" == "x86_64" ]; then
+  ui_print "! Wrong architecture detected. Aborting..."
+  ui_print "! Installation failed"
+  ui_print " "
+  exit 1
+fi
+
 # Extract busybox
 ui_print "- Installing Busybox"
-unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
+if [ "$BOOTMODE" == "false" ]; then
+  unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
+fi
 chmod +x "$TMP/busybox-arm"
 
 ui_print "- Installation complete"
