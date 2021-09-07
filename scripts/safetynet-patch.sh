@@ -779,6 +779,16 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
   if [ "$android_sdk" == "29" ]; then ZIP="zip/Keystore29.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore29.tar.xz -C $TMP; fi
   if [ "$android_sdk" == "30" ]; then ZIP="zip/Keystore30.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore30.tar.xz -C $TMP; fi
   if [ "$android_sdk" == "31" ]; then ZIP="zip/Keystore31.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore31.tar.xz -C $TMP; fi
+  # Mount keystore
+  if [ "$BOOTMODE" == "true" ]; then
+    # Mount independent system block
+    mount -o rw,remount,errors=continue /dev/*/.magisk/block/system_root
+    # Mount magisk based symlink
+    mount -o rw,remount $SYSTEM/bin
+    mount -o rw,remount $SYSTEM/bin/keystore
+    # Unmount keystore for upgrade
+    umount -l $SYSTEM/bin/keystore
+  fi
   # Do not install, if Android SDK 25 detected
   if [ ! "$android_sdk" == "25" ]; then
     # Up-to Android SDK 29, patched keystore executable required
