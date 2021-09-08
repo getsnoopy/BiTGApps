@@ -806,8 +806,10 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
     # Mount magisk based symlink
     mount -o rw,remount $SYSTEM/bin > /dev/null 2>&1
     mount -o rw,remount $SYSTEM/bin/keystore > /dev/null 2>&1
+    mount -o rw,remount $SYSTEM/bin/keystore2 > /dev/null 2>&1
     # Unmount keystore for upgrade
     umount -l $SYSTEM/bin/keystore > /dev/null 2>&1
+    umount -l $SYSTEM/bin/keystore2 > /dev/null 2>&1
   fi
   # Do not install, if Android SDK 25 detected
   if [ ! "$android_sdk" == "25" ]; then
