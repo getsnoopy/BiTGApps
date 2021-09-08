@@ -779,6 +779,26 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
   if [ "$android_sdk" == "29" ]; then ZIP="zip/Keystore29.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore29.tar.xz -C $TMP; fi
   if [ "$android_sdk" == "30" ]; then ZIP="zip/Keystore30.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore30.tar.xz -C $TMP; fi
   if [ "$android_sdk" == "31" ]; then ZIP="zip/Keystore31.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore31.tar.xz -C $TMP; fi
+  # Do not backup, if Android SDK 25 detected
+  if [ ! "$android_sdk" == "25" ]; then
+    # Up-to Android SDK 29, patched keystore executable required
+    if [ "$android_sdk" -le "29" ]; then
+      # Default keystore backup
+      cp -f $SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
+    fi
+  fi
+  # For Android SDK 30, patched keystore executable and library required
+  if [ "$android_sdk" == "30" ]; then
+    # Default keystore backup
+    cp -f $SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
+    cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
+  fi
+  # For Android SDK 31, patched keystore executable and library required
+  if [ "$android_sdk" == "31" ]; then
+    # Default keystore backup
+    cp -f $SYSTEM/bin/keystore2 $ANDROID_DATA/.backup/keystore2
+    cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
+  fi
   # Mount keystore
   if [ "$BOOTMODE" == "true" ]; then
     # Mount independent system block
@@ -793,8 +813,6 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
   if [ ! "$android_sdk" == "25" ]; then
     # Up-to Android SDK 29, patched keystore executable required
     if [ "$android_sdk" -le "29" ]; then
-      # Default keystore backup
-      cp -f $SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
       # Install patched keystore
       rm -rf $SYSTEM/bin/keystore
       cp -f $TMP/keystore $SYSTEM/bin/keystore
@@ -804,9 +822,6 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
   fi
   # For Android SDK 30, patched keystore executable and library required
   if [ "$android_sdk" == "30" ]; then
-    # Default keystore backup
-    cp -f $SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
-    cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
     # Install patched keystore
     rm -rf $SYSTEM/bin/keystore
     cp -f $TMP/keystore $SYSTEM/bin/keystore
@@ -820,9 +835,6 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
   fi
   # For Android SDK 31, patched keystore executable and library required
   if [ "$android_sdk" == "31" ]; then
-    # Default keystore backup
-    cp -f $SYSTEM/bin/keystore2 $ANDROID_DATA/.backup/keystore2
-    cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
     # Install patched keystore
     rm -rf $SYSTEM/bin/keystore2
     cp -f $TMP/keystore2 $SYSTEM/bin/keystore2
