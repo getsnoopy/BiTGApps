@@ -5370,7 +5370,8 @@ set_cts_patch() {
 
 # Universal SafetyNet Fix; Works together with CTS patch
 usf_v26() {
-  unpack_zip() { [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
+  if [ "$BOOTMODE" == "false" ]; then unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }; fi
+  if [ "$BOOTMODE" == "true" ]; then unpack_zip() { return 0; }; fi
   # Set defaults and unpack
   if [ "$android_sdk" == "26" ]; then ZIP="zip/Keystore26.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore26.tar.xz -C $TMP_KEYSTORE; fi
   if [ "$android_sdk" == "27" ]; then ZIP="zip/Keystore27.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore27.tar.xz -C $TMP_KEYSTORE; fi
@@ -5378,12 +5379,40 @@ usf_v26() {
   if [ "$android_sdk" == "29" ]; then ZIP="zip/Keystore29.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore29.tar.xz -C $TMP_KEYSTORE; fi
   if [ "$android_sdk" == "30" ]; then ZIP="zip/Keystore30.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore30.tar.xz -C $TMP_KEYSTORE; fi
   if [ "$android_sdk" == "31" ]; then ZIP="zip/Keystore31.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore31.tar.xz -C $TMP_KEYSTORE; fi
-  # Do not install, if Android SDK 25 detected
+  # Do not backup, if Android SDK 25 detected
   if [ ! "$android_sdk" == "25" ]; then
     # Up-to Android SDK 29, patched keystore executable required
     if [ "$android_sdk" -le "29" ]; then
       # Default keystore backup
       cp -f $SYSTEM_AS_SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
+    fi
+  fi
+  # For Android SDK 30, patched keystore executable and library required
+  if [ "$android_sdk" == "30" ]; then
+    # Default keystore backup
+    cp -f $SYSTEM_AS_SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
+    cp -f $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
+  fi
+  # For Android SDK 31, patched keystore executable and library required
+  if [ "$android_sdk" == "31" ]; then
+    # Default keystore backup
+    cp -f $SYSTEM_AS_SYSTEM/bin/keystore2 $ANDROID_DATA/.backup/keystore2
+    cp -f $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
+  fi
+  # Mount keystore
+  if [ "$BOOTMODE" == "true" ]; then
+    # Mount independent system block
+    mount -o rw,remount,errors=continue /dev/*/.magisk/block/system_root > /dev/null 2>&1
+    # Mount magisk based symlink
+    mount -o rw,remount $SYSTEM_AS_SYSTEM/bin > /dev/null 2>&1
+    mount -o rw,remount $SYSTEM_AS_SYSTEM/bin/keystore > /dev/null 2>&1
+    # Unmount keystore for upgrade
+    umount -l $SYSTEM_AS_SYSTEM/bin/keystore > /dev/null 2>&1
+  fi
+  # Do not install, if Android SDK 25 detected
+  if [ ! "$android_sdk" == "25" ]; then
+    # Up-to Android SDK 29, patched keystore executable required
+    if [ "$android_sdk" -le "29" ]; then
       # Install patched keystore
       rm -rf $SYSTEM_AS_SYSTEM/bin/keystore
       cp -f $TMP_KEYSTORE/keystore $SYSTEM_AS_SYSTEM/bin/keystore
@@ -5393,9 +5422,6 @@ usf_v26() {
   fi
   # For Android SDK 30, patched keystore executable and library required
   if [ "$android_sdk" == "30" ]; then
-    # Default keystore backup
-    cp -f $SYSTEM_AS_SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
-    cp -f $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
     # Install patched keystore
     rm -rf $SYSTEM_AS_SYSTEM/bin/keystore
     cp -f $TMP_KEYSTORE/keystore $SYSTEM_AS_SYSTEM/bin/keystore
@@ -5409,9 +5435,6 @@ usf_v26() {
   fi
   # For Android SDK 31, patched keystore executable and library required
   if [ "$android_sdk" == "31" ]; then
-    # Default keystore backup
-    cp -f $SYSTEM_AS_SYSTEM/bin/keystore2 $ANDROID_DATA/.backup/keystore2
-    cp -f $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
     # Install patched keystore
     rm -rf $SYSTEM_AS_SYSTEM/bin/keystore2
     cp -f $TMP_KEYSTORE/keystore2 $SYSTEM_AS_SYSTEM/bin/keystore2
