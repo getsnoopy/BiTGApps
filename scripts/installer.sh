@@ -4819,6 +4819,7 @@ post_backup() {
         cp -fR $f/LatinIME $ANDROID_DATA/.backup/LatinIME > /dev/null 2>&1
         cp -fR $f/Launcher3 $ANDROID_DATA/.backup/Launcher3 > /dev/null 2>&1
         cp -fR $f/Launcher3QuickStep $ANDROID_DATA/.backup/Launcher3QuickStep > /dev/null 2>&1
+        cp -fR $f/NexusLauncherPrebuilt $ANDROID_DATA/.backup/NexusLauncherPrebuilt > /dev/null 2>&1
         cp -fR $f/NexusLauncherRelease $ANDROID_DATA/.backup/NexusLauncherRelease > /dev/null 2>&1
         cp -fR $f/QuickStep $ANDROID_DATA/.backup/QuickStep > /dev/null 2>&1
         cp -fR $f/QuickStepLauncher $ANDROID_DATA/.backup/QuickStepLauncher > /dev/null 2>&1
@@ -4873,6 +4874,7 @@ post_restore() {
       cp -fR $f/LatinIME $SYSTEM/app/LatinIME > /dev/null 2>&1
       cp -fR $f/Launcher3 $SYSTEM/priv-app/Launcher3 > /dev/null 2>&1
       cp -fR $f/Launcher3QuickStep $SYSTEM/priv-app/Launcher3QuickStep > /dev/null 2>&1
+      cp -fR $f/NexusLauncherPrebuilt $SYSTEM/priv-app/NexusLauncherPrebuilt > /dev/null 2>&1
       cp -fR $f/NexusLauncherRelease $SYSTEM/priv-app/NexusLauncherRelease > /dev/null 2>&1
       cp -fR $f/QuickStep $SYSTEM/priv-app/QuickStep > /dev/null 2>&1
       cp -fR $f/QuickStepLauncher $SYSTEM/priv-app/QuickStepLauncher > /dev/null 2>&1

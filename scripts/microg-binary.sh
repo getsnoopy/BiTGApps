@@ -205,6 +205,7 @@ post_restore() {
     cp -fR $f/LatinIME $SYSTEM/app/LatinIME > /dev/null 2>&1
     cp -fR $f/Launcher3 $SYSTEM/priv-app/Launcher3 > /dev/null 2>&1
     cp -fR $f/Launcher3QuickStep $SYSTEM/priv-app/Launcher3QuickStep > /dev/null 2>&1
+    cp -fR $f/NexusLauncherPrebuilt $SYSTEM/priv-app/NexusLauncherPrebuilt > /dev/null 2>&1
     cp -fR $f/NexusLauncherRelease $SYSTEM/priv-app/NexusLauncherRelease > /dev/null 2>&1
     cp -fR $f/QuickStep $SYSTEM/priv-app/QuickStep > /dev/null 2>&1
     cp -fR $f/QuickStepLauncher $SYSTEM/priv-app/QuickStepLauncher > /dev/null 2>&1
