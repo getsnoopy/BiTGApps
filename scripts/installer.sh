@@ -4580,15 +4580,15 @@ whitelist_vendor_overlay() {
     [ "$android_sdk" == "30" ] && VNDK="30"
     [ "$android_sdk" == "31" ] && VNDK="31"
     # Create vendor overlay
-    mkdir -p $SYSTEM_AS_SYSTEM/vendor_overlay/${VNDK}
-    chmod -R 0755 $SYSTEM_AS_SYSTEM/vendor_overlay/${VNDK}
-    chcon -hR u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/vendor_overlay/${VNDK}"
+    mkdir -p $SYSTEM_AS_SYSTEM/product/vendor_overlay/${VNDK}
+    chmod -R 0755 $SYSTEM_AS_SYSTEM/product/vendor_overlay/${VNDK}
+    chcon -hR u:object_r:system_file:s0 "$SYSTEM_AS_SYSTEM/product/vendor_overlay/${VNDK}"
     # Override default permission
     if [ "$device_vendorpartition" == "true" ] && [ -n "$(cat $VENDOR/build.prop | grep control_privapp_permissions)" ]; then
       grep -v "ro.control_privapp_permissions" $VENDOR/build.prop > $TMP/build.prop
-      cp -f $TMP/build.prop $SYSTEM_AS_SYSTEM/vendor_overlay/${VNDK}/build.prop
-      chmod 0644 $SYSTEM_AS_SYSTEM/vendor_overlay/${VNDK}/build.prop
-      chcon -h u:object_r:vendor_file:s0 "$SYSTEM_AS_SYSTEM/vendor_overlay/${VNDK}/build.prop"
+      cp -f $TMP/build.prop $SYSTEM_AS_SYSTEM/product/vendor_overlay/${VNDK}/build.prop
+      chmod 0644 $SYSTEM_AS_SYSTEM/product/vendor_overlay/${VNDK}/build.prop
+      chcon -h u:object_r:vendor_file:s0 "$SYSTEM_AS_SYSTEM/product/vendor_overlay/${VNDK}/build.prop"
       rm -rf $TMP/build.prop
     fi
   fi

@@ -455,8 +455,8 @@ if [ "$BOOTMODE" == "true" ] && [ "$($TMP/grep -w -o /product /proc/mounts)" ]; 
 fi
 
 ui_print "- Wipe vendor overlay";
-rm -rf $SYSTEM/vendor_overlay/30/build.prop
-rm -rf $SYSTEM/vendor_overlay/31/build.prop
+rm -rf $SYSTEM/product/vendor_overlay/30/build.prop
+rm -rf $SYSTEM/product/vendor_overlay/31/build.prop
 
 # Unmount APEX
 if [ "$BOOTMODE" == "false" ]; then
