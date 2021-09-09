@@ -548,4 +548,6 @@ ui_print "- Installation complete"
 ui_print " "
 
 # Cleanup
-rm -rf $TMP/AIK.tar.xz $TMP/chromeos $TMP/cpio $TMP/grep $TMP/magiskboot $TMP/updater
+for f in AIK.tar.xz chromeos cpio grep installer.sh magiskboot updater util_functions.sh; do
+  rm -rf $TMP/$f
+done

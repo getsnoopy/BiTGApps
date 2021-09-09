@@ -91,4 +91,6 @@ ui_print "- Installation complete"
 ui_print " "
 
 # Cleanup
-rm -rf $TMP/find $TMP/updater
+for f in find installer.sh updater util_functions.sh; do
+  rm -rf $TMP/$f
+done
