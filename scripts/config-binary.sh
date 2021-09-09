@@ -67,11 +67,20 @@ if [ "$ARCH" == "x86" ] || [ "$ARCH" == "x86_64" ]; then
   exit 1
 fi
 
-# Remove duplicated and deprecated configs
+# Remove duplicated configs
 ui_print "- Wipe duplicate configs"
+for d in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage /data/media/0; do
+  for f in bitgapps-config.prop microg-config.prop; do
+    for i in $($TMP/find $d -iname "$f" 2>/dev/null); do
+      rm -rf $i
+    done
+  done
+done
+
+# Remove deprecated configs
 ui_print "- Wipe deprecated configs"
 for d in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage /data/media/0; do
-  for f in addon-config.prop bitgapps-config.prop cts-config.prop microg-config.prop setup-config.prop wipe-config.prop; do
+  for f in addon-config.prop cts-config.prop setup-config.prop wipe-config.prop; do
     for i in $($TMP/find $d -iname "$f" 2>/dev/null); do
       rm -rf $i
     done
