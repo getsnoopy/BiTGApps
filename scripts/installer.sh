@@ -960,8 +960,10 @@ on_installed() {
   exit "$?"
 }
 
+sideload_config() { for f in bitgapps-config.prop microg-config.prop; do unzip -o "$ZIPFILE" "$f" -d "$TMP" 2>/dev/null; done; }
+
 get_bitgapps_config() {
-  for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage /data/media/0; do
+  for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage /data/media/0 /tmp; do
     for b in $(find $f -iname "bitgapps-config.prop" 2>/dev/null); do
       if [ -f "$b" ]; then
         BITGAPPS_CONFIG="$b"
@@ -977,7 +979,7 @@ get_bitgapps_config() {
 }
 
 get_microg_config() {
-  for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage /data/media/0; do
+  for f in /sdcard /sdcard1 /external_sd /usb_otg /usbstorage /data/media/0 /tmp; do
     for m in $(find $f -iname "microg-config.prop" 2>/dev/null); do
       if [ -f "$m" ]; then
         MICROG_CONFIG="$m"
@@ -5670,83 +5672,215 @@ helper() { env_vars; print_title; set_bb; umount_all; recovery_actions; }
 # These set of functions should be executed after 'helper' function
 pre_install() {
   if [ "$ZIPTYPE" == "addon" ] && [ "$BOOTMODE" == "false" ]; then
-    { on_partition_check; on_fstab_check; ab_partition
-      system_as_root; super_partition; vendor_mnt
-      mount_all; check_rw_status; system_layout
-      mount_status; get_bitgapps_config; profile
-      on_release_tag; chk_release_tag; on_version_check
-      on_platform_check; on_target_platform; on_config_version
-      config_version; on_addon_stack; on_addon_check
-      on_module_check; on_wipe_check; set_wipe_config
-      on_addon_wipe; set_addon_wipe; df_vroot_target
-      df_vnonroot_target; }
+    on_partition_check
+    on_fstab_check
+    ab_partition
+    system_as_root
+    super_partition
+    vendor_mnt
+    mount_all
+    check_rw_status
+    system_layout
+    mount_status
+    sideload_config
+    get_bitgapps_config
+    profile
+    on_release_tag
+    chk_release_tag
+    on_version_check
+    on_platform_check
+    on_target_platform
+    on_config_version
+    config_version
+    on_addon_stack
+    on_addon_check
+    on_module_check
+    on_wipe_check
+    set_wipe_config
+    on_addon_wipe
+    set_addon_wipe
+    df_vroot_target
+    df_vnonroot_target
   fi
   if [ "$ZIPTYPE" == "addon" ] && [ "$BOOTMODE" == "true" ]; then
-    { on_partition_check; ab_partition; system_as_root
-      super_partition; vendor_mnt; mount_BM
-      check_rw_status; system_layout; mount_status
-      get_bitgapps_config; profile; on_release_tag
-      chk_release_tag; on_version_check; on_platform_check
-      on_target_platform; on_config_version; config_version
-      on_addon_stack; on_addon_check; on_module_check
-      on_wipe_check; set_wipe_config; on_addon_wipe
-      set_addon_wipe; df_vroot_target; df_vnonroot_target; }
+    on_partition_check
+    ab_partition
+    system_as_root
+    super_partition
+    vendor_mnt
+    mount_BM
+    check_rw_status
+    system_layout
+    mount_status
+    sideload_config
+    get_bitgapps_config
+    profile
+    on_release_tag
+    chk_release_tag
+    on_version_check
+    on_platform_check
+    on_target_platform
+    on_config_version
+    config_version
+    on_addon_stack
+    on_addon_check
+    on_module_check
+    on_wipe_check
+    set_wipe_config
+    on_addon_wipe
+    set_addon_wipe
+    df_vroot_target
+    df_vnonroot_target
   fi
   if [ "$ZIPTYPE" == "basic" ] && [ "$BOOTMODE" == "false" ]; then
-    { on_partition_check; on_fstab_check; ab_partition
-      system_as_root; super_partition; vendor_mnt
-      mount_all; check_rw_status; system_layout
-      mount_status; backup_target; check_build_prop
-      chk_inst_pkg; on_inst_abort; get_bitgapps_config
-      profile; on_release_tag; check_release_tag
-      on_version_check; check_sdk; check_version
-      on_platform_check; on_target_platform; build_platform
-      check_platform; clean_inst; on_config_version
-      config_version; on_module_check; on_wipe_check
-      set_wipe_config; on_addon_wipe; set_addon_wipe
-      on_safetynet_check; on_bootlog_check; }
+    on_partition_check
+    on_fstab_check
+    ab_partition
+    system_as_root
+    super_partition
+    vendor_mnt
+    mount_all
+    check_rw_status
+    system_layout
+    mount_status
+    backup_target
+    check_build_prop
+    chk_inst_pkg
+    on_inst_abort
+    sideload_config
+    get_bitgapps_config
+    profile
+    on_release_tag
+    check_release_tag
+    on_version_check
+    check_sdk
+    check_version
+    on_platform_check
+    on_target_platform
+    build_platform
+    check_platform
+    clean_inst
+    on_config_version
+    config_version
+    on_module_check
+    on_wipe_check
+    set_wipe_config
+    on_addon_wipe
+    set_addon_wipe
+    on_safetynet_check
+    on_bootlog_check
   fi
   if [ "$ZIPTYPE" == "basic" ] && [ "$BOOTMODE" == "true" ]; then
-    { on_partition_check; ab_partition; system_as_root
-      super_partition; vendor_mnt; mount_BM
-      check_rw_status; system_layout; mount_status
-      backup_target; check_build_prop; chk_inst_pkg
-      on_inst_abort; get_bitgapps_config; profile
-      on_release_tag; check_release_tag; on_version_check
-      check_sdk; check_version; on_platform_check
-      on_target_platform; build_platform; check_platform
-      clean_inst; on_config_version; config_version
-      on_module_check; on_wipe_check; set_wipe_config
-      on_addon_wipe; set_addon_wipe; on_safetynet_check
-      on_bootlog_check; }
+    on_partition_check
+    ab_partition
+    system_as_root
+    super_partition
+    vendor_mnt
+    mount_BM
+    check_rw_status
+    system_layout
+    mount_status
+    backup_target
+    check_build_prop
+    chk_inst_pkg
+    on_inst_abort
+    sideload_config
+    get_bitgapps_config
+    profile
+    on_release_tag
+    check_release_tag
+    on_version_check
+    check_sdk
+    check_version
+    on_platform_check
+    on_target_platform
+    build_platform
+    check_platform
+    clean_inst
+    on_config_version
+    config_version
+    on_module_check
+    on_wipe_check
+    set_wipe_config
+    on_addon_wipe
+    set_addon_wipe
+    on_safetynet_check
+    on_bootlog_check
   fi
   if [ "$ZIPTYPE" == "microg" ] && [ "$BOOTMODE" == "false" ]; then
-    { on_partition_check; on_fstab_check; ab_partition
-      system_as_root; super_partition; vendor_mnt
-      mount_all; check_rw_status; system_layout
-      mount_status; backup_target; check_build_prop
-      chk_inst_pkg; on_inst_abort; get_microg_config
-      profile; on_release_tag; check_release_tag
-      on_version_check; check_sdk; check_version
-      on_platform_check; on_target_platform; build_platform
-      check_platform; clean_inst; on_config_version
-      config_version; on_module_check; on_wipe_check
-      set_wipe_config; on_addon_wipe; set_addon_wipe
-      on_safetynet_check; on_bootlog_check; }
+    on_partition_check
+    on_fstab_check
+    ab_partition
+    system_as_root
+    super_partition
+    vendor_mnt
+    mount_all
+    check_rw_status
+    system_layout
+    mount_status
+    backup_target
+    check_build_prop
+    chk_inst_pkg
+    on_inst_abort
+    sideload_config
+    get_microg_config
+    profile
+    on_release_tag
+    check_release_tag
+    on_version_check
+    check_sdk
+    check_version
+    on_platform_check
+    on_target_platform
+    build_platform
+    check_platform
+    clean_inst
+    on_config_version
+    config_version
+    on_module_check
+    on_wipe_check
+    set_wipe_config
+    on_addon_wipe
+    set_addon_wipe
+    on_safetynet_check
+    on_bootlog_check
   fi
   if [ "$ZIPTYPE" == "microg" ] && [ "$BOOTMODE" == "true" ]; then
-    { on_partition_check; ab_partition; system_as_root
-      super_partition; vendor_mnt; mount_BM
-      check_rw_status; system_layout; mount_status
-      backup_target; check_build_prop; chk_inst_pkg
-      on_inst_abort; get_microg_config; profile
-      on_release_tag; check_release_tag; on_version_check
-      check_sdk; check_version; on_platform_check
-      on_target_platform; build_platform; check_platform
-      clean_inst; on_config_version; config_version
-      on_module_check; on_wipe_check; set_wipe_config
-      on_addon_wipe; set_addon_wipe; on_safetynet_check
-      on_bootlog_check; }
+    on_partition_check
+    ab_partition
+    system_as_root
+    super_partition
+    vendor_mnt
+    mount_BM
+    check_rw_status
+    system_layout
+    mount_status
+    backup_target
+    check_build_prop
+    chk_inst_pkg
+    on_inst_abort
+    sideload_config
+    get_microg_config
+    profile
+    on_release_tag
+    check_release_tag
+    on_version_check
+    check_sdk
+    check_version
+    on_platform_check
+    on_target_platform
+    build_platform
+    check_platform
+    clean_inst
+    on_config_version
+    config_version
+    on_module_check
+    on_wipe_check
+    set_wipe_config
+    on_addon_wipe
+    set_addon_wipe
+    on_safetynet_check
+    on_bootlog_check
   fi
 }
 
@@ -5857,45 +5991,124 @@ chk_disk() { if [ "$wipe_config" == "false" ] || [ "$addon_wipe" == "false" ]; t
 # Do not merge 'pre_install' functions here
 post_install() {
   if [ "$ZIPTYPE" == "addon" ] && [ "$wipe_config" == "false" ]; then
-    { on_rwg_check; on_unsupported_rwg; skip_on_unsupported
-      build_defaults; mk_component; system_pathmap; check_addon_install
-      print_title_module; require_new_magisk; check_modules_path
-      on_rwg_systemless; set_bitgapps_module; set_module_path
-      create_module_pathmap; system_module_pathmap; on_addon_config
-      on_addon_check; on_addon_chk; set_addon_config
-      on_addon_install; fix_module_perm; module_info; on_installed; }
+    on_rwg_check
+    on_unsupported_rwg
+    skip_on_unsupported
+    build_defaults
+    mk_component
+    system_pathmap
+    check_addon_install
+    print_title_module
+    require_new_magisk
+    check_modules_path
+    on_rwg_systemless
+    set_bitgapps_module
+    set_module_path
+    create_module_pathmap
+    system_module_pathmap
+    on_addon_config
+    on_addon_check
+    on_addon_chk
+    set_addon_config
+    on_addon_install
+    fix_module_perm
+    module_info
+    on_installed
   fi
   if [ "$ZIPTYPE" == "basic" ] && [ "$wipe_config" == "false" ]; then
-    { on_rwg_check; on_unsupported_rwg; on_fake_rwg_check
-      skip_on_unsupported; post_backup; build_defaults; mk_component
-      system_pathmap; print_title_module; require_new_magisk
-      check_modules_path; on_rwg_systemless; set_bitgapps_module
-      set_module_path; create_module_pathmap; system_module_pathmap
-      override_module; rwg_aosp_install; set_aosp_default
-      lim_aosp_install; pre_installed_v25; sdk_v25_install
-      on_aosp_install; build_prop_file; ota_prop_file
-      rwg_ota_prop; on_setup_check; set_setup_config
-      print_title_setup; on_setup_install; backup_script
-      opt_v25; whitelist_patch; adb_secure; sdk_fix; selinux_fix
-      fix_gms_hide; fix_module_perm; module_info; rwg_dummy_backup
-      mk_busybox_backup; boot_image_editor; patch_bootimg
-      on_cts_patch; boot_whitelist_permission; on_installed; }
+    on_rwg_check
+    on_unsupported_rwg
+    on_fake_rwg_check
+    skip_on_unsupported
+    post_backup
+    build_defaults
+    mk_component
+    system_pathmap
+    print_title_module
+    require_new_magisk
+    check_modules_path
+    on_rwg_systemless
+    set_bitgapps_module
+    set_module_path
+    create_module_pathmap
+    system_module_pathmap
+    override_module
+    rwg_aosp_install
+    set_aosp_default
+    lim_aosp_install
+    pre_installed_v25
+    sdk_v25_install
+    on_aosp_install
+    build_prop_file
+    ota_prop_file
+    rwg_ota_prop
+    on_setup_check
+    set_setup_config
+    print_title_setup
+    on_setup_install
+    backup_script
+    opt_v25
+    whitelist_patch
+    adb_secure
+    sdk_fix
+    selinux_fix
+    fix_gms_hide
+    fix_module_perm
+    module_info
+    rwg_dummy_backup
+    mk_busybox_backup
+    boot_image_editor
+    patch_bootimg
+    on_cts_patch
+    boot_whitelist_permission
+    on_installed
   fi
   if [ "$ZIPTYPE" == "microg" ] && [ "$wipe_config" == "false" ]; then
-    { on_rwg_check; on_unsupported_rwg; on_fake_rwg_check
-      skip_on_unsupported; post_backup; build_defaults; mk_component
-      system_pathmap; print_title_module; require_new_magisk
-      check_modules_path; on_rwg_systemless; set_bitgapps_module
-      set_module_path; create_module_pathmap; system_module_pathmap
-      override_module; rwg_aosp_install; set_aosp_default
-      lim_aosp_install; pre_installed_microg; microg_install
-      on_aosp_install; build_prop_file; ota_prop_file; rwg_ota_prop
-      backup_script; runtime_permissions; opt_v25; whitelist_patch
-      adb_secure; sdk_fix; selinux_fix; fix_microg_hide
-      fix_module_perm; maps_config; maps_framework; module_info
-      rwg_dummy_backup; mk_busybox_backup; boot_image_editor
-      patch_bootimg; on_cts_patch; boot_whitelist_permission
-      on_installed; }
+    on_rwg_check
+    on_unsupported_rwg
+    on_fake_rwg_check
+    skip_on_unsupported
+    post_backup
+    build_defaults
+    mk_component
+    system_pathmap
+    print_title_module
+    require_new_magisk
+    check_modules_path
+    on_rwg_systemless
+    set_bitgapps_module
+    set_module_path
+    create_module_pathmap
+    system_module_pathmap
+    override_module
+    rwg_aosp_install
+    set_aosp_default
+    lim_aosp_install
+    pre_installed_microg
+    microg_install
+    on_aosp_install
+    build_prop_file
+    ota_prop_file
+    rwg_ota_prop
+    backup_script
+    runtime_permissions
+    opt_v25
+    whitelist_patch
+    adb_secure
+    sdk_fix
+    selinux_fix
+    fix_microg_hide
+    fix_module_perm
+    maps_config
+    maps_framework
+    module_info
+    rwg_dummy_backup
+    mk_busybox_backup
+    boot_image_editor
+    patch_bootimg
+    on_cts_patch
+    boot_whitelist_permission
+    on_installed
   fi
 }
 
