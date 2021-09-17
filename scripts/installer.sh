@@ -5884,6 +5884,13 @@ pre_install() {
   fi
 }
 
+# Remove Additional Packages
+pre_uninstall() {
+  local SYSTEM_SYSTEM
+  if [ "$supported_module_config" == "false" ]; then pre_installed_pkg; fi
+  $supported_module_config && set_module_path; SYSTEM_SYSTEM="$SYSTEM"; pre_installed_pkg
+}
+
 # Check availability of Product partition
 chk_product() {
   if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" == "29" ] && [ "$BOOTMODE" == "false" ]; then
@@ -6113,7 +6120,7 @@ post_install() {
 }
 
 # Begin installation
-{ helper; pre_install; chk_disk; post_install; post_uninstall; }
+{ helper; pre_install; pre_uninstall; chk_disk; post_install; post_uninstall; }
 # end installation
 
 # end method
