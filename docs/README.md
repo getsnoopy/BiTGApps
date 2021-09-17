@@ -37,8 +37,9 @@ A collection of information and use of BiTGApps.
 
 #### Changelogs
 
-* [**BiTGApps**](https://github.com/BiTGApps/BiTGApps/wiki/BiTGApps)
-* [**Additional Packages**](https://github.com/BiTGApps/BiTGApps/wiki/Additional-Packages)
+* [**BiTGApps Package**](https://github.com/BiTGApps/BiTGApps/wiki/BiTGApps)
+* [**MicroG Package**](https://github.com/BiTGApps/BiTGApps/wiki/microG-Changelogs)
+* [**Additional Package**](https://github.com/BiTGApps/BiTGApps/wiki/Additional-Packages)
 
 #### microG
 
