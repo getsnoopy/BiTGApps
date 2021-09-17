@@ -1191,7 +1191,7 @@ on_version_check() {
 on_platform_check() { device_architecture="$(get_prop "ro.product.cpu.abi")"; }
 
 # Set supported Android Platform
-on_target_platform() { ANDROID_PLATFORM_ARM32="armeabi-v7a" && ANDROID_PLATFORM_ARM64="arm64-v8a"; }
+on_target_platform() { ANDROID_PLATFORM_ARM32="armeabi-v7a"; ANDROID_PLATFORM_ARM64="arm64-v8a"; }
 
 build_platform() {
   if [ "$TARGET_ANDROID_ARCH" == "ARM" ]; then ANDROID_PLATFORM="$ANDROID_PLATFORM_ARM32"; fi
@@ -1508,7 +1508,7 @@ system_pathmap() {
     for i in \
       $SYSTEM_ETC_DEFAULT \
       $SYSTEM_ETC_PREF \
-      $SYSTEM_OVERLAY; do
+      $SYSTEM_OVERLAY 2>/dev/null; do
       test -d $i || mkdir $i
       chmod 0755 $i
       chcon -h u:object_r:system_file:s0 "$i"
@@ -3353,7 +3353,7 @@ vanced_boot_patch() {
   esac
   if [ -f "header" ] && [ "$($l/grep -w -o 'androidboot.selinux=enforcing' header)" ]; then
     # Change selinux state to permissive from enforcing
-    sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
+    $l/sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
   fi
   if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
     # Change selinux state to permissive, without this bootlog script failed to execute
@@ -3366,14 +3366,14 @@ vanced_boot_patch() {
     cd ../
   fi
   if [ -f "ramdisk/init.rc" ]; then
-    if [ ! -n "$(cat ramdisk/init.rc | grep init.vanced.rc)" ]; then
-      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.vanced.rc' ramdisk/init.rc
+    if [ -n "$(cat ramdisk/init.rc | grep init.vanced.rc)" ]; then
+      rm -rf ramdisk/init.vanced.rc
       cp -f $TMP/init.vanced.rc ramdisk/init.vanced.rc
       chmod 0750 ramdisk/init.vanced.rc
       chcon -h u:object_r:rootfs:s0 "ramdisk/init.vanced.rc"
     fi
-    if [ -n "$(cat ramdisk/init.rc | grep init.vanced.rc)" ]; then
-      rm -rf ramdisk/init.vanced.rc
+    if [ ! -n "$(cat ramdisk/init.rc | grep init.vanced.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.vanced.rc' ramdisk/init.rc
       cp -f $TMP/init.vanced.rc ramdisk/init.vanced.rc
       chmod 0750 ramdisk/init.vanced.rc
       chcon -h u:object_r:rootfs:s0 "ramdisk/init.vanced.rc"
@@ -3405,42 +3405,42 @@ vanced_boot_patch() {
   rm -rf $TMP_AIK/ramdisk
   # Patch root file system component
   if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/init.rc" ] && [ -n "$(cat /system_root/init.rc | grep ro.zygote)" ]; }; then
-    if [ ! -n "$(cat /system_root/init.rc | grep init.vanced.rc)" ]; then
-      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.vanced.rc' /system_root/init.rc
-      cp -f $TMP/init.vanced.rc /system_root/init.vanced.rc
-      chmod 0750 /system_root/init.vanced.rc
-      chcon -h u:object_r:rootfs:s0 "/system_root/init.vanced.rc"
-    fi
     if [ -n "$(cat /system_root/init.rc | grep init.vanced.rc)" ]; then
       rm -rf /system_root/init.vanced.rc
       cp -f $TMP/init.vanced.rc /system_root/init.vanced.rc
       chmod 0750 /system_root/init.vanced.rc
       chcon -h u:object_r:rootfs:s0 "/system_root/init.vanced.rc"
     fi
+    if [ ! -n "$(cat /system_root/init.rc | grep init.vanced.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.vanced.rc' /system_root/init.rc
+      cp -f $TMP/init.vanced.rc /system_root/init.vanced.rc
+      chmod 0750 /system_root/init.vanced.rc
+      chcon -h u:object_r:rootfs:s0 "/system_root/init.vanced.rc"
+    fi
   fi
   if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
-    if [ ! -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.vanced.rc)" ]; then
-      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.vanced.rc' /system_root/system/etc/init/hw/init.rc
-      cp -f $TMP/init.vanced.rc /system_root/system/etc/init/hw/init.vanced.rc
-      chmod 0644 /system_root/system/etc/init/hw/init.vanced.rc
-      chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.vanced.rc"
-    fi
     if [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.vanced.rc)" ]; then
       rm -rf /system_root/system/etc/init/hw/init.vanced.rc
       cp -f $TMP/init.vanced.rc /system_root/system/etc/init/hw/init.vanced.rc
       chmod 0644 /system_root/system/etc/init/hw/init.vanced.rc
       chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.vanced.rc"
     fi
+    if [ ! -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.vanced.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.vanced.rc' /system_root/system/etc/init/hw/init.rc
+      cp -f $TMP/init.vanced.rc /system_root/system/etc/init/hw/init.vanced.rc
+      chmod 0644 /system_root/system/etc/init/hw/init.vanced.rc
+      chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.vanced.rc"
+    fi
   fi
   if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
-    if [ ! -n "$(cat /system/etc/init/hw/init.rc | grep init.vanced.rc)" ]; then
-      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.vanced.rc' /system/etc/init/hw/init.rc
+    if [ -n "$(cat /system/etc/init/hw/init.rc | grep init.vanced.rc)" ]; then
+      rm -rf /system/etc/init/hw/init.vanced.rc
       cp -f $TMP/init.vanced.rc /system/etc/init/hw/init.vanced.rc
       chmod 0644 /system/etc/init/hw/init.vanced.rc
       chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.vanced.rc"
     fi
-    if [ -n "$(cat /system/etc/init/hw/init.rc | grep init.vanced.rc)" ]; then
-      rm -rf /system/etc/init/hw/init.vanced.rc
+    if [ ! -n "$(cat /system/etc/init/hw/init.rc | grep init.vanced.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.vanced.rc' /system/etc/init/hw/init.rc
       cp -f $TMP/init.vanced.rc /system/etc/init/hw/init.vanced.rc
       chmod 0644 /system/etc/init/hw/init.vanced.rc
       chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.vanced.rc"
@@ -3818,12 +3818,12 @@ set_addon_zip_conf() {
         insert_line $SYSTEM/config.prop "ro.config.vanced" after '# Begin addon properties' "ro.config.vanced"
         insert_line $SYSTEM/config.prop "ro.config.vancedmicrog" after '# Begin addon properties' "ro.config.vancedmicrog"
         # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
-        mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
+        mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore 2>/dev/null
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
           rm -rf $i/YouTube* $i/Youtube* $i/MicroGGMSCore $i/microg*
         done
         # Restore microG GMSCore after wiping
-        mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
+        mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore 2>/dev/null
       fi
       # Wipe additional YouTube Vanced components
       rm -rf $SYSTEM_AS_SYSTEM/adb $SYSTEM_AS_SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
@@ -3850,12 +3850,12 @@ set_addon_zip_conf() {
         rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
       done
       # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
-      mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
+      mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore 2>/dev/null
       for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $i/MicroGGMSCore $i/microg*
       done
       # Restore microG GMSCore after wiping
-      mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
+      mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore 2>/dev/null
       # Wipe additional YouTube Vanced components
       rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       # Check magisk
@@ -3897,12 +3897,12 @@ set_addon_zip_conf() {
         rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
       done
       # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
-      mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
+      mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore 2>/dev/null
       for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $i/MicroGGMSCore $i/microg*
       done
       # Restore microG GMSCore after wiping
-      mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
+      mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore 2>/dev/null
       # Wipe additional YouTube Vanced components
       rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       ADDON_SYS="YouTubeVanced.tar.xz"
@@ -4339,12 +4339,12 @@ set_addon_zip_sep() {
         insert_line $SYSTEM/config.prop "ro.config.vanced" after '# Begin addon properties' "ro.config.vanced"
         insert_line $SYSTEM/config.prop "ro.config.vancedmicrog" after '# Begin addon properties' "ro.config.vancedmicrog"
         # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
-        mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
+        mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore 2>/dev/null
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
           rm -rf $i/YouTube* $i/Youtube* $i/MicroGGMSCore $i/microg*
         done
         # Restore microG GMSCore after wiping
-        mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
+        mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore 2>/dev/null
       fi
       # Wipe additional YouTube Vanced components
       rm -rf $SYSTEM_AS_SYSTEM/adb $SYSTEM_AS_SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
@@ -4374,12 +4374,12 @@ set_addon_zip_sep() {
         rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
       done
       # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
-      mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
+      mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore 2>/dev/null
       for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $i/MicroGGMSCore $i/microg*
       done
       # Restore microG GMSCore after wiping
-      mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
+      mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore 2>/dev/null
       # Wipe additional YouTube Vanced components
       rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       # Check magisk
@@ -4419,12 +4419,12 @@ set_addon_zip_sep() {
         rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
       done
       # Both microG GMSCore and YouTube Vanced GMSCore has same package name. So rename microG GMSCore before wiping
-      mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore
+      mv -f $SYSTEM/priv-app/MicroGGMSCore $SYSTEM/priv-app/GMSCore 2>/dev/null
       for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
         rm -rf $i/YouTube* $i/Youtube* $i/MicroGGMSCore $i/microg*
       done
       # Restore microG GMSCore after wiping
-      mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore
+      mv -f $SYSTEM/priv-app/GMSCore $SYSTEM/priv-app/MicroGGMSCore 2>/dev/null
       # Wipe additional YouTube Vanced components
       rm -rf $ANDROID_DATA/app/com.google.android.youtube-* $ANDROID_DATA/app/*/com.google.android.youtube-* $ANDROID_DATA/adb/YouTubeStock $ANDROID_DATA/adb/YouTubeVanced $ANDROID_DATA/adb/service.d/vanced.sh
       ADDON_SYS="YouTubeVanced.tar.xz"
@@ -4522,7 +4522,7 @@ purge_whitelist_permission() {
     rm -rf $TMP/prop.default
   fi
   if [ "$device_vendorpartition" == "false" ]; then
-    if [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep control_privapp_permissions)" ]; then
+    if [ -f "$SYSTEM_AS_SYSTEM/vendor/build.prop" ] && [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep control_privapp_permissions)" ]; then
       grep -v "ro.control_privapp_permissions" $SYSTEM_AS_SYSTEM/vendor/build.prop > $TMP/build.prop
       rm -rf $SYSTEM_AS_SYSTEM/vendor/build.prop
       cp -f $TMP/build.prop $SYSTEM_AS_SYSTEM/vendor/build.prop
@@ -5090,7 +5090,7 @@ on_patch_bootimg() {
   esac
   if [ -f "header" ] && [ "$($l/grep -w -o 'androidboot.selinux=enforcing' header)" ]; then
     # Change selinux state to permissive from enforcing
-    sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
+    $l/sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
   fi
   if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
     # Change selinux state to permissive, without this bootlog script failed to execute
@@ -5116,14 +5116,14 @@ on_patch_bootimg() {
     replace_line ramdisk/default.prop 'persist.sys.usb.config=none' 'persist.sys.usb.config=adb'
   fi
   if [ -f "ramdisk/init.rc" ]; then
-    if [ ! -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
-      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' ramdisk/init.rc
+    if [ -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
+      rm -rf ramdisk/init.logcat.rc
       cp -f $TMP/init.logcat.rc ramdisk/init.logcat.rc
       chmod 0750 ramdisk/init.logcat.rc
       chcon -h u:object_r:rootfs:s0 "ramdisk/init.logcat.rc"
     fi
-    if [ -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
-      rm -rf ramdisk/init.logcat.rc
+    if [ ! -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' ramdisk/init.rc
       cp -f $TMP/init.logcat.rc ramdisk/init.logcat.rc
       chmod 0750 ramdisk/init.logcat.rc
       chcon -h u:object_r:rootfs:s0 "ramdisk/init.logcat.rc"
@@ -5155,42 +5155,42 @@ on_patch_bootimg() {
   rm -rf $TMP_AIK/ramdisk
   # Patch root file system component
   if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/init.rc" ] && [ -n "$(cat /system_root/init.rc | grep ro.zygote)" ]; }; then
-    if [ ! -n "$(cat /system_root/init.rc | grep init.logcat.rc)" ]; then
-      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' /system_root/init.rc
-      cp -f $TMP/init.logcat.rc /system_root/init.logcat.rc
-      chmod 0750 /system_root/init.logcat.rc
-      chcon -h u:object_r:rootfs:s0 "/system_root/init.logcat.rc"
-    fi
     if [ -n "$(cat /system_root/init.rc | grep init.logcat.rc)" ]; then
       rm -rf /system_root/init.logcat.rc
       cp -f $TMP/init.logcat.rc /system_root/init.logcat.rc
       chmod 0750 /system_root/init.logcat.rc
       chcon -h u:object_r:rootfs:s0 "/system_root/init.logcat.rc"
     fi
+    if [ ! -n "$(cat /system_root/init.rc | grep init.logcat.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.logcat.rc' /system_root/init.rc
+      cp -f $TMP/init.logcat.rc /system_root/init.logcat.rc
+      chmod 0750 /system_root/init.logcat.rc
+      chcon -h u:object_r:rootfs:s0 "/system_root/init.logcat.rc"
+    fi
   fi
   if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
-    if [ ! -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
-      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' /system_root/system/etc/init/hw/init.rc
-      cp -f $TMP/init.logcat.rc /system_root/system/etc/init/hw/init.logcat.rc
-      chmod 0644 /system_root/system/etc/init/hw/init.logcat.rc
-      chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.logcat.rc"
-    fi
     if [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
       rm -rf /system_root/system/etc/init/hw/init.logcat.rc
       cp -f $TMP/init.logcat.rc /system_root/system/etc/init/hw/init.logcat.rc
       chmod 0644 /system_root/system/etc/init/hw/init.logcat.rc
       chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.logcat.rc"
     fi
+    if [ ! -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' /system_root/system/etc/init/hw/init.rc
+      cp -f $TMP/init.logcat.rc /system_root/system/etc/init/hw/init.logcat.rc
+      chmod 0644 /system_root/system/etc/init/hw/init.logcat.rc
+      chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.logcat.rc"
+    fi
   fi
   if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
-    if [ ! -n "$(cat /system/system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
-      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' /system/system/etc/init/hw/init.rc
+    if [ -n "$(cat /system/system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
+      rm -rf /system/system/etc/init/hw/init.logcat.rc
       cp -f $TMP/init.logcat.rc /system/system/etc/init/hw/init.logcat.rc
       chmod 0644 /system/system/etc/init/hw/init.logcat.rc
       chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.logcat.rc"
     fi
-    if [ -n "$(cat /system/system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
-      rm -rf /system/system/etc/init/hw/init.logcat.rc
+    if [ ! -n "$(cat /system/system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' /system/system/etc/init/hw/init.rc
       cp -f $TMP/init.logcat.rc /system/system/etc/init/hw/init.logcat.rc
       chmod 0644 /system/system/etc/init/hw/init.logcat.rc
       chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.logcat.rc"
