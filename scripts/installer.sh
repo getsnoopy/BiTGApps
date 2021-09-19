@@ -2141,14 +2141,22 @@ backup_script() {
 runtime_permissions() {
   for m in /data/magisk; do
     if [ -d "$m" ]; then
-      mkdir -p /data/adb/service.d && chmod -R 0755 /data/adb
+      mkdir -p /data/adb/service.d
+      # ADB permission is limited to owner
+      chmod 0700 /data/adb
+      chmod 0755 /data/adb/service.d
       mv -f /data/magisk /data/adb/magisk
+      # Label Magisk Components
+      chcon -h u:object_r:adb_data_file:s0 "/data/adb"
+      chcon -h u:object_r:adb_data_file:s0 "/data/adb/service.d"
     fi
   done
   for m in /data/adb/magisk; do
     if [ -d "$m" ]; then
       test -d /data/adb/service.d || mkdir /data/adb/service.d
       chmod 0755 /data/adb/service.d
+      # Label Magisk Component
+      chcon -h u:object_r:adb_data_file:s0 "/data/adb/service.d"
     fi
   done
   if [ "$ZIPTYPE" == "microg" ] && [ -d "$ANDROID_DATA/adb/service.d" ]; then
@@ -5549,14 +5557,22 @@ require_new_magisk() {
     for m in /data/magisk; do
       if [ -d "$m" ]; then
         mkdir -p /data/adb/modules
-        chmod -R 0755 /data/adb
+        # ADB permission is limited to owner
+        chmod 0700 /data/adb
+        chmod 0755 /data/adb/modules
         mv -f /data/magisk /data/adb/magisk
+        # Label Magisk Components
+        chcon -h u:object_r:adb_data_file:s0 "/data/adb"
+        chcon -h u:object_r:system_file:s0 "/data/adb/modules"
+        chcon -hR u:object_r:magisk_file:s0 "/data/adb/magisk"
       fi
     done
     for m in /data/adb/magisk; do
       if [ -d "$m" ]; then
         test -d /data/adb/modules || mkdir /data/adb/modules
         chmod 0755 /data/adb/modules
+        # Label Magisk Component
+        chcon -h u:object_r:system_file:s0 "/data/adb/modules"
       fi
     done
     [ -f /data/adb/magisk/util_functions.sh ] || on_abort "! Please install Magisk v20.4+"
@@ -5570,14 +5586,22 @@ require_new_magisk_v2() {
   for m in /data/magisk; do
     if [ -d "$m" ]; then
       mkdir -p /data/adb/modules
-      chmod -R 0755 /data/adb
+      # ADB permission is limited to owner
+      chmod 0700 /data/adb
+      chmod 0755 /data/adb/modules
       mv -f /data/magisk /data/adb/magisk
+      # Label Magisk Components
+      chcon -h u:object_r:adb_data_file:s0 "/data/adb"
+      chcon -h u:object_r:system_file:s0 "/data/adb/modules"
+      chcon -hR u:object_r:magisk_file:s0 "/data/adb/magisk"
     fi
   done
   for m in /data/adb/magisk; do
     if [ -d "$m" ]; then
       test -d /data/adb/modules || mkdir /data/adb/modules
       chmod 0755 /data/adb/modules
+      # Label Magisk Component
+      chcon -h u:object_r:system_file:s0 "/data/adb/modules"
     fi
   done
   [ -f /data/adb/magisk/util_functions.sh ] || SKIP_VANCED_INSTALL="true"
