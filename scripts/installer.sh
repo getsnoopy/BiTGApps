@@ -2925,21 +2925,16 @@ dps_sound_model() {
 
 gboard_usr() {
   # Set default packages and unpack
-  ZIP="zip/usr_share.tar.xz zip/usr_srec.tar.xz"
+  ZIP="zip/usr_share.tar.xz"
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
   tar -xf $ZIP_FILE/usr_share.tar.xz -C $TMP_USR_SHARE
-  tar -xf $ZIP_FILE/usr_srec.tar.xz -C $TMP_USR_SREC
   if [ "$supported_module_config" == "false" ]; then
     # Create components
     test -d $SYSTEM_AS_SYSTEM/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_AS_SYSTEM/usr/share/ime/google/d3_lms
-    test -d $SYSTEM_AS_SYSTEM/usr/srec/en-US || mkdir -p $SYSTEM_AS_SYSTEM/usr/srec/en-US
     # Install packages
     for share in $TMP_USR_SHARE/*; do
       cp -f $share $SYSTEM_AS_SYSTEM/usr/share/ime/google/d3_lms
-    done
-    for srec in $TMP_USR_SREC/*; do
-      cp -f $srec $SYSTEM_AS_SYSTEM/usr/srec/en-US
     done
     # Recursively set folder permission
     find $SYSTEM_AS_SYSTEM/usr -type d | xargs chmod 0755
@@ -2947,11 +2942,41 @@ gboard_usr() {
   if [ "$supported_module_config" == "true" ]; then
     # Create components
     test -d $SYSTEM_SYSTEM/usr/share/ime/google/d3_lms || mkdir -p $SYSTEM_SYSTEM/usr/share/ime/google/d3_lms
-    test -d $SYSTEM_SYSTEM/usr/srec/en-US || mkdir -p $SYSTEM_SYSTEM/usr/srec/en-US
     # Install packages
     for share in $TMP_USR_SHARE/*; do
       cp -f $share $SYSTEM_SYSTEM/usr/share/ime/google/d3_lms
     done
+    # Recursively set folder permission
+    find $SYSTEM_SYSTEM/usr -type d | xargs chmod 0755
+  fi
+  # Wipe temporary components
+  rm -rf $ZIP $TMP_USR_SHARE
+}
+
+speech_common() {
+  # Set default packages and unpack
+  ZIP="zip/usr_srec.tar.xz"
+  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # Unpack system files
+  tar -xf $ZIP_FILE/usr_srec.tar.xz -C $TMP_USR_SREC
+  if [ "$supported_module_config" == "false" ]; then
+    # Module can be installed from Assistant or TTS package
+    rm -rf $SYSTEM_AS_SYSTEM/usr/srec/en-US
+    # Create components
+    test -d $SYSTEM_AS_SYSTEM/usr/srec/en-US || mkdir -p $SYSTEM_AS_SYSTEM/usr/srec/en-US
+    # Install packages
+    for srec in $TMP_USR_SREC/*; do
+      cp -f $srec $SYSTEM_AS_SYSTEM/usr/srec/en-US
+    done
+    # Recursively set folder permission
+    find $SYSTEM_AS_SYSTEM/usr -type d | xargs chmod 0755
+  fi
+  if [ "$supported_module_config" == "true" ]; then
+    # Module can be installed from Assistant or TTS package
+    rm -rf $SYSTEM_SYSTEM/usr/srec/en-US
+    # Create components
+    test -d $SYSTEM_SYSTEM/usr/srec/en-US || mkdir -p $SYSTEM_SYSTEM/usr/srec/en-US
+    # Install packages
     for srec in $TMP_USR_SREC/*; do
       cp -f $srec $SYSTEM_SYSTEM/usr/srec/en-US
     done
@@ -2959,7 +2984,7 @@ gboard_usr() {
     find $SYSTEM_SYSTEM/usr -type d | xargs chmod 0755
   fi
   # Wipe temporary components
-  rm -rf $ZIP $TMP_USR_SHARE $TMP_USR_SREC
+  rm -rf $ZIP $TMP_USR_SREC
 }
 
 maps_config() {
@@ -3469,6 +3494,7 @@ set_addon_zip_conf() {
       ADDON_CORE="Velvet.tar.xz"
       PKG_CORE="Velvet"
       target_core
+      speech_common
       set_google_assistant_default
       # Enable Google Assistant
       insert_line $SYSTEM_AS_SYSTEM/build.prop "ro.opa.eligible_device=true" after 'net.bt.name=Android' 'ro.opa.eligible_device=true'
@@ -3817,6 +3843,7 @@ set_addon_zip_conf() {
       ADDON_SYS="GoogleTTSPrebuilt.tar.xz"
       PKG_SYS="GoogleTTSPrebuilt"
       target_sys
+      speech_common
     else
       ui_print "! Skip installing TTS Google"
     fi
@@ -3969,6 +3996,7 @@ set_addon_zip_sep() {
         PKG_CORE="Velvet"
       fi
       target_core
+      speech_common
       set_google_assistant_default
       # Enable Google Assistant
       insert_line $SYSTEM_AS_SYSTEM/build.prop "ro.opa.eligible_device=true" after 'net.bt.name=Android' 'ro.opa.eligible_device=true'
@@ -4340,6 +4368,7 @@ set_addon_zip_sep() {
         PKG_SYS="GoogleTTSPrebuilt"
       fi
       target_sys
+      speech_common
     fi
     if [ "$TARGET_VANCED_MICROG" == "true" ]; then
       ui_print "- Installing YouTube Vanced"
