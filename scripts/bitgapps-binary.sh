@@ -348,7 +348,7 @@ fi
 
 # Set vendor mount point
 device_vendorpartition="false"
-if [ "$BOOTMODE" == "false" ] && [ "$($l/grep -w -o /vendor $fstab)" ]; then
+if [ "$BOOTMODE" == "false" ] && [ "$($TMP/grep -w -o /vendor $fstab)" ]; then
   device_vendorpartition="true"
   VENDOR="/vendor"
 fi
@@ -366,13 +366,13 @@ if [ "$BOOTMODE" == "false" ]; then
       mount -o bind /data/media/0 /sdcard
     fi
   fi
-  if [ "$($l/grep -w -o /cache $fstab)" ]; then
+  if [ "$($TMP/grep -w -o /cache $fstab)" ]; then
     mount -o ro -t auto /cache > /dev/null 2>&1
     mount -o rw,remount -t auto /cache > /dev/null 2>&1
   fi
   mount -o ro -t auto /persist > /dev/null 2>&1
   mount -o rw,remount -t auto /persist > /dev/null 2>&1
-  if [ "$($l/grep -w -o /metadata $fstab)" ]; then
+  if [ "$($TMP/grep -w -o /metadata $fstab)" ]; then
     mount -o ro -t auto /metadata > /dev/null 2>&1
     mount -o rw,remount -t auto /metadata > /dev/null 2>&1
   fi
@@ -441,7 +441,7 @@ if [ "$BOOTMODE" == "false" ]; then
           mount -o rw,remount -t auto $VENDOR_MAPPER $VENDOR > /dev/null 2>&1
         fi
       fi
-      if [ "$($l/grep -w -o /product $fstab)" ]; then
+      if [ "$($TMP/grep -w -o /product $fstab)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
@@ -452,7 +452,7 @@ if [ "$BOOTMODE" == "false" ]; then
           mount -o rw,remount -t auto $PRODUCT_MAPPER /product > /dev/null 2>&1
         fi
       fi
-      if [ "$($l/grep -w -o /system_ext $fstab)" ]; then
+      if [ "$($TMP/grep -w -o /system_ext $fstab)" ]; then
         ui_print "- Mounting /system_ext"
         mount -o ro -t auto /dev/block/mapper/system_ext$slot /system_ext > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/system_ext$slot /system_ext > /dev/null 2>&1
@@ -476,12 +476,12 @@ if [ "$BOOTMODE" == "false" ]; then
         mount -o ro -t auto /dev/block/mapper/vendor $VENDOR > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/vendor $VENDOR > /dev/null 2>&1
       fi
-      if [ "$($l/grep -w -o /product $fstab)" ]; then
+      if [ "$($TMP/grep -w -o /product $fstab)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /dev/block/mapper/product /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/product /product > /dev/null 2>&1
       fi
-      if [ "$($l/grep -w -o /system_ext $fstab)" ]; then
+      if [ "$($TMP/grep -w -o /system_ext $fstab)" ]; then
         ui_print "- Mounting /system_ext"
         mount -o ro -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
@@ -514,7 +514,7 @@ if [ "$BOOTMODE" == "false" ]; then
         mount -o ro -t auto $VENDOR > /dev/null 2>&1
         mount -o rw,remount -t auto $VENDOR > /dev/null 2>&1
       fi
-      if [ "$($l/grep -w -o /product $fstab)" ]; then
+      if [ "$($TMP/grep -w -o /product $fstab)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /product > /dev/null 2>&1
         mount -o rw,remount -t auto /product > /dev/null 2>&1
@@ -535,7 +535,7 @@ if [ "$BOOTMODE" == "false" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
       fi
-      if [ "$($l/grep -w -o /product $fstab)" ]; then
+      if [ "$($TMP/grep -w -o /product $fstab)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
@@ -655,7 +655,7 @@ if [ "$BOOTMODE" == "false" ] && [ "$device_vendorpartition" == "true" ]; then
 fi
 
 # Check product partition mount status
-if [ "$BOOTMODE" == "false" ] && [ "$($l/grep -w -o /product $fstab)" ]; then
+if [ "$BOOTMODE" == "false" ] && [ "$($TMP/grep -w -o /product $fstab)" ]; then
   if ! is_mounted /product; then
     ui_print "! Cannot mount /product. Aborting..."
     ui_print "! Installation failed"
@@ -665,7 +665,7 @@ if [ "$BOOTMODE" == "false" ] && [ "$($l/grep -w -o /product $fstab)" ]; then
 fi
 
 # Check system_ext partition mount status
-if [ "$BOOTMODE" == "false" ] && [ "$($l/grep -w -o /system_ext $fstab)" ]; then
+if [ "$BOOTMODE" == "false" ] && [ "$($TMP/grep -w -o /system_ext $fstab)" ]; then
   if ! is_mounted /system_ext; then
     ui_print "! Cannot mount /system_ext. Aborting..."
     ui_print "! Installation failed"
@@ -696,10 +696,10 @@ if [ "$BOOTMODE" == "false" ]; then
   if [ "$device_vendorpartition" == "true" ]; then
     vendor_as_rw=`$TMP/grep -v '#' /proc/mounts | $TMP/grep -E '/vendor?[^a-zA-Z]' | $TMP/grep -oE 'rw' | head -n 1`
   fi
-  if [ "$($l/grep -w -o /product $fstab)" ]; then
+  if [ "$($TMP/grep -w -o /product $fstab)" ]; then
     product_as_rw=`$TMP/grep -v '#' /proc/mounts | $TMP/grep -E '/product?[^a-zA-Z]' | $TMP/grep -oE 'rw' | head -n 1`
   fi
-  if [ "$($l/grep -w -o /system_ext $fstab)" ]; then
+  if [ "$($TMP/grep -w -o /system_ext $fstab)" ]; then
     system_ext_as_rw=`$TMP/grep -v '#' /proc/mounts | $TMP/grep -E '/system_ext?[^a-zA-Z]' | $TMP/grep -oE 'rw' | head -n 1`
   fi
 fi
@@ -737,7 +737,7 @@ if [ "$device_vendorpartition" == "true" ]; then
 fi
 
 # Check Product RW status
-if [ "$BOOTMODE" == "false" ] && [ "$($l/grep -w -o /product $fstab)" ]; then
+if [ "$BOOTMODE" == "false" ] && [ "$($TMP/grep -w -o /product $fstab)" ]; then
   if [ ! "$product_as_rw" == "rw" ]; then
     ui_print "! Read-only /product partition. Aborting..."
     ui_print "! Installation failed"
@@ -756,7 +756,7 @@ if [ "$BOOTMODE" == "true" ] && [ "$($TMP/grep -w -o /product /proc/mounts)" ]; 
 fi
 
 # Check SystemExt RW status
-if [ "$BOOTMODE" == "false" ] && [ "$($l/grep -w -o /system_ext $fstab)" ]; then
+if [ "$BOOTMODE" == "false" ] && [ "$($TMP/grep -w -o /system_ext $fstab)" ]; then
   if [ ! "$system_ext_as_rw" == "rw" ]; then
     ui_print "! Read-only /system_ext partition. Aborting..."
     ui_print "! Installation failed"
