@@ -151,13 +151,13 @@ if [ "$BOOTMODE" == "false" ]; then
       mount -o bind /data/media/0 /sdcard
     fi
   fi
-  if [ -n "$(cat $fstab | grep /cache)" ]; then
+  if [ "$($l/grep -w -o /cache $fstab)" ]; then
     mount -o ro -t auto /cache > /dev/null 2>&1
     mount -o rw,remount -t auto /cache > /dev/null 2>&1
   fi
   mount -o ro -t auto /persist > /dev/null 2>&1
   mount -o rw,remount -t auto /persist > /dev/null 2>&1
-  if [ -n "$(cat $fstab | grep /metadata)" ]; then
+  if [ "$($l/grep -w -o /metadata $fstab)" ]; then
     mount -o ro -t auto /metadata > /dev/null 2>&1
     mount -o rw,remount -t auto /metadata > /dev/null 2>&1
   fi

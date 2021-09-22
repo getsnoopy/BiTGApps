@@ -178,7 +178,7 @@ on_partition_check() {
 # Set vendor mount point
 vendor_mnt() {
   device_vendorpartition="false"
-  if [ -n "$(cat $fstab | grep /vendor)" ]; then
+  if [ "$($l/grep -w -o /vendor $fstab)" ]; then
     device_vendorpartition="true"
     VENDOR="/vendor"
   fi
@@ -317,7 +317,7 @@ mount_all() {
       mount -o bind /data/media/0 /sdcard
     fi
   fi
-  if [ -n "$(cat $fstab | grep /cache)" ]; then
+  if [ "$($l/grep -w -o /cache $fstab)" ]; then
     mount -o ro -t auto /cache > /dev/null 2>&1
     mount -o rw,remount -t auto /cache
   fi
@@ -378,7 +378,7 @@ mount_all() {
           mount -o rw,remount -t auto $VENDOR_MAPPER $VENDOR > /dev/null 2>&1
         fi
       fi
-      if [ -n "$(cat $fstab | grep /product)" ]; then
+      if [ "$($l/grep -w -o /product $fstab)" ]; then
         mount -o ro -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
         is_mounted /product || PRODUCT_DM_MOUNT="true"
@@ -388,7 +388,7 @@ mount_all() {
           mount -o rw,remount -t auto $PRODUCT_MAPPER /product > /dev/null 2>&1
         fi
       fi
-      if [ -n "$(cat $fstab | grep /system_ext)" ]; then
+      if [ "$($l/grep -w -o /system_ext $fstab)" ]; then
         mount -o ro -t auto /dev/block/mapper/system_ext$slot /system_ext > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/system_ext$slot /system_ext > /dev/null 2>&1
         is_mounted /system_ext || SYSTEMEXT_DM_MOUNT="true"
@@ -409,11 +409,11 @@ mount_all() {
         mount -o ro -t auto /dev/block/mapper/vendor $VENDOR > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/vendor $VENDOR > /dev/null 2>&1
       fi
-      if [ -n "$(cat $fstab | grep /product)" ]; then
+      if [ "$($l/grep -w -o /product $fstab)" ]; then
         mount -o ro -t auto /dev/block/mapper/product /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/product /product > /dev/null 2>&1
       fi
-      if [ -n "$(cat $fstab | grep /system_ext)" ]; then
+      if [ "$($l/grep -w -o /system_ext $fstab)" ]; then
         mount -o ro -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
       fi
@@ -444,7 +444,7 @@ mount_all() {
         mount -o ro -t auto $VENDOR > /dev/null 2>&1
         mount -o rw,remount -t auto $VENDOR > /dev/null 2>&1
       fi
-      if [ -n "$(cat $fstab | grep /product)" ]; then
+      if [ "$($l/grep -w -o /product $fstab)" ]; then
         mount -o ro -t auto /product > /dev/null 2>&1
         mount -o rw,remount -t auto /product > /dev/null 2>&1
       fi
@@ -462,7 +462,7 @@ mount_all() {
         mount -o ro -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
       fi
-      if [ -n "$(cat $fstab | grep /product)" ]; then
+      if [ "$($l/grep -w -o /product $fstab)" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
       fi

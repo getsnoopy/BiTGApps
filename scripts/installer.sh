@@ -154,7 +154,7 @@ set_bb() {
 # Create busybox backup in multiple locations to overcome encryption conflict
 mk_busybox_backup_v1() {
   # Backup busybox in cache partition for OTA script
-  if [ -n "$(cat $fstab | grep /cache)" ]; then
+  if [ "$($l/grep -w -o /cache $fstab)" ]; then
     rm -rf /cache/busybox && mkdir /cache/busybox
     cp -f $TMP/busybox-arm /cache/busybox/busybox-arm
     chmod -R 0755 /cache/busybox
@@ -166,7 +166,7 @@ mk_busybox_backup_v1() {
     chmod -R 0755 /persist/busybox
   fi
   # Backup busybox in metadata partition for OTA script
-  if [ -n "$(cat $fstab | grep /metadata)" ]; then
+  if [ "$($l/grep -w -o /metadata $fstab)" ]; then
     rm -rf /metadata/busybox && mkdir /metadata/busybox
     cp -f $TMP/busybox-arm /metadata/busybox/busybox-arm
     chmod -R 0755 /metadata/busybox
@@ -301,7 +301,7 @@ on_fstab_check() {
 # Set vendor mount point
 vendor_mnt() {
   device_vendorpartition="false"
-  if [ "$BOOTMODE" == "false" ] && [ -n "$(cat $fstab | grep /vendor)" ]; then
+  if [ "$BOOTMODE" == "false" ] && [ "$($l/grep -w -o /vendor $fstab)" ]; then
     device_vendorpartition="true"
     VENDOR="/vendor"
   fi
@@ -458,13 +458,13 @@ mount_all() {
       mount -o bind /data/media/0 /sdcard
     fi
   fi
-  if [ -n "$(cat $fstab | grep /cache)" ]; then
+  if [ "$($l/grep -w -o /cache $fstab)" ]; then
     mount -o ro -t auto /cache > /dev/null 2>&1
     mount -o rw,remount -t auto /cache > /dev/null 2>&1
   fi
   mount -o ro -t auto /persist > /dev/null 2>&1
   mount -o rw,remount -t auto /persist > /dev/null 2>&1
-  if [ -n "$(cat $fstab | grep /metadata)" ]; then
+  if [ "$($l/grep -w -o /metadata $fstab)" ]; then
     mount -o ro -t auto /metadata > /dev/null 2>&1
     mount -o rw,remount -t auto /metadata > /dev/null 2>&1
   fi
@@ -535,7 +535,7 @@ mount_all() {
         fi
         is_mounted $VENDOR || on_abort "! Cannot mount $VENDOR. Aborting..."
       fi
-      if [ -n "$(cat $fstab | grep /product)" ]; then
+      if [ "$($l/grep -w -o /product $fstab)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
@@ -547,7 +547,7 @@ mount_all() {
         fi
         is_mounted /product || on_abort "! Cannot mount /product. Aborting..."
       fi
-      if [ -n "$(cat $fstab | grep /system_ext)" ]; then
+      if [ "$($l/grep -w -o /system_ext $fstab)" ]; then
         ui_print "- Mounting /system_ext"
         mount -o ro -t auto /dev/block/mapper/system_ext$slot /system_ext > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/system_ext$slot /system_ext > /dev/null 2>&1
@@ -574,13 +574,13 @@ mount_all() {
         mount -o rw,remount -t auto /dev/block/mapper/vendor $VENDOR > /dev/null 2>&1
         is_mounted $VENDOR || on_abort "! Cannot mount $VENDOR. Aborting..."
       fi
-      if [ -n "$(cat $fstab | grep /product)" ]; then
+      if [ "$($l/grep -w -o /product $fstab)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /dev/block/mapper/product /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/product /product > /dev/null 2>&1
         is_mounted /product || on_abort "! Cannot mount /product. Aborting..."
       fi
-      if [ -n "$(cat $fstab | grep /system_ext)" ]; then
+      if [ "$($l/grep -w -o /system_ext $fstab)" ]; then
         ui_print "- Mounting /system_ext"
         mount -o ro -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
@@ -616,7 +616,7 @@ mount_all() {
         mount -o rw,remount -t auto $VENDOR > /dev/null 2>&1
         is_mounted $VENDOR || on_abort "! Cannot mount $VENDOR. Aborting..."
       fi
-      if [ -n "$(cat $fstab | grep /product)" ]; then
+      if [ "$($l/grep -w -o /product $fstab)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /product > /dev/null 2>&1
         mount -o rw,remount -t auto /product > /dev/null 2>&1
@@ -640,7 +640,7 @@ mount_all() {
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
         is_mounted $VENDOR || on_abort "! Cannot mount $VENDOR. Aborting..."
       fi
-      if [ -n "$(cat $fstab | grep /product)" ]; then
+      if [ "$($l/grep -w -o /product $fstab)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
@@ -681,11 +681,11 @@ check_rw_status() {
       vendor_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/vendor?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
       if [ ! "$vendor_as_rw" == "rw" ]; then ui_print "! Read-only vendor partition. Continue..."; fi
     fi
-    if [ -n "$(cat $fstab | grep /product)" ]; then
+    if [ "$($l/grep -w -o /product $fstab)" ]; then
       product_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/product?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
       if [ ! "$product_as_rw" == "rw" ]; then on_abort "! Read-only /product partition. Aborting..."; fi
     fi
-    if [ -n "$(cat $fstab | grep /system_ext)" ]; then
+    if [ "$($l/grep -w -o /system_ext $fstab)" ]; then
       system_ext_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/system_ext?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
       if [ ! "$system_ext_as_rw" == "rw" ]; then on_abort "! Read-only /system_ext partition. Aborting..."; fi
     fi

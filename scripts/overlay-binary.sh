@@ -151,13 +151,13 @@ if [ "$BOOTMODE" == "false" ]; then
       mount -o bind /data/media/0 /sdcard
     fi
   fi
-  if [ -n "$(cat $fstab | grep /cache)" ]; then
+  if [ "$($l/grep -w -o /cache $fstab)" ]; then
     mount -o ro -t auto /cache > /dev/null 2>&1
     mount -o rw,remount -t auto /cache > /dev/null 2>&1
   fi
   mount -o ro -t auto /persist > /dev/null 2>&1
   mount -o rw,remount -t auto /persist > /dev/null 2>&1
-  if [ -n "$(cat $fstab | grep /metadata)" ]; then
+  if [ "$($l/grep -w -o /metadata $fstab)" ]; then
     mount -o ro -t auto /metadata > /dev/null 2>&1
     mount -o rw,remount -t auto /metadata > /dev/null 2>&1
   fi
@@ -211,7 +211,7 @@ if [ "$BOOTMODE" == "false" ]; then
         mount -o ro -t auto $SYSTEM_MAPPER $ANDROID_ROOT > /dev/null 2>&1
         mount -o rw,remount -t auto $SYSTEM_MAPPER $ANDROID_ROOT > /dev/null 2>&1
       fi
-      if [ -n "$(cat $fstab | grep /product)" ]; then
+      if [ "$($l/grep -w -o /product $fstab)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
@@ -230,7 +230,7 @@ if [ "$BOOTMODE" == "false" ]; then
       ui_print "- Mounting /system"
       mount -o ro -t auto /dev/block/mapper/system $ANDROID_ROOT > /dev/null 2>&1
       mount -o rw,remount -t auto /dev/block/mapper/system $ANDROID_ROOT > /dev/null 2>&1
-      if [ -n "$(cat $fstab | grep /product)" ]; then
+      if [ "$($l/grep -w -o /product $fstab)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /dev/block/mapper/product /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/product /product > /dev/null 2>&1
@@ -258,7 +258,7 @@ if [ "$BOOTMODE" == "false" ]; then
         # Mount using block device
         mount $BLK $ANDROID_ROOT > /dev/null 2>&1
       fi
-      if [ -n "$(cat $fstab | grep /product)" ]; then
+      if [ "$($l/grep -w -o /product $fstab)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /product > /dev/null 2>&1
         mount -o rw,remount -t auto /product > /dev/null 2>&1
@@ -274,7 +274,7 @@ if [ "$BOOTMODE" == "false" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
       fi
-      if [ -n "$(cat $fstab | grep /product)" ]; then
+      if [ "$($l/grep -w -o /product $fstab)" ]; then
         ui_print "- Mounting /product"
         mount -o ro -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
@@ -383,7 +383,7 @@ if [ "$BOOTMODE" == "false" ]; then
 fi
 
 # Check product partition mount status
-if [ "$BOOTMODE" == "false" ] && [ -n "$(cat $fstab | grep /product)" ]; then
+if [ "$BOOTMODE" == "false" ] && [ "$($l/grep -w -o /product $fstab)" ]; then
   if ! is_mounted /product; then
     ui_print "! Cannot mount /product. Aborting..."
     ui_print "! Installation failed"
@@ -411,7 +411,7 @@ if [ "$BOOTMODE" == "false" ]; then
   if [ "$($TMP/grep -w -o /system $fstab)" ]; then
     system_as_rw=`$TMP/grep -v '#' /proc/mounts | $TMP/grep -E '/system?[^a-zA-Z]' | $TMP/grep -oE 'rw' | head -n 1`
   fi
-  if [ -n "$(cat $fstab | grep /product)" ]; then
+  if [ "$($l/grep -w -o /product $fstab)" ]; then
     product_as_rw=`$TMP/grep -v '#' /proc/mounts | $TMP/grep -E '/product?[^a-zA-Z]' | $TMP/grep -oE 'rw' | head -n 1`
   fi
 fi
@@ -436,7 +436,7 @@ if [ ! "$system_as_rw" == "rw" ]; then
 fi
 
 # Check Product RW status
-if [ "$BOOTMODE" == "false" ] && [ -n "$(cat $fstab | grep /product)" ]; then
+if [ "$BOOTMODE" == "false" ] && [ "$($l/grep -w -o /product $fstab)" ]; then
   if [ ! "$product_as_rw" == "rw" ]; then
     ui_print "! Read-only /product partition. Aborting..."
     ui_print "! Installation failed"
