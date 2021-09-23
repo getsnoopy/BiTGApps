@@ -28,6 +28,20 @@ $BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMO
 # Change selinux state to permissive
 setenforce 0
 
+# Data unencrypted
+install -d /data/unencrypted/key
+chmod -R 0700 /data/unencrypted
+chcon -hR u:object_r:unencrypted_data_file:s0 "/data/unencrypted"
+
+# Set unencrypted
+SECURE_DIR="/data/unencrypted"
+
+# Skip checking secure backup
+SKIP_SECURE_CHECK="true"
+
+# Skip restoring secure backup
+SKIP_SECURE_RESTORE="false"
+
 # Create temporary log directory
 test -d $TMP/bitgapps || mkdir $TMP/bitgapps
 
@@ -134,10 +148,16 @@ set_bb() {
       done
       # Set busybox components in environment
       export PATH="$l:$PATH"
-      # Backup busybox in data partition for OTA script
-      rm -rf $ANDROID_DATA/busybox && mkdir $ANDROID_DATA/busybox
-      cp -f $TMP/busybox-arm $ANDROID_DATA/busybox/busybox-arm
-      chmod -R 0755 $ANDROID_DATA/busybox
+      if [ ! -z "$(ls -A $ANDROID_DATA)" ]; then
+        # Backup busybox in data partition for OTA script
+        rm -rf $ANDROID_DATA/busybox && mkdir $ANDROID_DATA/busybox
+        cp -f $TMP/busybox-arm $ANDROID_DATA/busybox/busybox-arm
+        chmod -R 0755 $ANDROID_DATA/busybox
+        # Backup busybox in unencrypted data
+        rm -rf $SECURE_DIR/busybox && mkdir $SECURE_DIR/busybox
+        cp -f $TMP/busybox-arm $SECURE_DIR/busybox/busybox-arm
+        chmod -R 0755 $SECURE_DIR/busybox
+      fi
     fi
   fi
   if [ "$ARCH" == "x86" ] || [ "$ARCH" == "x86_64" ]; then
@@ -458,6 +478,18 @@ mount_all() {
       mount -o bind /data/media/0 /sdcard
     fi
   fi
+  # TODO: Backup busybox in data partition for OTA script
+  rm -rf $ANDROID_DATA/busybox && mkdir $ANDROID_DATA/busybox
+  cp -f $TMP/busybox-arm $ANDROID_DATA/busybox/busybox-arm
+  chmod -R 0755 $ANDROID_DATA/busybox
+  # TODO: Data unencrypted
+  install -d /data/unencrypted/key
+  chmod -R 0700 /data/unencrypted
+  chcon -hR u:object_r:unencrypted_data_file:s0 "/data/unencrypted"
+  # TODO: Backup busybox in unencrypted data
+  rm -rf $SECURE_DIR/busybox && mkdir $SECURE_DIR/busybox
+  cp -f $TMP/busybox-arm $SECURE_DIR/busybox/busybox-arm
+  chmod -R 0755 $SECURE_DIR/busybox
   if [ "$($l/grep -w -o /cache $fstab)" ]; then
     mount -o ro -t auto /cache > /dev/null 2>&1
     mount -o rw,remount -t auto /cache > /dev/null 2>&1
@@ -752,7 +784,21 @@ on_backup_target() {
   $BACKUP_V3 && ui_print "- Target backup: v3"
 }
 
+on_backup_target_v2() {
+  if [ -z "$(ls -A $SECURE_DIR/.backup)" ]; then SEC_BACKUP_V1="false"; else SEC_BACKUP_V1="true"; fi
+  if [ "$BACKUP_V1" == "true" ]; then rm -rf $SECURE_DIR/.backup/.backup; fi
+  if [ -z "$(ls -A $SECURE_DIR/.backup)" ]; then SEC_BACKUP_V2="false"; else SEC_BACKUP_V2="true"; fi
+  if [ "$BACKUP_V2" == "false" ]; then SEC_BACKUP_V3="true"; else SEC_BACKUP_V3="false"; fi
+  # Re-create dummy file for detection over dirty installation
+  touch $SECURE_DIR/.backup/.backup && chmod 0644 $SECURE_DIR/.backup/.backup
+  # Print backup type
+  $SEC_BACKUP_V2 && ui_print "- Secure backup: v2"
+  $SEC_BACKUP_V3 && ui_print "- Secure backup: v3"
+}
+
 backup_target() { if [ ! -d "$ANDROID_DATA/.backup" ]; then ui_print "- Target backup: v1"; else on_backup_target; fi; }
+
+backup_target_v2() { if [ ! -d "$ANDROID_DATA/.backup" ]; then ui_print "- Secure backup: v1"; else on_backup_target_v2; fi; }
 
 # Check existence of build property
 on_build_prop() { if [ ! "$($l/grep -w -o 'ro.gapps.release_tag' $SYSTEM/build.prop)" ] && [ ! -f "$SYSTEM/etc/g.prop" ]; then BUILDPROP="false"; else BUILDPROP="true"; fi; }
@@ -760,6 +806,11 @@ on_build_prop() { if [ ! "$($l/grep -w -o 'ro.gapps.release_tag' $SYSTEM/build.p
 check_build_prop() {
   if "$TARGET_DIRTY_INSTALL" && [ -f "$ANDROID_DATA/.backup/.backup" ]; then
     on_build_prop
+    # Skip checking secure backup
+    SKIP_SECURE_CHECK="true"
+  fi
+  if [ "$SKIP_SECURE_CHECK" == "false" ]; then
+    if "$TARGET_DIRTY_INSTALL" && [ -f "$SECURE_DIR/.backup/.backup" ]; then on_build_prop; fi
   fi
   case $BUILDPROP in
     false )
@@ -1402,9 +1453,11 @@ rwg_dummy_backup() {
   if [ "$TARGET_RWG_STATUS" == "true" ] && [ "$supported_module_config" == "false" ]; then
     ui_print "- Backup Non-GApps components"
     test -d $ANDROID_DATA/.backup || mkdir -p $ANDROID_DATA/.backup
-    chmod 0755 $ANDROID_DATA/.backup
-    # Create dummy file for detection over dirty installation
+    test -d $SECURE_DIR/.backup || mkdir -p $SECURE_DIR/.backup
+    chmod 0755 $ANDROID_DATA/.backup; chmod 0755 $SECURE_DIR/.backup
+    # Create dummy file
     touch $ANDROID_DATA/.backup/.backup && chmod 0644 $ANDROID_DATA/.backup/.backup
+    touch $SECURE_DIR/.backup/.backup && chmod 0644 $SECURE_DIR/.backup/.backup
   fi
 }
 
@@ -1508,8 +1561,8 @@ system_pathmap() {
     for i in \
       $SYSTEM_ETC_DEFAULT \
       $SYSTEM_ETC_PREF \
-      $SYSTEM_OVERLAY 2>/dev/null; do
-      test -d $i || mkdir $i
+      $SYSTEM_OVERLAY; do
+      test -d $i || mkdir $i 2>/dev/null
       chmod 0755 $i
       chcon -h u:object_r:system_file:s0 "$i"
     done
@@ -2650,6 +2703,39 @@ pre_restore_pkg() {
 post_restore_pkg() {
   if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$supported_module_config" == "false" ]; then
     for f in "$ANDROID_DATA/.backup"; do
+      if [ "$supported_chrome_wipe" == "true" ] || [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
+        rm -rf $SYSTEM/app/webview && cp -fR $f/webview $SYSTEM/app/webview > /dev/null 2>&1
+      fi
+      if [ "$supported_contacts_wipe" == "true" ] || [ "$TARGET_CONTACTS_GOOGLE" == "true" ]; then
+        rm -rf $SYSTEM/priv-app/Contacts && cp -fR $f/Contacts $SYSTEM/priv-app/Contacts > /dev/null 2>&1
+        cp -f $f/com.android.contacts.xml $SYSTEM/etc/permissions > /dev/null 2>&1
+      fi
+      if [ "$supported_dialer_wipe" == "true" ] || [ "$TARGET_DIALER_GOOGLE" == "true" ]; then
+        rm -rf $SYSTEM/priv-app/Dialer && cp -fR $f/Dialer $SYSTEM/priv-app/Dialer > /dev/null 2>&1
+        cp -f $f/com.android.dialer.xml $SYSTEM/etc/permissions > /dev/null 2>&1
+      fi
+      if [ "$supported_gboard_wipe" == "true" ] || [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
+        rm -rf $SYSTEM/app/LatinIME && cp -fR $f/LatinIME $SYSTEM/app/LatinIME > /dev/null 2>&1
+      fi
+      if [ "$supported_launcher_wipe" == "true" ] || [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
+        rm -rf $SYSTEM/priv-app/Launcher3 && cp -fR $f/Launcher3 $SYSTEM/priv-app/Launcher3 > /dev/null 2>&1
+        rm -rf $SYSTEM/priv-app/Launcher3QuickStep && cp -fR $f/Launcher3QuickStep $SYSTEM/priv-app/Launcher3QuickStep > /dev/null 2>&1
+        rm -rf $SYSTEM/priv-app/NexusLauncherRelease && cp -fR $f/NexusLauncherRelease $SYSTEM/priv-app/NexusLauncherRelease > /dev/null 2>&1
+        rm -rf $SYSTEM/priv-app/QuickStep && cp -fR $f/QuickStep $SYSTEM/priv-app/QuickStep > /dev/null 2>&1
+        rm -rf $SYSTEM/priv-app/QuickStepLauncher && cp -fR $f/QuickStepLauncher $SYSTEM/priv-app/QuickStepLauncher > /dev/null 2>&1
+        rm -rf $SYSTEM/priv-app/TrebuchetQuickStep && cp -fR $f/TrebuchetQuickStep $SYSTEM/priv-app/TrebuchetQuickStep > /dev/null 2>&1
+        rm -rf $SYSTEM/priv-app/QuickAccessWallet && cp -fR $f/QuickAccessWallet $SYSTEM/priv-app/QuickAccessWallet > /dev/null 2>&1
+        cp -f $f/com.android.launcher3.xml $SYSTEM/etc/permissions > /dev/null 2>&1
+        cp -f $f/privapp_whitelist_com.android.launcher3-ext.xml $SYSTEM/etc/permissions > /dev/null 2>&1
+      fi
+      if [ "$supported_messages_wipe" == "true" ] || [ "$TARGET_MESSAGES_GOOGLE" == "true" ]; then
+        rm -rf rm -rf $SYSTEM/app/messaging && cp -fR $f/messaging $SYSTEM/app/messaging > /dev/null 2>&1
+      fi
+      if [ "$supported_photos_wipe" == "true" ] || [ "$TARGET_PHOTOS_GOOGLE" == "true" ]; then
+        rm -rf rm -rf $SYSTEM/app/Gallery2 && cp -fR $f/Gallery2 $SYSTEM/app/Gallery2 > /dev/null 2>&1
+      fi
+    done
+    for f in "$SECURE_DIR/.backup"; do
       if [ "$supported_chrome_wipe" == "true" ] || [ "$TARGET_CHROME_GOOGLE" == "true" ]; then
         rm -rf $SYSTEM/app/webview && cp -fR $f/webview $SYSTEM/app/webview > /dev/null 2>&1
       fi
@@ -4835,7 +4921,8 @@ post_backup() {
       $SYSTEM/product/etc/permissions \
       $SYSTEM/system_ext/etc/permissions; do
       test -d $ANDROID_DATA/.backup || mkdir -p $ANDROID_DATA/.backup
-      chmod 0755 $ANDROID_DATA/.backup
+      test -d $SECURE_DIR/.backup || mkdir -p $SECURE_DIR/.backup
+      chmod 0755 $ANDROID_DATA/.backup; chmod 0755 $SECURE_DIR/.backup
       # Add previous backup detection
       if [ ! -f "$ANDROID_DATA/.backup/.backup" ]; then
         # APKs backed by framework
@@ -4874,16 +4961,57 @@ post_backup() {
         cp -f $f/com.android.contacts.xml $ANDROID_DATA/.backup > /dev/null 2>&1
         cp -f $f/com.android.dialer.xml $ANDROID_DATA/.backup > /dev/null 2>&1
       fi
+      # Secure backup detection
+      if [ ! -f "$SECURE_DIR/.backup/.backup" ]; then
+        # APKs backed by framework
+        cp -fR $f/ExtShared $SECURE_DIR/.backup/ExtShared > /dev/null 2>&1
+        cp -fR $f/ExtServices $SECURE_DIR/.backup/ExtServices > /dev/null 2>&1
+        # Non SetupWizard components and configs
+        cp -fR $f/OneTimeInitializer $SECURE_DIR/.backup/OneTimeInitializer > /dev/null 2>&1
+        cp -fR $f/ManagedProvisioning $SECURE_DIR/.backup/ManagedProvisioning > /dev/null 2>&1
+        cp -fR $f/Provision $SECURE_DIR/.backup/Provision > /dev/null 2>&1
+        cp -fR $f/LineageSetupWizard $SECURE_DIR/.backup/LineageSetupWizard > /dev/null 2>&1
+        cp -f $f/com.android.managedprovisioning.xml $SECURE_DIR/.backup > /dev/null 2>&1
+        cp -f $f/com.android.provision.xml $SECURE_DIR/.backup > /dev/null 2>&1
+        # Non Additional packages and config
+        cp -fR $f/Exactcalculator $SECURE_DIR/.backup/Exactcalculator > /dev/null 2>&1
+        cp -fR $f/Calendar $SECURE_DIR/.backup/Calendar > /dev/null 2>&1
+        cp -fR $f/Etar $SECURE_DIR/.backup/Etar > /dev/null 2>&1
+        cp -fR $f/DeskClock $SECURE_DIR/.backup/DeskClock > /dev/null 2>&1
+        cp -fR $f/Gallery2 $SECURE_DIR/.backup/Gallery2 > /dev/null 2>&1
+        cp -fR $f/Jelly $SECURE_DIR/.backup/Jelly > /dev/null 2>&1
+        cp -fR $f/LatinIME $SECURE_DIR/.backup/LatinIME > /dev/null 2>&1
+        cp -fR $f/Launcher3 $SECURE_DIR/.backup/Launcher3 > /dev/null 2>&1
+        cp -fR $f/Launcher3QuickStep $SECURE_DIR/.backup/Launcher3QuickStep > /dev/null 2>&1
+        cp -fR $f/NexusLauncherPrebuilt $SECURE_DIR/.backup/NexusLauncherPrebuilt > /dev/null 2>&1
+        cp -fR $f/NexusLauncherRelease $SECURE_DIR/.backup/NexusLauncherRelease > /dev/null 2>&1
+        cp -fR $f/QuickStep $SECURE_DIR/.backup/QuickStep > /dev/null 2>&1
+        cp -fR $f/QuickStepLauncher $SECURE_DIR/.backup/QuickStepLauncher > /dev/null 2>&1
+        cp -fR $f/TrebuchetQuickStep $SECURE_DIR/.backup/TrebuchetQuickStep > /dev/null 2>&1
+        cp -fR $f/QuickAccessWallet $SECURE_DIR/.backup/QuickAccessWallet > /dev/null 2>&1
+        cp -f $f/com.android.launcher3.xml $SECURE_DIR/.backup > /dev/null 2>&1
+        cp -f $f/privapp_whitelist_com.android.launcher3-ext.xml $SECURE_DIR/.backup > /dev/null 2>&1
+        cp -fR $f/webview $SECURE_DIR/.backup/webview > /dev/null 2>&1
+        # AOSP APKs and configs
+        cp -fR $f/messaging $SECURE_DIR/.backup/messaging > /dev/null 2>&1
+        cp -fR $f/Contacts $SECURE_DIR/.backup/Contacts > /dev/null 2>&1
+        cp -fR $f/Dialer $SECURE_DIR/.backup/Dialer > /dev/null 2>&1
+        cp -f $f/com.android.contacts.xml $SECURE_DIR/.backup > /dev/null 2>&1
+        cp -f $f/com.android.dialer.xml $SECURE_DIR/.backup > /dev/null 2>&1
+      fi
     done
     # Create dummy file outside of loop function
     touch $ANDROID_DATA/.backup/.backup && chmod 0644 $ANDROID_DATA/.backup/.backup
+    touch $SECURE_DIR/.backup/.backup && chmod 0644 $SECURE_DIR/.backup/.backup
   fi
   if [ "$TARGET_RWG_STATUS" == "false" ] && [ "$supported_module_config" == "true" ]; then
     ui_print "- Backup Non-GApps components"
     test -d $ANDROID_DATA/.backup || mkdir -p $ANDROID_DATA/.backup
-    chmod 0755 $ANDROID_DATA/.backup
+    test -d $SECURE_DIR/.backup || mkdir -p $SECURE_DIR/.backup
+    chmod 0755 $ANDROID_DATA/.backup; chmod 0755 $SECURE_DIR/.backup
     # Create dummy file
     touch $ANDROID_DATA/.backup/.backup && chmod 0644 $ANDROID_DATA/.backup/.backup
+    touch $SECURE_DIR/.backup/.backup && chmod 0644 $SECURE_DIR/.backup/.backup
   fi
   if [ "$TARGET_RWG_STATUS" == "true" ]; then ui_print "! RWG device detected"; fi
 }
@@ -4891,6 +5019,9 @@ post_backup() {
 # Restore system files after wiping BiTGApps components
 post_restore() {
   ui_print "- Restore Non-GApps components"
+  if [ ! -f "$ANDROID_DATA/.backup/.backup" ] || [ ! -f "$SECURE_DIR/.backup/.backup" ]; then
+    on_abort "! Failed to restore Non-GApps components"
+  fi
   if [ -f "$ANDROID_DATA/.backup/.backup" ]; then
     for f in "$ANDROID_DATA/.backup"; do
       # APKs backed by framework
@@ -4931,9 +5062,53 @@ post_restore() {
     done
     # Remove backup after restore done
     rm -rf $ANDROID_DATA/.backup
-  else
-    on_abort "! Failed to restore Non-GApps components"
+    # Skip restore from unencrypted data
+    SKIP_SECURE_RESTORE="true"
   fi
+  # Secure backup in unencrypted data
+  if [ -f "$SECURE_DIR/.backup/.backup" ] && [ "$SKIP_SECURE_RESTORE" == "false" ]; then
+    for f in "$SECURE_DIR/.backup"; do
+      # APKs backed by framework
+      cp -fR $f/ExtShared $SYSTEM/app/ExtShared > /dev/null 2>&1
+      cp -fR $f/ExtServices $SYSTEM/priv-app/ExtServices > /dev/null 2>&1
+      # Non SetupWizard components and configs
+      cp -fR $f/OneTimeInitializer $SYSTEM/priv-app/OneTimeInitializer > /dev/null 2>&1
+      cp -fR $f/ManagedProvisioning $SYSTEM/priv-app/ManagedProvisioning > /dev/null 2>&1
+      cp -fR $f/Provision $SYSTEM/priv-app/Provision > /dev/null 2>&1
+      cp -fR $f/LineageSetupWizard $SYSTEM/priv-app/LineageSetupWizard > /dev/null 2>&1
+      cp -f $f/com.android.managedprovisioning.xml $SYSTEM/etc/permissions > /dev/null 2>&1
+      cp -f $f/com.android.provision.xml $SYSTEM/etc/permissions > /dev/null 2>&1
+      # Non Additional packages and config
+      cp -fR $f/Exactcalculator $SYSTEM/app/Exactcalculator > /dev/null 2>&1
+      cp -fR $f/Calendar $SYSTEM/app/Calendar > /dev/null 2>&1
+      cp -fR $f/Etar $SYSTEM/app/Etar > /dev/null 2>&1
+      cp -fR $f/DeskClock $SYSTEM/app/DeskClock > /dev/null 2>&1
+      cp -fR $f/Gallery2 $SYSTEM/app/Gallery2 > /dev/null 2>&1
+      cp -fR $f/Jelly $SYSTEM/app/Jelly > /dev/null 2>&1
+      cp -fR $f/LatinIME $SYSTEM/app/LatinIME > /dev/null 2>&1
+      cp -fR $f/Launcher3 $SYSTEM/priv-app/Launcher3 > /dev/null 2>&1
+      cp -fR $f/Launcher3QuickStep $SYSTEM/priv-app/Launcher3QuickStep > /dev/null 2>&1
+      cp -fR $f/NexusLauncherPrebuilt $SYSTEM/priv-app/NexusLauncherPrebuilt > /dev/null 2>&1
+      cp -fR $f/NexusLauncherRelease $SYSTEM/priv-app/NexusLauncherRelease > /dev/null 2>&1
+      cp -fR $f/QuickStep $SYSTEM/priv-app/QuickStep > /dev/null 2>&1
+      cp -fR $f/QuickStepLauncher $SYSTEM/priv-app/QuickStepLauncher > /dev/null 2>&1
+      cp -fR $f/TrebuchetQuickStep $SYSTEM/priv-app/TrebuchetQuickStep > /dev/null 2>&1
+      cp -fR $f/QuickAccessWallet $SYSTEM/priv-app/QuickAccessWallet > /dev/null 2>&1
+      cp -f $f/com.android.launcher3.xml $SYSTEM/etc/permissions > /dev/null 2>&1
+      cp -f $f/privapp_whitelist_com.android.launcher3-ext.xml $SYSTEM/etc/permissions > /dev/null 2>&1
+      cp -fR $f/webview $SYSTEM/app/webview > /dev/null 2>&1
+      # AOSP APKs and configs
+      cp -fR $f/messaging $SYSTEM/app/messaging > /dev/null 2>&1
+      cp -fR $f/Contacts $SYSTEM/priv-app/Contacts > /dev/null 2>&1
+      cp -fR $f/Dialer $SYSTEM/priv-app/Dialer > /dev/null 2>&1
+      cp -f $f/com.android.contacts.xml $SYSTEM/etc/permissions > /dev/null 2>&1
+      cp -f $f/com.android.dialer.xml $SYSTEM/etc/permissions > /dev/null 2>&1
+    done
+    # Remove backup after restore done
+    rm -rf $SECURE_DIR/.backup
+  fi
+  # Remove backup from unencrypted data
+  [ "$SKIP_SECURE_RESTORE" == "true" ] && rm -rf $SECURE_DIR/.backup
 }
 
 post_uninstall() {
@@ -4980,6 +5155,7 @@ post_uninstall() {
     remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
     # Remove backup after restore done
     rm -rf $ANDROID_DATA/.backup
+    rm -rf $SECURE_DIR/.backup
     # Runtime permissions
     clean_inst
     on_installed
@@ -5028,6 +5204,7 @@ post_uninstall() {
     remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
     # Remove backup after restore done
     rm -rf $ANDROID_DATA/.backup
+    rm -rf $SECURE_DIR/.backup
     # Runtime permissions
     clean_inst
     on_installed
@@ -5426,19 +5603,24 @@ usf_v26() {
     if [ "$android_sdk" -le "29" ]; then
       # Default keystore backup
       cp -f $SYSTEM_AS_SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
+      cp -f $SYSTEM_AS_SYSTEM/bin/keystore $SECURE_DIR/.backup/keystore
     fi
   fi
   # For Android SDK 30, patched keystore executable and library required
   if [ "$android_sdk" == "30" ]; then
     # Default keystore backup
     cp -f $SYSTEM_AS_SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
+    cp -f $SYSTEM_AS_SYSTEM/bin/keystore $SECURE_DIR/.backup/keystore
     cp -f $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
+    cp -f $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so $SECURE_DIR/.backup/libkeystore
   fi
   # For Android SDK 31, patched keystore executable and library required
   if [ "$android_sdk" == "31" ]; then
     # Default keystore backup
     cp -f $SYSTEM_AS_SYSTEM/bin/keystore2 $ANDROID_DATA/.backup/keystore2
+    cp -f $SYSTEM_AS_SYSTEM/bin/keystore2 $SECURE_DIR/.backup/keystore2
     cp -f $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
+    cp -f $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so $SECURE_DIR/.backup/libkeystore
   fi
   # Mount keystore
   if [ "$BOOTMODE" == "true" ]; then
@@ -5797,6 +5979,7 @@ pre_install() {
     system_layout
     mount_status
     backup_target
+    backup_target_v2
     check_build_prop
     chk_inst_pkg
     on_inst_abort
@@ -5834,6 +6017,7 @@ pre_install() {
     system_layout
     mount_status
     backup_target
+    backup_target_v2
     check_build_prop
     chk_inst_pkg
     on_inst_abort
@@ -5872,6 +6056,7 @@ pre_install() {
     system_layout
     mount_status
     backup_target
+    backup_target_v2
     check_build_prop
     chk_inst_pkg
     on_inst_abort
@@ -5909,6 +6094,7 @@ pre_install() {
     system_layout
     mount_status
     backup_target
+    backup_target_v2
     check_build_prop
     chk_inst_pkg
     on_inst_abort
