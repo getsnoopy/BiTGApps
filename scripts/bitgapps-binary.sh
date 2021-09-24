@@ -214,190 +214,190 @@ post_restore() {
       if [ "$($l/grep -w -o ExtShared $ANDROID_DATA/.backup/backup.lst)" ]; then
         EXTSHARED="$(grep -w ExtShared $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/ExtShared $ANDROID_ROOT/$EXTSHARED > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/ExtShared /$EXTSHARED > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/ExtShared /$EXTSHARED > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/ExtShared $EXTSHARED > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o ExtServices $ANDROID_DATA/.backup/backup.lst)" ]; then
         EXTSERVICES="$(grep -w ExtServices $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/ExtServices $ANDROID_ROOT/$EXTSERVICES > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/ExtServices /$EXTSERVICES > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/ExtServices /$EXTSERVICES > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/ExtServices $EXTSERVICES > /dev/null 2>&1; fi
       fi
       # Non SetupWizard components and configs
       if [ "$($l/grep -w -o OneTimeInitializer $ANDROID_DATA/.backup/backup.lst)" ]; then
         OTI="$(grep -w OneTimeInitializer $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/OneTimeInitializer $ANDROID_ROOT/$OTI > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/OneTimeInitializer /$OTI > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/OneTimeInitializer /$OTI > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/OneTimeInitializer $OTI > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o ManagedProvisioning $ANDROID_DATA/.backup/backup.lst)" ]; then
         MDP="$(grep -w ManagedProvisioning $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/ManagedProvisioning $ANDROID_ROOT/$MDP > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/ManagedProvisioning /$MDP > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/ManagedProvisioning /$MDP > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/ManagedProvisioning $MDP > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Provision $ANDROID_DATA/.backup/backup.lst)" ]; then
         PROVISION="$(grep -w Provision $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Provision $ANDROID_ROOT/$PROVISION > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Provision /$PROVISION > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Provision /$PROVISION > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Provision $PROVISION > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o LineageSetupWizard $ANDROID_DATA/.backup/backup.lst)" ]; then
         LSW="$(grep -w LineageSetupWizard $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/LineageSetupWizard $ANDROID_ROOT/$LSW > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/LineageSetupWizard /$LSW > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/LineageSetupWizard /$LSW > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/LineageSetupWizard $LSW > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o com.android.managedprovisioning.xml $ANDROID_DATA/.backup/backup.lst)" ]; then
         MPX="$(grep -w com.android.managedprovisioning.xml $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.managedprovisioning.xml $ANDROID_ROOT/$MPX > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.managedprovisioning.xml /$MPX > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/com.android.managedprovisioning.xml /$MPX > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/com.android.managedprovisioning.xml $MPX > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o com.android.provision.xml $ANDROID_DATA/.backup/backup.lst)" ]; then
         APX="$(grep -w com.android.provision.xml $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.provision.xml $ANDROID_ROOT/$APX > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.provision.xml /$APX > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/com.android.provision.xml /$APX > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/com.android.provision.xml $APX > /dev/null 2>&1; fi
       fi
       # Non Additional packages and config
       if [ "$($l/grep -w -o Exactcalculator $ANDROID_DATA/.backup/backup.lst)" ]; then
         EXCU="$(grep -w Exactcalculator $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Exactcalculator $ANDROID_ROOT/$EXCU > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Exactcalculator /$EXCU > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Exactcalculator /$EXCU > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Exactcalculator $EXCU > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Calendar $ANDROID_DATA/.backup/backup.lst)" ]; then
         EXCD="$(grep -w Calendar $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Calendar $ANDROID_ROOT/$EXCD > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Calendar /$EXCD > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Calendar /$EXCD > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Calendar $EXCD > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Etar $ANDROID_DATA/.backup/backup.lst)" ]; then
         ETAR="$(grep -w Etar $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Etar $ANDROID_ROOT/$ETAR > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Etar /$ETAR > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Etar /$ETAR > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Etar $ETAR > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o DeskClock $ANDROID_DATA/.backup/backup.lst)" ]; then
         CLOCK="$(grep -w DeskClock $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/DeskClock $ANDROID_ROOT/$CLOCK > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/DeskClock /$CLOCK > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/DeskClock /$CLOCK > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/DeskClock $CLOCK > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Gallery2 $ANDROID_DATA/.backup/backup.lst)" ]; then
         GALLERY="$(grep -w Gallery2 $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Gallery2 $ANDROID_ROOT/$GALLERY > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Gallery2 /$GALLERY > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Gallery2 /$GALLERY > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Gallery2 $GALLERY > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Jelly $ANDROID_DATA/.backup/backup.lst)" ]; then
         JELLY="$(grep -w Jelly $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Jelly $ANDROID_ROOT/$JELLY > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Jelly /$JELLY > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Jelly /$JELLY > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Jelly $JELLY > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o LatinIME $ANDROID_DATA/.backup/backup.lst)" ]; then
         IME="$(grep -w LatinIME $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/LatinIME $ANDROID_ROOT/$IME > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/LatinIME /$IME > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/LatinIME /$IME > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/LatinIME $IME > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Launcher3 $ANDROID_DATA/.backup/backup.lst)" ]; then
         LAUNCHER="$(grep -w Launcher3 $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Launcher3 $ANDROID_ROOT/$LAUNCHER > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Launcher3 /$LAUNCHER > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Launcher3 /$LAUNCHER > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Launcher3 $LAUNCHER > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Launcher3QuickStep $ANDROID_DATA/.backup/backup.lst)" ]; then
         LTQS="$(grep -w Launcher3QuickStep $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Launcher3QuickStep $ANDROID_ROOT/$LTQS > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Launcher3QuickStep /$LTQS > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Launcher3QuickStep /$LTQS > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Launcher3QuickStep $LTQS > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o NexusLauncherPrebuilt $ANDROID_DATA/.backup/backup.lst)" ]; then
         NEXUSLAUNCHER="$(grep -w NexusLauncherPrebuilt $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/NexusLauncherPrebuilt $ANDROID_ROOT/$NEXUSLAUNCHER > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/NexusLauncherPrebuilt /$NEXUSLAUNCHER > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/NexusLauncherPrebuilt /$NEXUSLAUNCHER > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/NexusLauncherPrebuilt $NEXUSLAUNCHER > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o NexusLauncherRelease $ANDROID_DATA/.backup/backup.lst)" ]; then
         NLR="$(grep -w NexusLauncherRelease $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/NexusLauncherRelease $ANDROID_ROOT/$NLR > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/NexusLauncherRelease /$NLR > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/NexusLauncherRelease /$NLR > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/NexusLauncherRelease $NLR > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o QuickStep $ANDROID_DATA/.backup/backup.lst)" ]; then
         QUICKSTEP="$(grep -w QuickStep $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/QuickStep $ANDROID_ROOT/$QUICKSTEP > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/QuickStep /$QUICKSTEP > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/QuickStep /$QUICKSTEP > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/QuickStep $QUICKSTEP > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o QuickStepLauncher $ANDROID_DATA/.backup/backup.lst)" ]; then
         QSL="$(grep -w QuickStepLauncher $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/QuickStepLauncher $ANDROID_ROOT/$QSL > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/QuickStepLauncher /$QSL > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/QuickStepLauncher /$QSL > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/QuickStepLauncher $QSL > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o TrebuchetQuickStep $ANDROID_DATA/.backup/backup.lst)" ]; then
         TREBUCHET="$(grep -w TrebuchetQuickStep $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/TrebuchetQuickStep $ANDROID_ROOT/$TREBUCHET > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/TrebuchetQuickStep /$TREBUCHET > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/TrebuchetQuickStep /$TREBUCHET > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/TrebuchetQuickStep $TREBUCHET > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o QuickAccessWallet $ANDROID_DATA/.backup/backup.lst)" ]; then
         WALLET="$(grep -w QuickAccessWallet $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/QuickAccessWallet $ANDROID_ROOT/$WALLET > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/QuickAccessWallet /$WALLET > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/QuickAccessWallet /$WALLET > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/QuickAccessWallet $WALLET > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o com.android.launcher3.xml $ANDROID_DATA/.backup/backup.lst)" ]; then
         LTX="$(grep -w com.android.launcher3.xml $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.launcher3.xml $ANDROID_ROOT/$LTX > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.launcher3.xml /$LTX > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/com.android.launcher3.xml /$LTX > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/com.android.launcher3.xml $LTX > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o privapp_whitelist_com.android.launcher3-ext.xml $ANDROID_DATA/.backup/backup.lst)" ]; then
         LTXT="$(grep -w privapp_whitelist_com.android.launcher3-ext.xml $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/privapp_whitelist_com.android.launcher3-ext.xml $ANDROID_ROOT/$LTXT > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/privapp_whitelist_com.android.launcher3-ext.xml /$LTXT > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/privapp_whitelist_com.android.launcher3-ext.xml /$LTXT > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/privapp_whitelist_com.android.launcher3-ext.xml $LTXT > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o webview $ANDROID_DATA/.backup/backup.lst)" ]; then
         WEBVIEW="$(grep -w webview $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/webview $ANDROID_ROOT/$WEBVIEW > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/webview /$WEBVIEW > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/webview /$WEBVIEW > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/webview $WEBVIEW > /dev/null 2>&1; fi
       fi
       # AOSP APKs and configs
       if [ "$($l/grep -w -o messaging $ANDROID_DATA/.backup/backup.lst)" ]; then
         MESSAGE="$(grep -w messaging $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/messaging $ANDROID_ROOT/$MESSAGE > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/messaging /$MESSAGE > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/messaging /$MESSAGE > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/messaging $MESSAGE > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Contacts $ANDROID_DATA/.backup/backup.lst)" ]; then
         CONTACT="$(grep -w Contacts $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Contacts $ANDROID_ROOT/$CONTACT > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Contacts /$CONTACT > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Contacts /$CONTACT > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Contacts $CONTACT > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Dialer $ANDROID_DATA/.backup/backup.lst)" ]; then
         DIALER="$(grep -w Dialer $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Dialer $ANDROID_ROOT/$DIALER > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Dialer /$DIALER > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Dialer /$DIALER > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Dialer $DIALER > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o com.android.contacts.xml $ANDROID_DATA/.backup/backup.lst)" ]; then
         CXML="$(grep -w com.android.contacts.xml $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.contacts.xml $ANDROID_ROOT/$CXML > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.contacts.xml /$CXML > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/com.android.contacts.xml /$CXML > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/com.android.contacts.xml $CXML > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o com.android.dialer.xml $ANDROID_DATA/.backup/backup.lst)" ]; then
         DXML="$(grep -w com.android.dialer.xml $ANDROID_DATA/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.dialer.xml $ANDROID_ROOT/$DXML > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.dialer.xml /$DXML > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/com.android.dialer.xml /$DXML > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/com.android.dialer.xml $DXML > /dev/null 2>&1; fi
       fi
     done
@@ -413,190 +413,190 @@ post_restore() {
       if [ "$($l/grep -w -o ExtShared $SECURE_DIR/.backup/backup.lst)" ]; then
         EXTSHARED="$(grep -w ExtShared $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/ExtShared $ANDROID_ROOT/$EXTSHARED > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/ExtShared /$EXTSHARED > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/ExtShared /$EXTSHARED > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/ExtShared $EXTSHARED > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o ExtServices $SECURE_DIR/.backup/backup.lst)" ]; then
         EXTSERVICES="$(grep -w ExtServices $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/ExtServices $ANDROID_ROOT/$EXTSERVICES > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/ExtServices /$EXTSERVICES > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/ExtServices /$EXTSERVICES > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/ExtServices $EXTSERVICES > /dev/null 2>&1; fi
       fi
       # Non SetupWizard components and configs
       if [ "$($l/grep -w -o OneTimeInitializer $SECURE_DIR/.backup/backup.lst)" ]; then
         OTI="$(grep -w OneTimeInitializer $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/OneTimeInitializer $ANDROID_ROOT/$OTI > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/OneTimeInitializer /$OTI > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/OneTimeInitializer /$OTI > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/OneTimeInitializer $OTI > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o ManagedProvisioning $SECURE_DIR/.backup/backup.lst)" ]; then
         MDP="$(grep -w ManagedProvisioning $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/ManagedProvisioning $ANDROID_ROOT/$MDP > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/ManagedProvisioning /$MDP > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/ManagedProvisioning /$MDP > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/ManagedProvisioning $MDP > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Provision $SECURE_DIR/.backup/backup.lst)" ]; then
         PROVISION="$(grep -w Provision $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Provision $ANDROID_ROOT/$PROVISION > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Provision /$PROVISION > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Provision /$PROVISION > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Provision $PROVISION > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o LineageSetupWizard $SECURE_DIR/.backup/backup.lst)" ]; then
         LSW="$(grep -w LineageSetupWizard $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/LineageSetupWizard $ANDROID_ROOT/$LSW > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/LineageSetupWizard /$LSW > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/LineageSetupWizard /$LSW > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/LineageSetupWizard $LSW > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o com.android.managedprovisioning.xml $SECURE_DIR/.backup/backup.lst)" ]; then
         MPX="$(grep -w com.android.managedprovisioning.xml $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.managedprovisioning.xml $ANDROID_ROOT/$MPX > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.managedprovisioning.xml /$MPX > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/com.android.managedprovisioning.xml /$MPX > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/com.android.managedprovisioning.xml $MPX > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o com.android.provision.xml $SECURE_DIR/.backup/backup.lst)" ]; then
         APX="$(grep -w com.android.provision.xml $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.provision.xml $ANDROID_ROOT/$APX > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.provision.xml /$APX > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/com.android.provision.xml /$APX > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/com.android.provision.xml $APX > /dev/null 2>&1; fi
       fi
       # Non Additional packages and config
       if [ "$($l/grep -w -o Exactcalculator $SECURE_DIR/.backup/backup.lst)" ]; then
         EXCU="$(grep -w Exactcalculator $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Exactcalculator $ANDROID_ROOT/$EXCU > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Exactcalculator /$EXCU > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Exactcalculator /$EXCU > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Exactcalculator $EXCU > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Calendar $SECURE_DIR/.backup/backup.lst)" ]; then
         EXCD="$(grep -w Calendar $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Calendar $ANDROID_ROOT/$EXCD > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Calendar /$EXCD > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Calendar /$EXCD > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Calendar $EXCD > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Etar $SECURE_DIR/.backup/backup.lst)" ]; then
         ETAR="$(grep -w Etar $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Etar $ANDROID_ROOT/$ETAR > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Etar /$ETAR > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Etar /$ETAR > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Etar $ETAR > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o DeskClock $SECURE_DIR/.backup/backup.lst)" ]; then
         CLOCK="$(grep -w DeskClock $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/DeskClock $ANDROID_ROOT/$CLOCK > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/DeskClock /$CLOCK > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/DeskClock /$CLOCK > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/DeskClock $CLOCK > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Gallery2 $SECURE_DIR/.backup/backup.lst)" ]; then
         GALLERY="$(grep -w Gallery2 $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Gallery2 $ANDROID_ROOT/$GALLERY > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Gallery2 /$GALLERY > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Gallery2 /$GALLERY > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Gallery2 $GALLERY > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Jelly $SECURE_DIR/.backup/backup.lst)" ]; then
         JELLY="$(grep -w Jelly $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Jelly $ANDROID_ROOT/$JELLY > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Jelly /$JELLY > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Jelly /$JELLY > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Jelly $JELLY > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o LatinIME $SECURE_DIR/.backup/backup.lst)" ]; then
         IME="$(grep -w LatinIME $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/LatinIME $ANDROID_ROOT/$IME > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/LatinIME /$IME > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/LatinIME /$IME > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/LatinIME $IME > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Launcher3 $SECURE_DIR/.backup/backup.lst)" ]; then
         LAUNCHER="$(grep -w Launcher3 $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Launcher3 $ANDROID_ROOT/$LAUNCHER > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Launcher3 /$LAUNCHER > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Launcher3 /$LAUNCHER > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Launcher3 $LAUNCHER > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Launcher3QuickStep $SECURE_DIR/.backup/backup.lst)" ]; then
         LTQS="$(grep -w Launcher3QuickStep $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Launcher3QuickStep $ANDROID_ROOT/$LTQS > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Launcher3QuickStep /$LTQS > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Launcher3QuickStep /$LTQS > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Launcher3QuickStep $LTQS > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o NexusLauncherPrebuilt $SECURE_DIR/.backup/backup.lst)" ]; then
         NEXUSLAUNCHER="$(grep -w NexusLauncherPrebuilt $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/NexusLauncherPrebuilt $ANDROID_ROOT/$NEXUSLAUNCHER > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/NexusLauncherPrebuilt /$NEXUSLAUNCHER > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/NexusLauncherPrebuilt /$NEXUSLAUNCHER > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/NexusLauncherPrebuilt $NEXUSLAUNCHER > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o NexusLauncherRelease $SECURE_DIR/.backup/backup.lst)" ]; then
         NLR="$(grep -w NexusLauncherRelease $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/NexusLauncherRelease $ANDROID_ROOT/$NLR > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/NexusLauncherRelease /$NLR > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/NexusLauncherRelease /$NLR > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/NexusLauncherRelease $NLR > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o QuickStep $SECURE_DIR/.backup/backup.lst)" ]; then
         QUICKSTEP="$(grep -w QuickStep $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/QuickStep $ANDROID_ROOT/$QUICKSTEP > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/QuickStep /$QUICKSTEP > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/QuickStep /$QUICKSTEP > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/QuickStep $QUICKSTEP > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o QuickStepLauncher $SECURE_DIR/.backup/backup.lst)" ]; then
         QSL="$(grep -w QuickStepLauncher $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/QuickStepLauncher $ANDROID_ROOT/$QSL > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/QuickStepLauncher /$QSL > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/QuickStepLauncher /$QSL > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/QuickStepLauncher $QSL > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o TrebuchetQuickStep $SECURE_DIR/.backup/backup.lst)" ]; then
         TREBUCHET="$(grep -w TrebuchetQuickStep $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/TrebuchetQuickStep $ANDROID_ROOT/$TREBUCHET > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/TrebuchetQuickStep /$TREBUCHET > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/TrebuchetQuickStep /$TREBUCHET > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/TrebuchetQuickStep $TREBUCHET > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o QuickAccessWallet $SECURE_DIR/.backup/backup.lst)" ]; then
         WALLET="$(grep -w QuickAccessWallet $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/QuickAccessWallet $ANDROID_ROOT/$WALLET > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/QuickAccessWallet /$WALLET > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/QuickAccessWallet /$WALLET > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/QuickAccessWallet $WALLET > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o com.android.launcher3.xml $SECURE_DIR/.backup/backup.lst)" ]; then
         LTX="$(grep -w com.android.launcher3.xml $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.launcher3.xml $ANDROID_ROOT/$LTX > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.launcher3.xml /$LTX > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/com.android.launcher3.xml /$LTX > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/com.android.launcher3.xml $LTX > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o privapp_whitelist_com.android.launcher3-ext.xml $SECURE_DIR/.backup/backup.lst)" ]; then
         LTXT="$(grep -w privapp_whitelist_com.android.launcher3-ext.xml $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/privapp_whitelist_com.android.launcher3-ext.xml $ANDROID_ROOT/$LTXT > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/privapp_whitelist_com.android.launcher3-ext.xml /$LTXT > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/privapp_whitelist_com.android.launcher3-ext.xml /$LTXT > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/privapp_whitelist_com.android.launcher3-ext.xml $LTXT > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o webview $SECURE_DIR/.backup/backup.lst)" ]; then
         WEBVIEW="$(grep -w webview $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/webview $ANDROID_ROOT/$WEBVIEW > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/webview /$WEBVIEW > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/webview /$WEBVIEW > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/webview $WEBVIEW > /dev/null 2>&1; fi
       fi
       # AOSP APKs and configs
       if [ "$($l/grep -w -o messaging $SECURE_DIR/.backup/backup.lst)" ]; then
         MESSAGE="$(grep -w messaging $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/messaging $ANDROID_ROOT/$MESSAGE > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/messaging /$MESSAGE > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/messaging /$MESSAGE > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/messaging $MESSAGE > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Contacts $SECURE_DIR/.backup/backup.lst)" ]; then
         CONTACT="$(grep -w Contacts $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Contacts $ANDROID_ROOT/$CONTACT > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Contacts /$CONTACT > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Contacts /$CONTACT > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Contacts $CONTACT > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o Dialer $SECURE_DIR/.backup/backup.lst)" ]; then
         DIALER="$(grep -w Dialer $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Dialer $ANDROID_ROOT/$DIALER > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/Dialer /$DIALER > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/Dialer /$DIALER > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/Dialer $DIALER > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o com.android.contacts.xml $SECURE_DIR/.backup/backup.lst)" ]; then
         CXML="$(grep -w com.android.contacts.xml $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.contacts.xml $ANDROID_ROOT/$CXML > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.contacts.xml /$CXML > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/com.android.contacts.xml /$CXML > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/com.android.contacts.xml $CXML > /dev/null 2>&1; fi
       fi
       if [ "$($l/grep -w -o com.android.dialer.xml $SECURE_DIR/.backup/backup.lst)" ]; then
         DXML="$(grep -w com.android.dialer.xml $SECURE_DIR/.backup/backup.lst)"
         if [ -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.dialer.xml $ANDROID_ROOT/$DXML > /dev/null 2>&1; fi
-        if [ ! -d "$ANDROID_ROOT/system" ]; then cp -fR $f/com.android.dialer.xml /$DXML > /dev/null 2>&1; fi
+        if [ -f "$ANDROID_ROOT/build.prop" ]; then cp -fR $f/com.android.dialer.xml /$DXML > /dev/null 2>&1; fi
         if [ "$BOOTMODE" == "true" ]; then cp -fR $f/com.android.dialer.xml $DXML > /dev/null 2>&1; fi
       fi
     done
