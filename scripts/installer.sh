@@ -29,9 +29,9 @@ $BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMO
 setenforce 0
 
 # Data unencrypted
-install -d /data/unencrypted/key
-chmod -R 0700 /data/unencrypted
-chcon -hR u:object_r:unencrypted_data_file:s0 "/data/unencrypted"
+install -d /data/unencrypted
+chmod 0700 /data/unencrypted
+chcon -h u:object_r:unencrypted_data_file:s0 "/data/unencrypted"
 
 # Set unencrypted
 SECURE_DIR="/data/unencrypted"
@@ -483,9 +483,9 @@ mount_all() {
   cp -f $TMP/busybox-arm $ANDROID_DATA/busybox/busybox-arm
   chmod -R 0755 $ANDROID_DATA/busybox
   # TODO: Data unencrypted
-  install -d /data/unencrypted/key
-  chmod -R 0700 /data/unencrypted
-  chcon -hR u:object_r:unencrypted_data_file:s0 "/data/unencrypted"
+  install -d /data/unencrypted
+  chmod 0700 /data/unencrypted
+  chcon -h u:object_r:unencrypted_data_file:s0 "/data/unencrypted"
   # TODO: Backup busybox in unencrypted data
   rm -rf $SECURE_DIR/busybox && mkdir $SECURE_DIR/busybox
   cp -f $TMP/busybox-arm $SECURE_DIR/busybox/busybox-arm
