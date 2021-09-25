@@ -54,6 +54,7 @@ A collection of information and use of BiTGApps.
 
 #### Developer Guide
 
+* [**Internal Details**](https://github.com/BiTGApps/BiTGApps/wiki/Internal-Details)
 * [**OTA Survival**](https://github.com/BiTGApps/BiTGApps/wiki/OTA-Survival)
 * [**OTA Config**](https://github.com/BiTGApps/BiTGApps/wiki/OTA-Config)
 * [**Safetynet Patch**](https://github.com/BiTGApps/BiTGApps/wiki/Safetynet-Patch)
