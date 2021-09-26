@@ -589,7 +589,7 @@ mount_all() {
           mount -o ro -t auto $SYSTEMEXT_MAPPER /system_ext > /dev/null 2>&1
           mount -o rw,remount -t auto $SYSTEMEXT_MAPPER /system_ext > /dev/null 2>&1
         fi
-        is_mounted /system_ext || on_abort "! Cannot mount /system_ext. Aborting..."
+        is_mounted /system_ext || ui_print "! Cannot mount /system_ext. Continue..."
       fi
     fi
     if [ "$device_abpartition" == "false" ]; then
@@ -616,7 +616,7 @@ mount_all() {
         ui_print "- Mounting /system_ext"
         mount -o ro -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
-        is_mounted /system_ext || on_abort "! Cannot mount /system_ext. Aborting..."
+        is_mounted /system_ext || ui_print "! Cannot mount /system_ext. Continue..."
       fi
     fi
   fi
@@ -719,7 +719,7 @@ check_rw_status() {
     fi
     if [ "$($l/grep -w -o /system_ext $fstab)" ]; then
       system_ext_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/system_ext?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
-      if [ ! "$system_ext_as_rw" == "rw" ]; then on_abort "! Read-only /system_ext partition. Aborting..."; fi
+      if [ ! "$system_ext_as_rw" == "rw" ]; then ui_print "! Read-only /system_ext partition. Continue..."; fi
     fi
   fi
   if [ "$BOOTMODE" == "true" ]; then
@@ -741,7 +741,7 @@ check_rw_status() {
     fi
     if [ "$($l/grep -w -o /system_ext /proc/mounts)" ]; then
       system_ext_as_rw=`$l/grep -w /system_ext /proc/mounts | $l/grep -ow rw | head -n 1`
-      if [ ! "$system_ext_as_rw" == "rw" ]; then on_abort "! Read-only /system_ext partition. Aborting..."; fi
+      if [ ! "$system_ext_as_rw" == "rw" ]; then ui_print "! Read-only /system_ext partition. Continue..."; fi
     fi
   fi
 }
@@ -895,13 +895,15 @@ mount_status() {
 set_error_log_zip() {
   NUM=$(( $RANDOM % 100 ))
   tar -cz -f "$TMP/bitgapps_debug_failed_logs.tar.gz" *
-  cp -f $TMP/bitgapps_debug_failed_logs.tar.gz $INTERNAL/bitgapps_debug_failed_logs_r${NUM}.tar.gz
+  cp -f $TMP/bitgapps_debug_failed_logs.tar.gz \
+  $INTERNAL/bitgapps_debug_failed_logs_r${NUM}.tar.gz
 }
 
 set_comp_log_zip() {
   NUM=$(( $RANDOM % 100 ))
   tar -cz -f "$TMP/bitgapps_debug_complete_logs.tar.gz" *
-  cp -f $TMP/bitgapps_debug_complete_logs.tar.gz $INTERNAL/bitgapps_debug_complete_logs_r${NUM}.tar.gz
+  cp -f $TMP/bitgapps_debug_complete_logs.tar.gz \
+  $INTERNAL/bitgapps_debug_complete_logs_r${NUM}.tar.gz
 }
 
 set_install_logs() {
@@ -6723,10 +6725,10 @@ chk_product() {
 # Check availability of SystemExt partition
 chk_system_Ext() {
   if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ] && [ "$BOOTMODE" == "false" ]; then
-    if [ ! -n "$(cat $fstab | grep /system_ext)" ]; then ui_print "! SystemExt partition not found. Aborting..."; lp_abort; fi
+    if [ ! -n "$(cat $fstab | grep /system_ext)" ]; then ui_print "! SystemExt partition not found. Continue..."; return 0; fi
   fi
   if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ] && [ "$BOOTMODE" == "true" ]; then
-    if [ ! "$($l/grep -w -o /system_ext /proc/mounts)" ]; then ui_print "! SystemExt partition not found. Aborting..."; lp_abort; fi
+    if [ ! "$($l/grep -w -o /system_ext /proc/mounts)" ]; then ui_print "! SystemExt partition not found. Continue..."; return 0; fi
   fi
 }
 
