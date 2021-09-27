@@ -814,8 +814,8 @@ check_build_prop() {
   fi
   case $BUILDPROP in
     false )
-      ui_print "! Unable to detect build property. Aborting..."
-      lp_abort
+      ui_print "! Unable to detect build property. Continue..."
+      return 0
       ;;
   esac
 }
