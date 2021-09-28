@@ -6700,10 +6700,10 @@ pre_install() {
 pre_uninstall() {
   local SYSTEM_SYSTEM
   if [ "$ZIPTYPE" == "addon" ] && [ "$wipe_config" == "false" ]; then
-    if [ "$supported_module_config" == "false" ]; then
+    if [ "$ADDON" == "conf" ] && [ "$supported_module_config" == "false" ]; then
       pre_installed_pkg
     fi
-    if [ "$supported_module_config" == "true" ]; then
+    if [ "$ADDON" == "conf" ] && [ "$supported_module_config" == "true" ]; then
       set_module_path
       SYSTEM_SYSTEM="$SYSTEM"
       pre_installed_pkg
