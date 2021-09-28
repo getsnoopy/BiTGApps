@@ -34,6 +34,9 @@ setenforce 0
 # Storage
 ANDROID_DATA="/data"
 
+# TODO: Set unencrypted
+SECURE_DIR="/data/unencrypted"
+
 # Load install functions from utility script
 . $TMP/util_functions.sh
 
@@ -197,6 +200,8 @@ ui_print() {
     echo -n -e "ui_print\n" >> /proc/self/fd/$OUTFD
   fi
 }
+
+set_write() { echo "$1"; }
 
 # Title
 ui_print " "
@@ -768,6 +773,7 @@ fi
 android_sdk="$(get_prop "ro.build.version.sdk")"
 ui_print "- Android SDK version: $android_sdk"
 
+# TODO: Universal SafetyNet Fix; Works together with CTS patch
 if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
   ui_print "- Installing patched keystore"
   if [ "$BOOTMODE" == "false" ]; then unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }; fi
@@ -785,19 +791,33 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
     if [ "$android_sdk" -le "29" ]; then
       # Default keystore backup
       cp -f $SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
+      cp -f $SYSTEM/bin/keystore $SECURE_DIR/.backup/keystore
+      # Write backup type
+      set_write "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
+      set_write "KEYSTORE" >> $SECURE_DIR/.backup/.backup
     fi
   fi
   # For Android SDK 30, patched keystore executable and library required
   if [ "$android_sdk" == "30" ]; then
     # Default keystore backup
     cp -f $SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
+    cp -f $SYSTEM/bin/keystore $SECURE_DIR/.backup/keystore
     cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
+    cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $SECURE_DIR/.backup/libkeystore
+    # Write backup type
+    set_write "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
+    set_write "KEYSTORE" >> $SECURE_DIR/.backup/.backup
   fi
   # For Android SDK 31, patched keystore executable and library required
   if [ "$android_sdk" == "31" ]; then
     # Default keystore backup
     cp -f $SYSTEM/bin/keystore2 $ANDROID_DATA/.backup/keystore2
+    cp -f $SYSTEM/bin/keystore2 $SECURE_DIR/.backup/keystore2
     cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
+    cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $SECURE_DIR/.backup/libkeystore
+    # Write backup type
+    set_write "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
+    set_write "KEYSTORE" >> $SECURE_DIR/.backup/.backup
   fi
   # Mount keystore
   if [ "$BOOTMODE" == "true" ]; then

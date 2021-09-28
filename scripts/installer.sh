@@ -117,6 +117,8 @@ ui_print() {
   fi
 }
 
+set_write() { echo "$1"; }
+
 # Set pre-bundled busybox
 set_bb() {
   # Check device architecture
@@ -1460,6 +1462,9 @@ rwg_dummy_backup() {
     # Create dummy file
     touch $ANDROID_DATA/.backup/.backup && chmod 0644 $ANDROID_DATA/.backup/.backup
     touch $SECURE_DIR/.backup/.backup && chmod 0644 $SECURE_DIR/.backup/.backup
+    # Write backup type
+    set_write "RWG" >> $ANDROID_DATA/.backup/.backup
+    set_write "RWG" >> $SECURE_DIR/.backup/.backup
   fi
 }
 
@@ -5155,8 +5160,11 @@ post_backup() {
       test -d $ANDROID_DATA/.backup || mkdir -p $ANDROID_DATA/.backup
       test -d $SECURE_DIR/.backup || mkdir -p $SECURE_DIR/.backup
       chmod 0755 $ANDROID_DATA/.backup; chmod 0755 $SECURE_DIR/.backup
+      # Check existing backup type
+      check_common_backup="$($l/grep -w 'KEYSTORE' $ANDROID_DATA/.backup/.backup)"
+      check_secure_backup="$($l/grep -w 'KEYSTORE' $SECURE_DIR/.backup/.backup)"
       # Add previous backup detection
-      if [ ! -f "$ANDROID_DATA/.backup/.backup" ]; then
+      if [ ! -f "$ANDROID_DATA/.backup/.backup" ] || { [ -f "$ANDROID_DATA/.backup/.backup" ] && [ "$check_common_backup" == "KEYSTORE" ]; }; then
         # APKs backed by framework
         cp -fR $f/ExtShared $ANDROID_DATA/.backup/ExtShared > /dev/null 2>&1
         cp -fR $f/ExtServices $ANDROID_DATA/.backup/ExtServices > /dev/null 2>&1
@@ -5194,7 +5202,7 @@ post_backup() {
         cp -f $f/com.android.dialer.xml $ANDROID_DATA/.backup > /dev/null 2>&1
       fi
       # Secure backup detection
-      if [ ! -f "$SECURE_DIR/.backup/.backup" ]; then
+      if [ ! -f "$SECURE_DIR/.backup/.backup" ] || { [ -f "$SECURE_DIR/.backup/.backup" ] && [ "$check_secure_backup" == "KEYSTORE" ]; }; then
         # APKs backed by framework
         cp -fR $f/ExtShared $SECURE_DIR/.backup/ExtShared > /dev/null 2>&1
         cp -fR $f/ExtServices $SECURE_DIR/.backup/ExtServices > /dev/null 2>&1
@@ -5235,6 +5243,9 @@ post_backup() {
     # Create dummy file outside of loop function
     touch $ANDROID_DATA/.backup/.backup && chmod 0644 $ANDROID_DATA/.backup/.backup
     touch $SECURE_DIR/.backup/.backup && chmod 0644 $SECURE_DIR/.backup/.backup
+    # Write backup type
+    set_write "SYSTEM" >> $ANDROID_DATA/.backup/.backup
+    set_write "SYSTEM" >> $SECURE_DIR/.backup/.backup
     # Create backup list
     if [ "$BOOTMODE" == "false" ] && [ -d "$ANDROID_ROOT/system" ]; then
       cd $ANDROID_ROOT
@@ -5277,6 +5288,9 @@ post_backup() {
     # Create dummy file
     touch $ANDROID_DATA/.backup/.backup && chmod 0644 $ANDROID_DATA/.backup/.backup
     touch $SECURE_DIR/.backup/.backup && chmod 0644 $SECURE_DIR/.backup/.backup
+    # Write backup type
+    set_write "SYSTEMLESS" >> $ANDROID_DATA/.backup/.backup
+    set_write "SYSTEMLESS" >> $SECURE_DIR/.backup/.backup
   fi
   if [ "$TARGET_RWG_STATUS" == "true" ]; then ui_print "! RWG device detected"; fi
 }
@@ -6179,6 +6193,9 @@ usf_v26() {
       # Default keystore backup
       cp -f $SYSTEM_AS_SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
       cp -f $SYSTEM_AS_SYSTEM/bin/keystore $SECURE_DIR/.backup/keystore
+      # Write backup type
+      set_write "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
+      set_write "KEYSTORE" >> $SECURE_DIR/.backup/.backup
     fi
   fi
   # For Android SDK 30, patched keystore executable and library required
@@ -6188,6 +6205,9 @@ usf_v26() {
     cp -f $SYSTEM_AS_SYSTEM/bin/keystore $SECURE_DIR/.backup/keystore
     cp -f $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
     cp -f $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so $SECURE_DIR/.backup/libkeystore
+    # Write backup type
+    set_write "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
+    set_write "KEYSTORE" >> $SECURE_DIR/.backup/.backup
   fi
   # For Android SDK 31, patched keystore executable and library required
   if [ "$android_sdk" == "31" ]; then
@@ -6196,6 +6216,9 @@ usf_v26() {
     cp -f $SYSTEM_AS_SYSTEM/bin/keystore2 $SECURE_DIR/.backup/keystore2
     cp -f $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
     cp -f $SYSTEM_AS_SYSTEM/lib64/libkeystore-attestation-application-id.so $SECURE_DIR/.backup/libkeystore
+    # Write backup type
+    set_write "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
+    set_write "KEYSTORE" >> $SECURE_DIR/.backup/.backup
   fi
   # Mount keystore
   if [ "$BOOTMODE" == "true" ]; then
