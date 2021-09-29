@@ -1034,10 +1034,8 @@ fi
 # Check system_ext partition mount status
 if [ "$BOOTMODE" == "false" ] && [ "$($TMP/grep -w -o /system_ext $fstab)" ]; then
   if ! is_mounted /system_ext; then
-    ui_print "! Cannot mount /system_ext. Aborting..."
-    ui_print "! Installation failed"
-    ui_print " "
-    exit 1
+    ui_print "! Cannot mount /system_ext. Continue..."
+    return 0
   fi
 fi
 
@@ -1125,19 +1123,15 @@ fi
 # Check SystemExt RW status
 if [ "$BOOTMODE" == "false" ] && [ "$($TMP/grep -w -o /system_ext $fstab)" ]; then
   if [ ! "$system_ext_as_rw" == "rw" ]; then
-    ui_print "! Read-only /system_ext partition. Aborting..."
-    ui_print "! Installation failed"
-    ui_print " "
-    exit 1
+    ui_print "! Read-only /system_ext partition. Continue..."
+    return 0
   fi
 fi
 
 if [ "$BOOTMODE" == "true" ] && [ "$($TMP/grep -w -o /system_ext /proc/mounts)" ]; then
   if [ ! "$system_ext_as_rw" == "rw" ]; then
-    ui_print "! Read-only /system_ext partition. Aborting..."
-    ui_print "! Installation failed"
-    ui_print " "
-    exit 1
+    ui_print "! Read-only /system_ext partition. Continue..."
+    return 0
   fi
 fi
 
