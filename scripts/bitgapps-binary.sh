@@ -203,6 +203,7 @@ post_install_wipe() {
   # Remove properties from system build
   remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
   remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
+  remove_line $SYSTEM/build.prop "ro.opa.eligible_device="
 }
 
 # TODO: Restore system files after wiping BiTGApps components

@@ -5107,6 +5107,7 @@ post_install_wipe() {
   # Remove properties from system build
   remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
   remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
+  remove_line $SYSTEM/build.prop "ro.opa.eligible_device="
 }
 
 microg_install_wipe() {
@@ -5141,6 +5142,7 @@ microg_install_wipe() {
   remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
   remove_line $SYSTEM/build.prop "ro.microg.device="
   remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
+  remove_line $SYSTEM/build.prop "ro.opa.eligible_device="
 }
 
 # TODO: Backup system files before install
