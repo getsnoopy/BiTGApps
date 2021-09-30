@@ -10,6 +10,7 @@ A collection of information and use of BiTGApps.
 * [**BiTGApps Packages**](https://github.com/BiTGApps/BiTGApps/wiki/BiTGApps-Packages)
 * [**BiTGApps Additional Packages**](https://github.com/BiTGApps/BiTGApps/wiki/BiTGApps-Additional-Packages)
 * [**BiTGApps Additional Patches**](https://github.com/BiTGApps/BiTGApps/wiki/BiTGApps-Additional-Patches)
+* [**BiTGApps SetupWizard Patches**](https://github.com/BiTGApps/BiTGApps/wiki/BiTGApps-SetupWizard-Patches)
 * [**BiTGApps Install Size**](https://github.com/BiTGApps/BiTGApps/wiki/BiTGApps-Install-Size)
 * [**BiTGApps Addons Size**](https://github.com/BiTGApps/BiTGApps/wiki/BiTGApps-Addons-Size)
 * [**BiTGApps Application**](https://github.com/BiTGApps/BiTGApps/wiki/BiTGApps-Application)
