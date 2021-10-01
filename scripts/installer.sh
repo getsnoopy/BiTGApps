@@ -5104,6 +5104,8 @@ post_install_wipe() {
   for f in $SYSTEM/usr $SYSTEM/product/usr $SYSTEM/system_ext/usr; do
     rm -rf $f/share/ime $f/srec
   done
+  # Remove busybox backup
+  rm -rf $ANDROID_DATA/busybox $SECURE_DIR/busybox /cache/busybox /persist/busybox /mnt/vendor/persist/busybox /metadata/busybox
   # Remove properties from system build
   remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
   remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
@@ -5138,6 +5140,8 @@ microg_install_wipe() {
   done
   rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay $ANDROID_DATA/adb/service.d/runtime.sh
   rm -rf $SYSTEM_ADDOND/microg.sh $SYSTEM_ADDOND/backup.sh $SYSTEM_ADDOND/restore.sh
+  # Remove busybox backup
+  rm -rf $ANDROID_DATA/busybox $SECURE_DIR/busybox /cache/busybox /persist/busybox /mnt/vendor/persist/busybox /metadata/busybox
   # Remove properties from system build
   remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
   remove_line $SYSTEM/build.prop "ro.microg.device="

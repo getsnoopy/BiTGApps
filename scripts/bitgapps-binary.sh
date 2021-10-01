@@ -200,6 +200,8 @@ post_install_wipe() {
   for f in $SYSTEM/usr $SYSTEM/product/usr $SYSTEM/system_ext/usr; do
     rm -rf $f/share/ime $f/srec
   done
+  # Remove busybox backup
+  rm -rf $ANDROID_DATA/busybox $SECURE_DIR/busybox /cache/busybox /persist/busybox /mnt/vendor/persist/busybox /metadata/busybox
   # Remove properties from system build
   remove_line $SYSTEM/build.prop "ro.gapps.release_tag="
   remove_line $SYSTEM/build.prop "ro.control_privapp_permissions="
