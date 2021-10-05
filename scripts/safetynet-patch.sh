@@ -667,7 +667,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
   if [ "$device_vendorpartition" == "false" ]; then
     ui_print "- Updating vendor properties"
     # Build security patch
-    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.vendor.build.security_patch)" ]; then
+    if [ -f "$SYSTEM/vendor/build.prop" ] && [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.vendor.build.security_patch)" ]; then
       CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=";
       grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
       rm -rf $SYSTEM/vendor/build.prop
@@ -678,7 +678,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
       insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
     fi
     # Build fingerprint
-    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.vendor.build.fingerprint)" ]; then
+    if [ -f "$SYSTEM/vendor/build.prop" ] && [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.vendor.build.fingerprint)" ]; then
       CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint="
       grep -v "$CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
       rm -rf $SYSTEM/vendor/build.prop
@@ -689,7 +689,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
       insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build fingerprint
-    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.build.fingerprint)" ]; then
+    if [ -f "$SYSTEM/vendor/build.prop" ] && [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.build.fingerprint)" ]; then
       CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint="
       grep -v "$CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
       rm -rf $SYSTEM/vendor/build.prop
@@ -700,7 +700,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
       insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'keyguard.no_require_sim=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build bootimage
-    if [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.bootimage.build.fingerprint)" ]; then
+    if [ -f "$SYSTEM/vendor/build.prop" ] && [ -n "$(cat $SYSTEM/vendor/build.prop | grep ro.bootimage.build.fingerprint)" ]; then
       CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint="
       grep -v "$CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE" $SYSTEM/vendor/build.prop > $TMP/vendor.prop
       rm -rf $SYSTEM/vendor/build.prop

@@ -3248,6 +3248,8 @@ gboard_usr() {
   # Set default packages and unpack
   ZIP="zip/usr_share.tar.xz"
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # Re-create unzip directory
+  test -d $TMP_USR_SHARE || install -d $TMP_USR_SHARE; chmod 0755 $TMP_USR_SHARE
   # Unpack system files
   tar -xf $ZIP_FILE/usr_share.tar.xz -C $TMP_USR_SHARE
   if [ "$supported_module_config" == "false" ]; then
@@ -3278,6 +3280,8 @@ speech_common() {
   # Set default packages and unpack
   ZIP="zip/usr_srec.tar.xz"
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  # Re-create unzip directory
+  test -d $TMP_USR_SREC || install -d $TMP_USR_SREC; chmod 0755 $TMP_USR_SREC
   # Unpack system files
   tar -xf $ZIP_FILE/usr_srec.tar.xz -C $TMP_USR_SREC
   if [ "$supported_module_config" == "false" ]; then
@@ -5167,8 +5171,8 @@ post_backup() {
       test -d $SECURE_DIR/.backup || mkdir -p $SECURE_DIR/.backup
       chmod 0755 $ANDROID_DATA/.backup; chmod 0755 $SECURE_DIR/.backup
       # Check existing backup type
-      check_common_backup="$($l/grep -w 'KEYSTORE' $ANDROID_DATA/.backup/.backup)"
-      check_secure_backup="$($l/grep -w 'KEYSTORE' $SECURE_DIR/.backup/.backup)"
+      check_common_backup="$($l/grep -w 'KEYSTORE' $ANDROID_DATA/.backup/.backup 2>/dev/null)"
+      check_secure_backup="$($l/grep -w 'KEYSTORE' $SECURE_DIR/.backup/.backup 2>/dev/null)"
       # Add previous backup detection
       if [ ! -f "$ANDROID_DATA/.backup/.backup" ] || { [ -f "$ANDROID_DATA/.backup/.backup" ] && [ "$check_common_backup" == "KEYSTORE" ]; }; then
         # APKs backed by framework
@@ -6089,7 +6093,7 @@ set_cts_patch() {
   fi
   if [ "$device_vendorpartition" == "false" ]; then
     # Build security patch
-    if [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep ro.vendor.build.security_patch)" ]; then
+    if [ -f "$SYSTEM_AS_SYSTEM/vendor/build.prop" ] && [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep ro.vendor.build.security_patch)" ]; then
       CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=";
       grep -v "$CTS_DEFAULT_VENDOR_BUILD_SEC_PATCH" $SYSTEM_AS_SYSTEM/vendor/build.prop > $TMP/vendor.prop
       rm -rf $SYSTEM_AS_SYSTEM/vendor/build.prop
@@ -6100,7 +6104,7 @@ set_cts_patch() {
       insert_line $SYSTEM_AS_SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
     fi
     # Build fingerprint
-    if [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep ro.vendor.build.fingerprint)" ]; then
+    if [ -f "$SYSTEM_AS_SYSTEM/vendor/build.prop" ] && [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep ro.vendor.build.fingerprint)" ]; then
       CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint="
       grep -v "$CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT" $SYSTEM_AS_SYSTEM/vendor/build.prop > $TMP/vendor.prop
       rm -rf $SYSTEM_AS_SYSTEM/vendor/build.prop
@@ -6111,7 +6115,7 @@ set_cts_patch() {
       insert_line $SYSTEM_AS_SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build fingerprint
-    if [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep ro.build.fingerprint)" ]; then
+    if [ -f "$SYSTEM_AS_SYSTEM/vendor/build.prop" ] && [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep ro.build.fingerprint)" ]; then
       CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint="
       grep -v "$CTS_DEFAULT_VENDOR_BUILD_FINGERPRINT" $SYSTEM_AS_SYSTEM/vendor/build.prop > $TMP/vendor.prop
       rm -rf $SYSTEM_AS_SYSTEM/vendor/build.prop
@@ -6122,7 +6126,7 @@ set_cts_patch() {
       insert_line $SYSTEM_AS_SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'keyguard.no_require_sim=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build bootimage
-    if [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep ro.bootimage.build.fingerprint)" ]; then
+    if [ -f "$SYSTEM_AS_SYSTEM/vendor/build.prop" ] && [ -n "$(cat $SYSTEM_AS_SYSTEM/vendor/build.prop | grep ro.bootimage.build.fingerprint)" ]; then
       CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint="
       grep -v "$CTS_DEFAULT_VENDOR_BUILD_BOOTIMAGE" $SYSTEM_AS_SYSTEM/vendor/build.prop > $TMP/vendor.prop
       rm -rf $SYSTEM_AS_SYSTEM/vendor/build.prop
