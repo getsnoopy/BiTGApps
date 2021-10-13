@@ -6288,7 +6288,16 @@ on_cts_patch() {
     if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
       ui_print "- Apply safetynet patch"
       set_cts_patch
-      usf_v26
+      # Keystore executable and library support ARMv8-A architecture
+      case $TARGET_ANDROID_ARCH in
+        ARM )
+          ui_print "! Skip keystore patch"
+          ;;
+        ARM64 )
+          ui_print "- Apply keystore patch"
+          usf_v26
+          ;;
+      esac
     fi
   fi
 }

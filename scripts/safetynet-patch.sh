@@ -773,8 +773,17 @@ fi
 android_sdk="$(get_prop "ro.build.version.sdk")"
 ui_print "- Android SDK version: $android_sdk"
 
+# Set platform check property; Obsolete build property in use
+device_architecture="$(get_prop "ro.product.cpu.abi")"
+ui_print "- Android platform: $device_architecture"
+
 # TODO: Universal SafetyNet Fix; Works together with CTS patch
-if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
+if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ "$TARGET_ANDROID_ARCH" == "ARM" ]; then
+  ui_print "! SKip installing patched keystore"
+fi
+
+# TODO: Universal SafetyNet Fix; Works together with CTS patch
+if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ "$TARGET_ANDROID_ARCH" == "ARM64" ]; then
   ui_print "- Installing patched keystore"
   if [ "$BOOTMODE" == "false" ]; then unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }; fi
   if [ "$BOOTMODE" == "true" ]; then unpack_zip() { return 0; }; fi
