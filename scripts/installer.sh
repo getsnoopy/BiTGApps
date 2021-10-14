@@ -4835,7 +4835,19 @@ set_addon_install() {
 
 addon_ota_prop() { [ "$supported_module_config" == "false" ] && insert_line $SYSTEM/config.prop "ro.addon.enabled=true" after '# Begin build properties' "ro.addon.enabled=true"; }
 
-on_addon_install() { print_title_addon; set_addon_install; addon_ota_prop; }
+# TODO: Support for API 31
+on_supported_api() {
+  if [ "$TARGET_ANDROID_SDK" == "31" ]; then
+    ui_print "! Unsupported API detected"
+    on_abort "! Skip installing additional packages"
+  fi
+  if [ "$TARGET_ANDROID_SDK" -lt "31" ]; then
+    set_addon_install
+    addon_ota_prop
+  fi
+}
+
+on_addon_install() { print_title_addon; on_supported_api; }
 
 # Delete existing GMS Doze entry from Android 7.1+
 opt_v25() {
