@@ -2197,6 +2197,21 @@ backup_script() {
   fi
 }
 
+# TODO: No such volume script aborted
+dummy_script() {
+  if [ -d "$SYSTEM_ADDOND" ] && [ "$supported_module_config" == "false" ]; then
+    ui_print "- Installing OTA survival script"
+    rm -rf $SYSTEM_ADDOND/dummy.sh
+    ZIP="zip/Addon.tar.xz"
+    [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+    tar -xf $ZIP_FILE/Addon.tar.xz -C $TMP_ADDON
+    pkg_TMPAddon
+    chcon -h u:object_r:system_file:s0 "$SYSTEM_ADDOND/dummy.sh"
+  else
+    ui_print "! Skip installing OTA survival script"
+  fi
+}
+
 # Set predefined runtime permissions for microG
 runtime_permissions() {
   for m in /data/magisk; do
@@ -6930,7 +6945,7 @@ post_install() {
     set_setup_config
     print_title_setup
     on_setup_install
-    backup_script
+    dummy_script
     opt_v25
     whitelist_patch
     adb_secure
@@ -6974,7 +6989,7 @@ post_install() {
     build_prop_file
     ota_prop_file
     rwg_ota_prop
-    backup_script
+    dummy_script
     runtime_permissions
     opt_v25
     whitelist_patch
