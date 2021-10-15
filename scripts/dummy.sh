@@ -38,6 +38,7 @@ case "$1" in
     ui_print "************************"
     ui_print "! Dummy OTA survival script shipped with BiTGApps"
     ui_print "! Reflash BiTGApps Packages after OTA upgrade"
+    ui_print "! To learn more, visit https://git.io/JKnaG"
     ui_print " "
   ;;
   restore)
@@ -47,6 +48,7 @@ case "$1" in
     ui_print "************************"
     ui_print "! Dummy OTA survival script shipped with BiTGApps"
     ui_print "! Reflash BiTGApps Packages after OTA upgrade"
+    ui_print "! To learn more, visit https://git.io/JKnaG"
     ui_print " "
   ;;
 esac
