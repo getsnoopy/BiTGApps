@@ -2201,6 +2201,11 @@ backup_script() {
 dummy_script() {
   if [ -d "$SYSTEM_ADDOND" ] && [ "$supported_module_config" == "false" ]; then
     ui_print "- Installing OTA survival script"
+    [ "$ZIPTYPE" == "basic" ] && ota="bitgapps.sh"
+    [ "$ZIPTYPE" == "microg" ] && ota="microg.sh"
+    for f in ${ota} backup.sh restore.sh; do
+      rm -rf $SYSTEM_ADDOND/$f
+    done
     rm -rf $SYSTEM_ADDOND/dummy.sh
     ZIP="zip/Addon.tar.xz"
     [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
