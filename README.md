@@ -4,10 +4,10 @@
 
 <div align="center">
   <!-- Version -->
-    <img src="https://img.shields.io/badge/Revision-39-blue.svg?longCache=true&style=flat-square"
+    <img src="https://img.shields.io/badge/Revision-40-blue.svg?longCache=true&style=flat-square"
       alt="Version" />
   <!-- Last Updated -->
-    <img src="https://img.shields.io/badge/Updated-October 05, 2021-orange.svg?longCache=true&style=flat-square"
+    <img src="https://img.shields.io/badge/Updated-October 16, 2021-orange.svg?longCache=true&style=flat-square"
       alt="_time_stamp_" />
   <!-- License -->
     <a href="https://www.gnu.org/licenses/gpl-3.0" target="_blank"><img src="https://img.shields.io/badge/License-GPLv3-yellow.svg?longCache=true&style=flat-square"></a>
@@ -51,9 +51,9 @@ Here are feature highlights:
 
 ## Release Tag
 
-![](https://img.shields.io/badge/BiTGApps-%20R39-green.svg?style=flat-square)
-![](https://img.shields.io/badge/MicroG-%20R39-blue.svg?style=flat-square)
-![](https://img.shields.io/badge/Addon-%20R27-red.svg?style=flat-square)
+![](https://img.shields.io/badge/BiTGApps-%20R40-green.svg?style=flat-square)
+![](https://img.shields.io/badge/MicroG-%20R40-blue.svg?style=flat-square)
+![](https://img.shields.io/badge/Addon-%20R28-red.svg?style=flat-square)
 
 ## Downloads
 
@@ -67,9 +67,10 @@ Here are feature highlights:
 * [BiTGApps Documentation](https://github.com/BiTGApps/BiTGApps/wiki)
 * [microG Support](https://github.com/BiTGApps/BiTGApps/wiki#microg)
 
-## Discussion Group
+## Social Links
 
-* [Telegram chat](https://t.me/bitgapps_official)
+[![Channel](https://img.shields.io/badge/Follow-Telegram-blue.svg?longCache=true&style=flat-square)](https://t.me/bitgapps_downloads_official)
+[![Discussion](https://img.shields.io/badge/Discussion-Telegram-red.svg?longCache=true&style=flat-square)](https://t.me/bitgapps_official)
 
 ## Support Project
 
