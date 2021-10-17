@@ -4857,11 +4857,11 @@ addon_ota_prop() { [ "$supported_module_config" == "false" ] && insert_line $SYS
 
 # TODO: Support for API 31
 on_supported_api() {
-  if [ "$TARGET_ANDROID_SDK" == "31" ]; then
+  if [ "$android_sdk" == "31" ]; then
     ui_print "! Unsupported API detected"
     on_abort "! Skip installing additional packages"
   fi
-  if [ "$TARGET_ANDROID_SDK" -lt "31" ]; then
+  if [ "$android_sdk" -lt "31" ]; then
     set_addon_install
     addon_ota_prop
   fi
