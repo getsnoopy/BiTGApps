@@ -437,7 +437,7 @@ if [ "$BOOTMODE" == "false" ]; then
   if [ -z "$SYSTEM" ]; then
     SYSTEM="/system_root/system"
   fi
-  test -d "$SYSTEM/apex" || return 1
+  local_apex() { test -d "$SYSTEM/apex" || return 1; }; local_apex
   ui_print "- Mounting /apex"
   local_apex() { local apex dest loop minorx num; }; local_apex
   setup_mountpoint /apex
@@ -881,7 +881,7 @@ fi
 
 # Unmount APEX
 if [ "$BOOTMODE" == "false" ]; then
-  test -d /apex || return 1
+  local_apex() { test -d /apex || return 1; }; local_apex
   local_dest() { local dest loop; }; local_dest
   for dest in $(find /apex -type d -mindepth 1 -maxdepth 1); do
     if [ -f $dest.img ]; then
