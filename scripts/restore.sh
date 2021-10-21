@@ -706,7 +706,12 @@ pkg_System() {
     YouTube Abstruct BasicDreams BlissPapers BookmarkProvider Browser* Camera* Chromium ColtPapers \
     EasterEgg* EggGame Email* ExactCalculator Exchange2 Gallery* GugelClock HTMLViewer Jelly \
     messaging MiXplorer* Music* Partnerbookmark* PartnerBookmark* Phonograph PhotoTable RetroMusic* \
-    VanillaMusic Via* QPGallery QuickSearchBox; do
+    VanillaMusic Via* QPGallery QuickSearchBox GoogleContacts* GoogleExtShared GoogleGalleryGo \
+    LocationHistory* MicropaperPrebuilt PrebuiltBugle PrebuiltClockGoogle PrebuiltDeskClockGoogle \
+    SoundAmplifierPrebuilt YouTube* AboutBliss BlissStatistics Calendar* Dashboard DeskClock EmergencyInfo \
+    Etar HTMLViewer Jelly Messaging messaging PhotoTable* Recorder* SimpleGallery WallpaperZone \
+    CaptivePortalLoginGoogle GooglePrint* NexusWallpapers* PlayAutoInstallConfig PrebuiltDeskClockGoogle \
+    PrebuiltGoogleTelemetryTvp TurboAdapter TrichromeLibrary WebViewGoogle; do
     rm -rf $S/app/$i $S/product/app/$i $S/system_ext/app/$i
   done
   for i in \
@@ -716,7 +721,10 @@ pkg_System() {
     GoogleExtservices GoogleExtServicesPrebuilt GoogleFeedback GoogleOneTimeInitializer GooglePartnerSetup GoogleRestore \
     GoogleServicesFramework HotwordEnrollment* HotWordEnrollment* matchmaker* Matchmaker* Phonesky PixelLive* PrebuiltGmsCore* \
     PixelSetupWizard* SetupWizard* Tag* Tips* Turbo* Velvet Wellbeing* AudioFX Camera* Eleven MatLog MusicFX OmniSwitch \
-    Snap* Tag* Via* VinylMusicPlayer; do
+    Snap* Tag* Via* VinylMusicPlayer ConnMetrics GoogleContacts* GoogleDialer GoogleExtServices MaestroPrebuilt SCONE Scribe* \
+    RecorderPrebuilt WallpaperPickerGoogleRelease AncientWallpaperZone Contacts crDroidMusic Dialer EmergencyInfo Gallery2 \
+    Recorder* AmbientSensePrebuilt AndroidAutoFullPrebuilt DeviceIntelligenceNetworkPrebuilt DevicePersonalizationPrebuiltPixel3 \
+    GoogleRestorePrebuilt PartnerSetupPrebuilt PrebuiltBugle TurboPrebuilt DocumentsUIGoogle TagGoogle; do
     rm -rf $S/priv-app/$i $S/product/priv-app/$i $S/system_ext/priv-app/$i
   done
   for i in \
@@ -761,8 +769,11 @@ pkg_System() {
     permissions/com.google.android.gms* sysconfig/microg* sysconfig/nogoolag*; do
     rm -rf $S/etc/$i $S/product/etc/$i $S/system_ext/etc/$i
   done
-  for i in $S/overlay $S/product/overlay $S/system_ext/overlay; do
-    rm -rf $i/PixelConfigOverlay*
+  for i in \
+    GoogleConfigOverlay* Gms* PixelConfigOverlay* ChromeOverlay* TelegramOverlay* WhatsAppOverlay*
+    GmsConfigOverlay* GooglePermissionController* GoogleWebViewOverlay* ManagedProvisioningPixel*
+    TelegramOverlay* WhatsAppOverlay* PixelSetupWizard* SettingsGoogle* SystemUIGoogle* SystemUIGXOverlay*; do
+    rm -rf $S/overlay/$i $S/product/overlay/$i $S/system_ext/overlay/$i
   done
   for i in $S/usr $S/product/usr $S/system_ext/usr; do
     rm -rf $i/share/ime $i/srec
@@ -872,9 +883,12 @@ restoredirTMPAddon() {
     $TMP/addon/priv-app/ContactsGooglePrebuilt
     $TMP/addon/priv-app/DialerGooglePrebuilt
     $TMP/addon/priv-app/DPSGooglePrebuilt
+    $TMP/addon/priv-app/DPSGooglePrebuiltSc
     $TMP/addon/priv-app/GearheadGooglePrebuilt
     $TMP/addon/priv-app/NexusLauncherPrebuilt
+    $TMP/addon/priv-app/NexusLauncherPrebuiltSc
     $TMP/addon/priv-app/NexusQuickAccessWallet
+    $TMP/addon/priv-app/NexusQuickAccessWalletSc
     $TMP/addon/priv-app/Velvet
     $TMP/addon/priv-app/WellbeingPrebuilt"
 
@@ -898,6 +912,7 @@ restoredirTMPAddon() {
 
   TMP_OVERLAY_ADDON="
     $TMP/addon/overlay/NexusLauncherOverlay
+    $TMP/addon/overlay/NexusLauncherOverlaySc
     $TMP/addon/overlay/DPSOverlay"
 
   TMP_SHARE_ADDON="
@@ -1014,7 +1029,7 @@ fix_addon_conflict() {
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.dps)" ]; then
       for i in $S/app $S/priv-app $S/product/app $S/product/priv-app $S/system_ext/app $S/system_ext/priv-app; do
-        rm -rf $i/DPSGooglePrebuilt $i/Matchmaker*
+        rm -rf $i/DPSGooglePrebuilt* $i/Matchmaker*
         done
       for i in $S/etc/permissions $S/product/etc/permissions $S/system_ext/etc/permissions; do
         rm -rf $i/com.google.android.as.xml
@@ -1037,7 +1052,7 @@ fix_addon_conflict() {
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.launcher)" ]; then
       for i in $S/app $S/priv-app $S/product/app $S/product/priv-app $S/system_ext/app $S/system_ext/priv-app; do
-        rm -rf $i/Launcher3 $i/Launcher3QuickStep $i/NexusLauncherPrebuilt $i/NexusLauncherRelease $i/NexusQuickAccessWallet $i/QuickAccessWallet $i/QuickStep $i/QuickStepLauncher $i/TrebuchetQuickStep
+        rm -rf $i/Launcher3 $i/Launcher3QuickStep $i/NexusLauncherPrebuilt* $i/NexusLauncherRelease $i/NexusQuickAccessWallet* $i/QuickAccessWallet $i/QuickStep $i/QuickStepLauncher $i/TrebuchetQuickStep
       done
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.maps)" ]; then

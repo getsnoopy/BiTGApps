@@ -1705,7 +1705,9 @@ pkg_System() {
     VanillaMusic Via* QPGallery QuickSearchBox GoogleContacts* GoogleExtShared GoogleGalleryGo \
     LocationHistory* MicropaperPrebuilt PrebuiltBugle PrebuiltClockGoogle PrebuiltDeskClockGoogle \
     SoundAmplifierPrebuilt YouTube* AboutBliss BlissStatistics Calendar* Dashboard DeskClock EmergencyInfo \
-    Etar HTMLViewer Jelly Messaging messaging PhotoTable* Recorder* SimpleGallery WallpaperZone; do
+    Etar HTMLViewer Jelly Messaging messaging PhotoTable* Recorder* SimpleGallery WallpaperZone \
+    CaptivePortalLoginGoogle GooglePrint* NexusWallpapers* PlayAutoInstallConfig PrebuiltDeskClockGoogle \
+    PrebuiltGoogleTelemetryTvp TurboAdapter TrichromeLibrary WebViewGoogle; do
     rm -rf $SYSTEM_AS_SYSTEM/app/$i $SYSTEM_AS_SYSTEM/product/app/$i $SYSTEM_AS_SYSTEM/system_ext/app/$i
   done
   for i in \
@@ -1717,7 +1719,8 @@ pkg_System() {
     PixelSetupWizard* SetupWizard* Tag* Tips* Turbo* Velvet Wellbeing* AudioFX Camera* Eleven MatLog MusicFX OmniSwitch \
     Snap* Tag* Via* VinylMusicPlayer ConnMetrics GoogleContacts* GoogleDialer GoogleExtServices MaestroPrebuilt SCONE Scribe* \
     RecorderPrebuilt WallpaperPickerGoogleRelease AncientWallpaperZone Contacts crDroidMusic Dialer EmergencyInfo Gallery2 \
-    Recorder*; do
+    Recorder* AmbientSensePrebuilt AndroidAutoFullPrebuilt DeviceIntelligenceNetworkPrebuilt DevicePersonalizationPrebuiltPixel3 \
+    GoogleRestorePrebuilt PartnerSetupPrebuilt PrebuiltBugle TurboPrebuilt DocumentsUIGoogle TagGoogle; do
     rm -rf $SYSTEM_AS_SYSTEM/priv-app/$i $SYSTEM_AS_SYSTEM/product/priv-app/$i $SYSTEM_AS_SYSTEM/system_ext/priv-app/$i
   done
   for i in \
@@ -1762,8 +1765,11 @@ pkg_System() {
     permissions/com.google.android.gms* sysconfig/microg* sysconfig/nogoolag*; do
     rm -rf $SYSTEM_AS_SYSTEM/etc/$i $SYSTEM_AS_SYSTEM/product/etc/$i $SYSTEM_AS_SYSTEM/system_ext/etc/$i
   done
-  for i in $SYSTEM_AS_SYSTEM/overlay $SYSTEM_AS_SYSTEM/product/overlay $SYSTEM_AS_SYSTEM/system_ext/overlay; do
-    rm -rf $i/GoogleConfigOverlay* $i/Gms* $i/PixelConfigOverlay* $i/ChromeOverlay $i/TelegramOverlay $i/WhatsAppOverlay
+  for i in \
+    GoogleConfigOverlay* Gms* PixelConfigOverlay* ChromeOverlay* TelegramOverlay* WhatsAppOverlay* GmsConfigOverlay* \
+    GooglePermissionController* GoogleWebViewOverlay* ManagedProvisioningPixel* TelegramOverlay* WhatsAppOverlay* \
+    PixelSetupWizard* SettingsGoogle* SystemUIGoogle* SystemUIGXOverlay*; do
+    rm -rf $SYSTEM_AS_SYSTEM/overlay/$i $SYSTEM_AS_SYSTEM/product/overlay/$i $SYSTEM_AS_SYSTEM/system_ext/overlay/$i
   done
   for i in $SYSTEM_AS_SYSTEM/usr $SYSTEM_AS_SYSTEM/product/usr $SYSTEM_AS_SYSTEM/system_ext/usr; do
     rm -rf $i/share/ime $i/srec
@@ -2382,7 +2388,7 @@ pre_installed_pkg() {
     for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
       rm -rf $i/Velvet $i/BromitePrebuilt $i/WebViewBromite $i/CalculatorGooglePrebuilt $i/CalendarGooglePrebuilt
       rm -rf $i/ChromeGooglePrebuilt $i/TrichromeLibrary $i/WebViewGoogle $i/ContactsGooglePrebuilt $i/DeskClockGooglePrebuilt
-      rm -rf $i/DialerGooglePrebuilt $i/DPSGooglePrebuilt $i/GboardGooglePrebuilt $i/GearheadGooglePrebuilt $i/NexusLauncherPrebuilt $i/NexusQuickAccessWallet
+      rm -rf $i/DialerGooglePrebuilt $i/DPSGooglePrebuilt* $i/GboardGooglePrebuilt $i/GearheadGooglePrebuilt $i/NexusLauncherPrebuilt* $i/NexusQuickAccessWallet*
       rm -rf $i/MapsGooglePrebuilt $i/MarkupGooglePrebuilt $i/MessagesGooglePrebuilt $i/CarrierServices $i/PhotosGooglePrebuilt $i/SoundPickerPrebuilt
       rm -rf $i/GoogleTTSPrebuilt $i/YouTube $i/MicroGGMSCore $i/WellbeingPrebuilt
     done
@@ -2394,14 +2400,14 @@ pre_installed_pkg() {
       rm -rf $i/com.google.android.dialer.support.jar $i/com.google.android.maps.jar
     done
     for i in $SYSTEM/overlay $SYSTEM/product/overlay $SYSTEM/system_ext/overlay; do
-      rm -rf $i/DPSOverlay $i/NexusLauncherOverlay
+      rm -rf $i/DPSOverlay $i/NexusLauncherOverlay*
     done
   fi
   if [ "$supported_module_config" == "true" ]; then
     for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
       rm -rf $i/Velvet $i/BromitePrebuilt $i/WebViewBromite $i/CalculatorGooglePrebuilt $i/CalendarGooglePrebuilt
       rm -rf $i/ChromeGooglePrebuilt $i/TrichromeLibrary $i/WebViewGoogle $i/ContactsGooglePrebuilt $i/DeskClockGooglePrebuilt
-      rm -rf $i/DialerGooglePrebuilt $i/DPSGooglePrebuilt $i/GboardGooglePrebuilt $i/GearheadGooglePrebuilt $i/NexusLauncherPrebuilt $i/NexusQuickAccessWallet
+      rm -rf $i/DialerGooglePrebuilt $i/DPSGooglePrebuilt* $i/GboardGooglePrebuilt $i/GearheadGooglePrebuilt $i/NexusLauncherPrebuilt* $i/NexusQuickAccessWallet*
       rm -rf $i/MapsGooglePrebuilt $i/MarkupGooglePrebuilt $i/MessagesGooglePrebuilt $i/CarrierServices $i/PhotosGooglePrebuilt $i/SoundPickerPrebuilt
       rm -rf $i/GoogleTTSPrebuilt $i/YouTube $i/MicroGGMSCore $i/WellbeingPrebuilt
     done
@@ -2413,7 +2419,7 @@ pre_installed_pkg() {
       rm -rf $i/com.google.android.dialer.support.jar $i/com.google.android.maps.jar
     done
     for i in $SYSTEM_SYSTEM/overlay $SYSTEM_SYSTEM/product/overlay $SYSTEM_SYSTEM/system_ext/overlay; do
-      rm -rf $i/DPSOverlay $i/NexusLauncherOverlay
+      rm -rf $i/DPSOverlay $i/NexusLauncherOverlay*
     done
   fi
 }
@@ -2487,11 +2493,11 @@ pre_restore_pkg() {
     fi
     if [ "$supported_dps_wipe" == "true" ] || [ "$TARGET_DPS_GOOGLE" == "true" ]; then
       ui_print "- Uninstall DPS Google"
-      rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt $SYSTEM/product/priv-app/DPSGooglePrebuilt $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
+      rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt* $SYSTEM/product/priv-app/DPSGooglePrebuilt* $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt*
       for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
         rm -rf $i/com.google.android.as.xml
       done
-      rm -rf $SYSTEM/etc/firmware/music_detector.descriptor $SYSTEM/etc/firmware/music_detector.sound_model $SYSTEM/overlay/DPSOverlay
+      rm -rf $SYSTEM/etc/firmware/music_detector.descriptor $SYSTEM/etc/firmware/music_detector.sound_model $SYSTEM/product/overlay/DPSOverlay
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.dps"
     fi
@@ -2514,14 +2520,14 @@ pre_restore_pkg() {
     fi
     if [ "$supported_launcher_wipe" == "true" ] || [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Pixel Launcher"
-      rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt $SYSTEM/product/priv-app/NexusLauncherPrebuilt $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
-      rm -rf $SYSTEM/priv-app/NexusQuickAccessWallet $SYSTEM/product/priv-app/NexusQuickAccessWallet $SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
+      rm -rf $SYSTEM/priv-app/NexusLauncherPrebuilt* $SYSTEM/product/priv-app/NexusLauncherPrebuilt* $SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt*
+      rm -rf $SYSTEM/priv-app/NexusQuickAccessWallet* $SYSTEM/product/priv-app/NexusQuickAccessWallet* $SYSTEM/system_ext/priv-app/NexusQuickAccessWallet*
       for i in \
         $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions \
         $SYSTEM/etc/sysconfig $SYSTEM/product/etc/sysconfig $SYSTEM/system_ext/etc/sysconfig; do
         rm -rf $i/com.google.android.apps.nexuslauncher.xml
       done
-      rm -rf $SYSTEM/overlay/NexusLauncherOverlay
+      rm -rf $SYSTEM/product/overlay/NexusLauncherOverlay*
       # Remove Addon property from OTA config
       remove_line $SYSTEM/config.prop "ro.config.launcher"
     fi
@@ -2651,11 +2657,11 @@ pre_restore_pkg() {
     fi
     if [ "$supported_dps_wipe" == "true" ] || [ "$TARGET_DPS_GOOGLE" == "true" ]; then
       ui_print "- Uninstall DPS Google"
-      rm -rf $SYSTEM_SYSTEM/priv-app/DPSGooglePrebuilt $SYSTEM_SYSTEM/product/priv-app/DPSGooglePrebuilt $SYSTEM_SYSTEM/system_ext/priv-app/DPSGooglePrebuilt
+      rm -rf $SYSTEM_SYSTEM/priv-app/DPSGooglePrebuilt* $SYSTEM_SYSTEM/product/priv-app/DPSGooglePrebuilt* $SYSTEM_SYSTEM/system_ext/priv-app/DPSGooglePrebuilt*
       for i in $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/permissions; do
         rm -rf $i/com.google.android.as.xml
       done
-      rm -rf $SYSTEM_SYSTEM/etc/firmware/music_detector.descriptor $SYSTEM_SYSTEM/etc/firmware/music_detector.sound_model $SYSTEM_SYSTEM/overlay/DPSOverlay
+      rm -rf $SYSTEM_SYSTEM/etc/firmware/music_detector.descriptor $SYSTEM_SYSTEM/etc/firmware/music_detector.sound_model $SYSTEM_SYSTEM/product/overlay/DPSOverlay
     fi
     if [ "$supported_gboard_wipe" == "true" ] || [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Keyboard Google"
@@ -2672,13 +2678,14 @@ pre_restore_pkg() {
     fi
     if [ "$supported_launcher_wipe" == "true" ] || [ "$TARGET_LAUNCHER_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Pixel Launcher"
-      rm -rf $SYSTEM_SYSTEM/priv-app/NexusLauncherPrebuilt $SYSTEM_SYSTEM/product/priv-app/NexusLauncherPrebuilt $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt
-      rm -rf $SYSTEM_SYSTEM/priv-app/NexusQuickAccessWallet $SYSTEM_SYSTEM/product/priv-app/NexusQuickAccessWallet $SYSTEM_SYSTEM/system_ext/priv-app/NexusQuickAccessWallet
+      rm -rf $SYSTEM_SYSTEM/priv-app/NexusLauncherPrebuilt* $SYSTEM_SYSTEM/product/priv-app/NexusLauncherPrebuilt* $SYSTEM_SYSTEM/system_ext/priv-app/NexusLauncherPrebuilt*
+      rm -rf $SYSTEM_SYSTEM/priv-app/NexusQuickAccessWallet* $SYSTEM_SYSTEM/product/priv-app/NexusQuickAccessWallet* $SYSTEM_SYSTEM/system_ext/priv-app/NexusQuickAccessWallet*
       for i in \
         $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/permissions \
         $SYSTEM_SYSTEM/etc/sysconfig $SYSTEM_SYSTEM/product/etc/sysconfig $SYSTEM_SYSTEM/system_ext/etc/sysconfig; do
         rm -rf $i/com.google.android.apps.nexuslauncher.xml
       done
+      rm -rf $SYSTEM_SYSTEM/product/overlay/NexusLauncherOverlay*
     fi
     if [ "$supported_maps_wipe" == "true" ] || [ "$TARGET_MAPS_GOOGLE" == "true" ]; then
       ui_print "- Uninstall Maps Google"
@@ -3189,10 +3196,13 @@ launcher_config() {
 
 launcher_overlay() {
   # Set default package and unpack
-  ZIP="zip/overlay/NexusLauncherOverlay.tar.xz"
-  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  [ "$android_sdk" == "30" ] && ZIP="zip/overlay/NexusLauncherOverlay.tar.xz"
+  [ "$android_sdk" == "31" ] && ZIP="zip/overlay/NexusLauncherOverlaySc.tar.xz"
+  # Set target package
+  ZIP="$ZIP"; [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
-  tar -xf $ZIP_FILE/overlay/NexusLauncherOverlay.tar.xz -C $TMP_OVERLAY
+  [ "$android_sdk" == "30" ] && tar -xf $ZIP_FILE/overlay/NexusLauncherOverlay.tar.xz -C $TMP_OVERLAY
+  [ "$android_sdk" == "31" ] && tar -xf $ZIP_FILE/overlay/NexusLauncherOverlaySc.tar.xz -C $TMP_OVERLAY
   # Install package
   pkg_TMPOverlay
   # Set selinux context
@@ -3226,10 +3236,13 @@ dps_overlay() {
 
 dps_sound_model() {
   # Set default package and unpack
-  ZIP="zip/DPSFirmware.tar.xz"
-  [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  [ "$android_sdk" == "30" ] && ZIP="zip/DPSFirmware.tar.xz"
+  [ "$android_sdk" == "31" ] && ZIP="zip/DPSFirmwareSc.tar.xz"
+  # Set target package
+  ZIP="$ZIP"; [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Unpack system files
-  tar -xf $ZIP_FILE/DPSFirmware.tar.xz -C $TMP_FIRMWARE
+  [ "$android_sdk" == "30" ] && tar -xf $ZIP_FILE/DPSFirmware.tar.xz -C $TMP_FIRMWARE
+  [ "$android_sdk" == "31" ] && tar -xf $ZIP_FILE/DPSFirmwareSc.tar.xz -C $TMP_FIRMWARE
   if [ "$supported_module_config" == "false" ]; then
     # Create firmware
     test -d $SYSTEM_AS_SYSTEM/etc/firmware || mkdir $SYSTEM_AS_SYSTEM/etc/firmware
@@ -3994,12 +4007,12 @@ set_addon_zip_conf() {
     else
       ui_print "! Skip installing Dialer Google"
     fi
-    if [ "$supported_dps_config" == "true" ] && [ "$android_sdk" == "30" ]; then
+    if [ "$supported_dps_config" == "true" ] && [ "$android_sdk" -ge "30" ]; then
       ui_print "- Installing DPS Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.dps" after '# Begin addon properties' "ro.config.dps"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/DPSGooglePrebuilt $i/Matchmaker*
+          rm -rf $i/DPSGooglePrebuilt* $i/Matchmaker*
         done
         for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
           rm -rf $i/com.google.android.as.xml
@@ -4010,13 +4023,13 @@ set_addon_zip_conf() {
           (mkdir $i/MatchmakerPrebuilt && touch $i/MatchmakerPrebuilt/.replace) 2>/dev/null
         done
       fi
-      ADDON_CORE="DPSGooglePrebuilt.tar.xz"
-      PKG_CORE="DPSGooglePrebuilt"
+      if [ "$android_sdk" == "30" ]; then ADDON_CORE="DPSGooglePrebuilt.tar.xz"; PKG_CORE="DPSGooglePrebuilt"; fi
+      if [ "$android_sdk" == "31" ]; then ADDON_CORE="DPSGooglePrebuiltSc.tar.xz"; PKG_CORE="DPSGooglePrebuiltSc"; fi
       target_core
       dps_config
       dps_overlay
       dps_sound_model
-    elif [ "$supported_dps_config" == "false" ] && [ "$android_sdk" == "30" ]; then
+    elif [ "$supported_dps_config" == "false" ] && [ "$android_sdk" -ge "30" ]; then
       ui_print "! Skip installing DPS Google"
     else
       ui_print "! Cannot install DPS Google"
@@ -4061,12 +4074,12 @@ set_addon_zip_conf() {
     else
       ui_print "! Skip installing Android Auto"
     fi
-    if [ "$supported_launcher_config" == "true" ] && [ "$android_sdk" == "30" ]; then
+    if [ "$supported_launcher_config" == "true" ] && [ "$android_sdk" -ge "30" ]; then
       ui_print "- Installing Pixel Launcher"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.launcher" after '# Begin addon properties' "ro.config.launcher"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/Launcher3 $i/Launcher3QuickStep $i/NexusLauncherPrebuilt $i/NexusLauncherRelease $i/NexusQuickAccessWallet $i/QuickAccessWallet $i/QuickStep $i/QuickStepLauncher $i/TrebuchetQuickStep
+          rm -rf $i/Launcher3 $i/Launcher3QuickStep $i/NexusLauncherPrebuilt* $i/NexusLauncherRelease $i/NexusQuickAccessWallet* $i/QuickAccessWallet $i/QuickStep $i/QuickStepLauncher $i/TrebuchetQuickStep
         done
       fi
       if [ "$supported_module_config" == "true" ]; then
@@ -4075,15 +4088,15 @@ set_addon_zip_conf() {
           (touch $i/Launcher3/.replace $i/Launcher3QuickStep/.replace $i/NexusLauncherRelease/.replace $i/QuickAccessWallet/.replace $i/QuickStep/.replace $i/QuickStepLauncher/.replace $i/TrebuchetQuickStep/.replace) 2>/dev/null
         done
       fi
-      ADDON_CORE="NexusLauncherPrebuilt.tar.xz"
-      PKG_CORE="NexusLauncherPrebuilt"
+      if [ "$android_sdk" == "30" ]; then ADDON_CORE="NexusLauncherPrebuilt.tar.xz"; PKG_CORE="NexusLauncherPrebuilt"; fi
+      if [ "$android_sdk" == "31" ]; then ADDON_CORE="NexusLauncherPrebuiltSc.tar.xz"; PKG_CORE="NexusLauncherPrebuiltSc"; fi
       target_core
-      ADDON_CORE="NexusQuickAccessWallet.tar.xz"
-      PKG_CORE="NexusQuickAccessWallet"
+      if [ "$android_sdk" == "30" ]; then ADDON_CORE="NexusQuickAccessWallet.tar.xz"; PKG_CORE="NexusQuickAccessWallet"; fi
+      if [ "$android_sdk" == "31" ]; then ADDON_CORE="NexusQuickAccessWalletSc.tar.xz"; PKG_CORE="NexusQuickAccessWalletSc"; fi
       target_core
       launcher_overlay
       launcher_config
-    elif [ "$supported_launcher_config" == "false" ] && [ "$android_sdk" == "30" ]; then
+    elif [ "$supported_launcher_config" == "false" ] && [ "$android_sdk" -ge "30" ]; then
       ui_print "! Skip installing Pixel Launcher"
     else
       ui_print "! Cannot install Pixel Launcher"
@@ -4493,12 +4506,12 @@ set_addon_zip_sep() {
       dialer_framework
       set_google_dialer_default
     fi
-    if [ "$TARGET_DPS_GOOGLE" == "true" ] && [ "$android_sdk" == "30" ]; then
+    if [ "$TARGET_DPS_GOOGLE" == "true" ] && [ "$android_sdk" -ge "30" ]; then
       ui_print "- Installing DPS Google"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.dps" after '# Begin addon properties' "ro.config.dps"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/DPSGooglePrebuilt $i/Matchmaker*
+          rm -rf $i/DPSGooglePrebuilt* $i/Matchmaker*
         done
         for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
           rm -rf $i/com.google.android.as.xml
@@ -4510,12 +4523,10 @@ set_addon_zip_sep() {
         done
       fi
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
-        ADDON_CORE="DPSGooglePrebuilt_arm.tar.xz"
-        PKG_CORE="DPSGooglePrebuilt"
+        [ "$android_sdk" == "30" ] && ADDON_CORE="DPSGooglePrebuilt_arm.tar.xz"; PKG_CORE="DPSGooglePrebuilt"
       fi
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-        ADDON_CORE="DPSGooglePrebuilt_arm64.tar.xz"
-        PKG_CORE="DPSGooglePrebuilt"
+        [ "$android_sdk" == "31" ] && ADDON_CORE="DPSGooglePrebuiltSc_arm64.tar.xz"; PKG_CORE="DPSGooglePrebuiltSc"
       fi
       target_core
       dps_config
@@ -4573,12 +4584,12 @@ set_addon_zip_sep() {
       fi
       target_core
     fi
-    if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ] && [ "$android_sdk" == "30" ]; then
+    if [ "$TARGET_LAUNCHER_GOOGLE" == "true" ] && [ "$android_sdk" -ge "30" ]; then
       ui_print "- Installing Pixel Launcher"
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.launcher" after '# Begin addon properties' "ro.config.launcher"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/Launcher3 $i/Launcher3QuickStep $i/NexusLauncherPrebuilt $i/NexusLauncherRelease $i/NexusQuickAccessWallet $i/QuickAccessWallet $i/QuickStep $i/QuickStepLauncher $i/TrebuchetQuickStep
+          rm -rf $i/Launcher3 $i/Launcher3QuickStep $i/NexusLauncherPrebuilt* $i/NexusLauncherRelease $i/NexusQuickAccessWallet* $i/QuickAccessWallet $i/QuickStep $i/QuickStepLauncher $i/TrebuchetQuickStep
         done
       fi
       if [ "$supported_module_config" == "true" ]; then
@@ -4587,11 +4598,11 @@ set_addon_zip_sep() {
           (touch $i/Launcher3/.replace $i/Launcher3QuickStep/.replace $i/NexusLauncherRelease/.replace $i/QuickAccessWallet/.replace $i/QuickStep/.replace $i/QuickStepLauncher/.replace $i/TrebuchetQuickStep/.replace) 2>/dev/null
         done
       fi
-      ADDON_CORE="NexusLauncherPrebuilt.tar.xz"
-      PKG_CORE="NexusLauncherPrebuilt"
+      if [ "$android_sdk" == "30" ]; then ADDON_CORE="NexusLauncherPrebuilt.tar.xz"; PKG_CORE="NexusLauncherPrebuilt"; fi
+      if [ "$android_sdk" == "31" ]; then ADDON_CORE="NexusLauncherPrebuiltSc.tar.xz"; PKG_CORE="NexusLauncherPrebuiltSc"; fi
       target_core
-      ADDON_CORE="NexusQuickAccessWallet.tar.xz"
-      PKG_CORE="NexusQuickAccessWallet"
+      if [ "$android_sdk" == "30" ]; then ADDON_CORE="NexusQuickAccessWallet.tar.xz"; PKG_CORE="NexusQuickAccessWallet"; fi
+      if [ "$android_sdk" == "31" ]; then ADDON_CORE="NexusQuickAccessWalletSc.tar.xz"; PKG_CORE="NexusQuickAccessWalletSc"; fi
       target_core
       launcher_overlay
       launcher_config
@@ -5114,8 +5125,8 @@ post_install_wipe() {
     ChromeGooglePrebuilt DeskClockGooglePrebuilt GboardGooglePrebuilt GoogleTTSPrebuilt \
     MapsGooglePrebuilt MarkupGooglePrebuilt MessagesGooglePrebuilt MicroGGMSCore PhotosGooglePrebuilt \
     SoundPickerPrebuilt TrichromeLibrary WebViewBromite WebViewGoogle YouTube CarrierServices \
-    ContactsGooglePrebuilt DialerGooglePrebuilt DPSGooglePrebuilt GearheadGooglePrebuilt \
-    NexusLauncherPrebuilt NexusQuickAccessWallet Velvet WellbeingPrebuilt Exactcalculator \
+    ContactsGooglePrebuilt DialerGooglePrebuilt DPSGooglePrebuilt* GearheadGooglePrebuilt \
+    NexusLauncherPrebuilt* NexusQuickAccessWallet* Velvet WellbeingPrebuilt Exactcalculator \
     Calendar Etar DeskClock Gallery2 Jelly LatinIME webview Launcher3 Launcher3QuickStep \
     NexusLauncherRelease QuickAccessWallet QuickStep QuickStepLauncher TrebuchetQuickStep \
     AndroidMigratePrebuilt GoogleBackupTransport GoogleOneTimeInitializer GoogleRestore \
@@ -5134,7 +5145,7 @@ post_install_wipe() {
     rm -rf $SYSTEM_ETC_CONFIG/$i $SYSTEM_ETC_DEFAULT/$i $SYSTEM_ETC_PERM/$i $SYSTEM_ETC_PREF/$i
   done
   rm -rf $SYSTEM_FRAMEWORK/com.google.android.dialer.support.jar $SYSTEM_FRAMEWORK/com.google.android.maps.jar
-  rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay $SYSTEM_OVERLAY/NexusLauncherOverlay $SYSTEM_OVERLAY/DPSOverlay
+  rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay $SYSTEM_OVERLAY/NexusLauncherOverlay* $SYSTEM_OVERLAY/DPSOverlay
   rm -rf $SYSTEM_ADDOND/bitgapps.sh $SYSTEM_ADDOND/backup.sh $SYSTEM_ADDOND/restore.sh
   rm -rf $SYSTEM/etc/firmware/music_detector.descriptor $SYSTEM/etc/firmware/music_detector.sound_model $SYSTEM/etc/g.prop $SYSTEM/config.prop
   for f in $SYSTEM/usr $SYSTEM/product/usr $SYSTEM/system_ext/usr; do

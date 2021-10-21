@@ -626,9 +626,12 @@ backupdirSYSAddon() {
     $SYSTEM/priv-app/ContactsGooglePrebuilt
     $SYSTEM/priv-app/DialerGooglePrebuilt
     $SYSTEM/priv-app/DPSGooglePrebuilt
+    $SYSTEM/priv-app/DPSGooglePrebuiltSc
     $SYSTEM/priv-app/GearheadGooglePrebuilt
     $SYSTEM/priv-app/NexusLauncherPrebuilt
+    $SYSTEM/priv-app/NexusLauncherPrebuiltSc
     $SYSTEM/priv-app/NexusQuickAccessWallet
+    $SYSTEM/priv-app/NexusQuickAccessWalletSc
     $SYSTEM/priv-app/Velvet
     $SYSTEM/priv-app/WellbeingPrebuilt"
 
@@ -652,6 +655,7 @@ backupdirSYSAddon() {
 
   SYS_OVERLAY_ADDON="
     $SYSTEM/product/overlay/NexusLauncherOverlay
+    $SYSTEM/product/overlay/NexusLauncherOverlaySc
     $SYSTEM/product/overlay/DPSOverlay"
 
   SYS_USR_ADDON="
