@@ -4527,8 +4527,12 @@ set_addon_zip_sep() {
       fi
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
         if [ "$android_sdk" == "30" ]; then ADDON_CORE="DPSGooglePrebuilt_arm.tar.xz"; PKG_CORE="DPSGooglePrebuilt"; target_core; fi
+        if [ "$android_sdk" == "31" ]; then ADDON_CORE="DPSGooglePrebuiltSc_arm.tar.xz"; PKG_CORE="DPSGooglePrebuiltSc"; target_core; fi
+        # Snow Cone Specific Package
+        if [ "$android_sdk" == "31" ]; then ADDON_CORE="DINGooglePrebuiltSc_arm.tar.xz"; PKG_CORE="DINGooglePrebuiltSc"; target_core; fi
       fi
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
+        if [ "$android_sdk" == "30" ]; then ADDON_CORE="DPSGooglePrebuilt_arm64.tar.xz"; PKG_CORE="DPSGooglePrebuilt"; target_core; fi
         if [ "$android_sdk" == "31" ]; then ADDON_CORE="DPSGooglePrebuiltSc_arm64.tar.xz"; PKG_CORE="DPSGooglePrebuiltSc"; target_core; fi
         # Snow Cone Specific Package
         if [ "$android_sdk" == "31" ]; then ADDON_CORE="DINGooglePrebuiltSc_arm64.tar.xz"; PKG_CORE="DINGooglePrebuiltSc"; target_core; fi
