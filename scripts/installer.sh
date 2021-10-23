@@ -2388,9 +2388,9 @@ pre_installed_pkg() {
     for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
       rm -rf $i/Velvet $i/BromitePrebuilt $i/WebViewBromite $i/CalculatorGooglePrebuilt $i/CalendarGooglePrebuilt
       rm -rf $i/ChromeGooglePrebuilt $i/TrichromeLibrary $i/WebViewGoogle $i/ContactsGooglePrebuilt $i/DeskClockGooglePrebuilt
-      rm -rf $i/DialerGooglePrebuilt $i/DPSGooglePrebuilt* $i/GboardGooglePrebuilt $i/GearheadGooglePrebuilt $i/NexusLauncherPrebuilt* $i/NexusQuickAccessWallet*
-      rm -rf $i/MapsGooglePrebuilt $i/MarkupGooglePrebuilt $i/MessagesGooglePrebuilt $i/CarrierServices $i/PhotosGooglePrebuilt $i/SoundPickerPrebuilt
-      rm -rf $i/GoogleTTSPrebuilt $i/YouTube $i/MicroGGMSCore $i/WellbeingPrebuilt
+      rm -rf $i/DialerGooglePrebuilt $i/DPSGooglePrebuilt* $i/DINGooglePrebuilt* $i/GboardGooglePrebuilt $i/GearheadGooglePrebuilt $i/NexusLauncherPrebuilt*
+      rm -rf $i/NexusQuickAccessWallet* $i/MapsGooglePrebuilt $i/MarkupGooglePrebuilt $i/MessagesGooglePrebuilt $i/CarrierServices $i/PhotosGooglePrebuilt
+      rm -rf $i/SoundPickerPrebuilt $i/GoogleTTSPrebuilt $i/YouTube $i/MicroGGMSCore $i/WellbeingPrebuilt
     done
     for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
       rm -rf $i/com.google.android.dialer.framework.xml $i/com.google.android.dialer.support.xml
@@ -2407,9 +2407,9 @@ pre_installed_pkg() {
     for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
       rm -rf $i/Velvet $i/BromitePrebuilt $i/WebViewBromite $i/CalculatorGooglePrebuilt $i/CalendarGooglePrebuilt
       rm -rf $i/ChromeGooglePrebuilt $i/TrichromeLibrary $i/WebViewGoogle $i/ContactsGooglePrebuilt $i/DeskClockGooglePrebuilt
-      rm -rf $i/DialerGooglePrebuilt $i/DPSGooglePrebuilt* $i/GboardGooglePrebuilt $i/GearheadGooglePrebuilt $i/NexusLauncherPrebuilt* $i/NexusQuickAccessWallet*
-      rm -rf $i/MapsGooglePrebuilt $i/MarkupGooglePrebuilt $i/MessagesGooglePrebuilt $i/CarrierServices $i/PhotosGooglePrebuilt $i/SoundPickerPrebuilt
-      rm -rf $i/GoogleTTSPrebuilt $i/YouTube $i/MicroGGMSCore $i/WellbeingPrebuilt
+      rm -rf $i/DialerGooglePrebuilt $i/DPSGooglePrebuilt* $i/DINGooglePrebuilt* $i/GboardGooglePrebuilt $i/GearheadGooglePrebuilt $i/NexusLauncherPrebuilt*
+      rm -rf $i/NexusQuickAccessWallet* $i/MapsGooglePrebuilt $i/MarkupGooglePrebuilt $i/MessagesGooglePrebuilt $i/CarrierServices $i/PhotosGooglePrebuilt
+      rm -rf $i/SoundPickerPrebuilt $i/GoogleTTSPrebuilt $i/YouTube $i/MicroGGMSCore $i/WellbeingPrebuilt
     done
     for i in $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/permissions; do
       rm -rf $i/com.google.android.dialer.framework.xml $i/com.google.android.dialer.support.xml
@@ -2494,6 +2494,7 @@ pre_restore_pkg() {
     if [ "$supported_dps_wipe" == "true" ] || [ "$TARGET_DPS_GOOGLE" == "true" ]; then
       ui_print "- Uninstall DPS Google"
       rm -rf $SYSTEM/priv-app/DPSGooglePrebuilt* $SYSTEM/product/priv-app/DPSGooglePrebuilt* $SYSTEM/system_ext/priv-app/DPSGooglePrebuilt*
+      rm -rf $SYSTEM/priv-app/DINGooglePrebuilt* $SYSTEM/product/priv-app/DINGooglePrebuilt* $SYSTEM/system_ext/priv-app/DINGooglePrebuilt*
       for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
         rm -rf $i/com.google.android.as.xml
       done
@@ -2658,6 +2659,7 @@ pre_restore_pkg() {
     if [ "$supported_dps_wipe" == "true" ] || [ "$TARGET_DPS_GOOGLE" == "true" ]; then
       ui_print "- Uninstall DPS Google"
       rm -rf $SYSTEM_SYSTEM/priv-app/DPSGooglePrebuilt* $SYSTEM_SYSTEM/product/priv-app/DPSGooglePrebuilt* $SYSTEM_SYSTEM/system_ext/priv-app/DPSGooglePrebuilt*
+      rm -rf $SYSTEM_SYSTEM/priv-app/DINGooglePrebuilt* $SYSTEM_SYSTEM/product/priv-app/DINGooglePrebuilt* $SYSTEM_SYSTEM/system_ext/priv-app/DINGooglePrebuilt*
       for i in $SYSTEM_SYSTEM/etc/permissions $SYSTEM_SYSTEM/product/etc/permissions $SYSTEM_SYSTEM/system_ext/etc/permissions; do
         rm -rf $i/com.google.android.as.xml
       done
@@ -4012,7 +4014,7 @@ set_addon_zip_conf() {
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.dps" after '# Begin addon properties' "ro.config.dps"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/DPSGooglePrebuilt* $i/Matchmaker*
+          rm -rf $i/DeviceIntelligenceNetwork* $i/DINGooglePrebuilt* $i/DPSGooglePrebuilt* $i/Matchmaker*
         done
         for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
           rm -rf $i/com.google.android.as.xml
@@ -4020,12 +4022,13 @@ set_addon_zip_conf() {
       fi
       if [ "$supported_module_config" == "true" ]; then
         for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
-          (mkdir $i/MatchmakerPrebuilt && touch $i/MatchmakerPrebuilt/.replace) 2>/dev/null
+          (mkdir $i/DeviceIntelligenceNetworkPrebuilt $i/MatchmakerPrebuilt && touch $i/DeviceIntelligenceNetworkPrebuilt/.replace $i/MatchmakerPrebuilt/.replace) 2>/dev/null
         done
       fi
-      if [ "$android_sdk" == "30" ]; then ADDON_CORE="DPSGooglePrebuilt.tar.xz"; PKG_CORE="DPSGooglePrebuilt"; fi
-      if [ "$android_sdk" == "31" ]; then ADDON_CORE="DPSGooglePrebuiltSc.tar.xz"; PKG_CORE="DPSGooglePrebuiltSc"; fi
-      target_core
+      if [ "$android_sdk" == "30" ]; then ADDON_CORE="DPSGooglePrebuilt.tar.xz"; PKG_CORE="DPSGooglePrebuilt"; target_core; fi
+      if [ "$android_sdk" == "31" ]; then ADDON_CORE="DPSGooglePrebuiltSc.tar.xz"; PKG_CORE="DPSGooglePrebuiltSc"; target_core; fi
+      # Snow Cone Specific Package
+      if [ "$android_sdk" == "31" ]; then ADDON_CORE="DINGooglePrebuiltSc.tar.xz"; PKG_CORE="DINGooglePrebuiltSc"; target_core; fi
       dps_config
       dps_overlay
       dps_sound_model
@@ -4511,7 +4514,7 @@ set_addon_zip_sep() {
       if [ "$supported_module_config" == "false" ]; then
         insert_line $SYSTEM/config.prop "ro.config.dps" after '# Begin addon properties' "ro.config.dps"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
-          rm -rf $i/DPSGooglePrebuilt* $i/Matchmaker*
+          rm -rf $i/DeviceIntelligenceNetwork* $i/DINGooglePrebuilt* $i/DPSGooglePrebuilt* $i/Matchmaker*
         done
         for i in $SYSTEM/etc/permissions $SYSTEM/product/etc/permissions $SYSTEM/system_ext/etc/permissions; do
           rm -rf $i/com.google.android.as.xml
@@ -4519,16 +4522,17 @@ set_addon_zip_sep() {
       fi
       if [ "$supported_module_config" == "true" ]; then
         for i in $SYSTEM_SYSTEM/app $SYSTEM_SYSTEM/priv-app $SYSTEM_SYSTEM/product/app $SYSTEM_SYSTEM/product/priv-app $SYSTEM_SYSTEM/system_ext/app $SYSTEM_SYSTEM/system_ext/priv-app; do
-          (mkdir $i/MatchmakerPrebuilt && touch $i/MatchmakerPrebuilt/.replace) 2>/dev/null
+          (mkdir $i/DeviceIntelligenceNetworkPrebuilt $i/MatchmakerPrebuilt && touch $i/DeviceIntelligenceNetworkPrebuilt/.replace $i/MatchmakerPrebuilt/.replace) 2>/dev/null
         done
       fi
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
-        [ "$android_sdk" == "30" ] && ADDON_CORE="DPSGooglePrebuilt_arm.tar.xz"; PKG_CORE="DPSGooglePrebuilt"
+        if [ "$android_sdk" == "30" ]; then ADDON_CORE="DPSGooglePrebuilt_arm.tar.xz"; PKG_CORE="DPSGooglePrebuilt"; target_core; fi
       fi
       if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ]; then
-        [ "$android_sdk" == "31" ] && ADDON_CORE="DPSGooglePrebuiltSc_arm64.tar.xz"; PKG_CORE="DPSGooglePrebuiltSc"
+        if [ "$android_sdk" == "31" ]; then ADDON_CORE="DPSGooglePrebuiltSc_arm64.tar.xz"; PKG_CORE="DPSGooglePrebuiltSc"; target_core; fi
+        # Snow Cone Specific Package
+        if [ "$android_sdk" == "31" ]; then ADDON_CORE="DINGooglePrebuiltSc_arm64.tar.xz"; PKG_CORE="DINGooglePrebuiltSc"; target_core; fi
       fi
-      target_core
       dps_config
       dps_overlay
       dps_sound_model
@@ -5119,7 +5123,7 @@ post_install_wipe() {
     NexusLauncherRelease QuickAccessWallet QuickStep QuickStepLauncher TrebuchetQuickStep \
     AndroidMigratePrebuilt GoogleBackupTransport GoogleOneTimeInitializer GoogleRestore \
     SetupWizardPrebuilt OneTimeInitializer ManagedProvisioning Provision LineageSetupWizard \
-    messaging Contacts Dialer; do
+    messaging Contacts Dialer DINGooglePrebuilt*; do
     rm -rf $SYSTEM_APP/$i $SYSTEM_PRIV_APP/$i
   done
   for i in \

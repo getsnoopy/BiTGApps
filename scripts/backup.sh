@@ -627,6 +627,7 @@ backupdirSYSAddon() {
     $SYSTEM/priv-app/DialerGooglePrebuilt
     $SYSTEM/priv-app/DPSGooglePrebuilt
     $SYSTEM/priv-app/DPSGooglePrebuiltSc
+    $SYSTEM/priv-app/DINGooglePrebuiltSc
     $SYSTEM/priv-app/GearheadGooglePrebuilt
     $SYSTEM/priv-app/NexusLauncherPrebuilt
     $SYSTEM/priv-app/NexusLauncherPrebuiltSc

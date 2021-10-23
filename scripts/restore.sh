@@ -884,6 +884,7 @@ restoredirTMPAddon() {
     $TMP/addon/priv-app/DialerGooglePrebuilt
     $TMP/addon/priv-app/DPSGooglePrebuilt
     $TMP/addon/priv-app/DPSGooglePrebuiltSc
+    $TMP/addon/priv-app/DINGooglePrebuiltSc
     $TMP/addon/priv-app/GearheadGooglePrebuilt
     $TMP/addon/priv-app/NexusLauncherPrebuilt
     $TMP/addon/priv-app/NexusLauncherPrebuiltSc
@@ -1029,7 +1030,7 @@ fix_addon_conflict() {
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.dps)" ]; then
       for i in $S/app $S/priv-app $S/product/app $S/product/priv-app $S/system_ext/app $S/system_ext/priv-app; do
-        rm -rf $i/DPSGooglePrebuilt* $i/Matchmaker*
+        rm -rf $i/DeviceIntelligenceNetwork* $i/DINGooglePrebuilt* $i/DPSGooglePrebuilt* $i/Matchmaker*
         done
       for i in $S/etc/permissions $S/product/etc/permissions $S/system_ext/etc/permissions; do
         rm -rf $i/com.google.android.as.xml
