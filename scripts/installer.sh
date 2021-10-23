@@ -6581,6 +6581,7 @@ pre_install() {
     on_version_check
     on_platform_check
     on_target_platform
+    clean_inst
     on_config_version
     config_version
     on_addon_stack
@@ -6611,6 +6612,7 @@ pre_install() {
     on_version_check
     on_platform_check
     on_target_platform
+    clean_inst
     on_config_version
     config_version
     on_addon_stack
