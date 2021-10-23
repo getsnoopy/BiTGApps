@@ -1335,6 +1335,7 @@ RTP_v29() {
     fi
   fi
   [ "$BOOTMODE" == "true" ] && rm -rf /data/system/users/*/runtime-permissions.xml
+  [ "$ZIPTYPE" == "addon" ] && rm -rf /data/system/users/*/runtime-permissions.xml
 }
 
 RTP_v30() {
@@ -1351,6 +1352,7 @@ RTP_v30() {
     fi
   fi
   [ "$BOOTMODE" == "true" ] && rm -rf "$RTP_DEST"
+  [ "$ZIPTYPE" == "addon" ] && rm -rf "$RTP_DEST"
 }
 
 # Wipe runtime permissions
