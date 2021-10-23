@@ -5134,7 +5134,7 @@ post_install_wipe() {
   done
   rm -rf $SYSTEM_FRAMEWORK/com.google.android.dialer.support.jar $SYSTEM_FRAMEWORK/com.google.android.maps.jar
   rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay $SYSTEM_OVERLAY/NexusLauncherOverlay* $SYSTEM_OVERLAY/DPSOverlay
-  rm -rf $SYSTEM_ADDOND/bitgapps.sh $SYSTEM_ADDOND/backup.sh $SYSTEM_ADDOND/restore.sh
+  rm -rf $SYSTEM_ADDOND/bitgapps.sh $SYSTEM_ADDOND/backup.sh $SYSTEM_ADDOND/restore.sh $SYSTEM_ADDOND/dummy.sh
   rm -rf $SYSTEM/etc/firmware/music_detector.descriptor $SYSTEM/etc/firmware/music_detector.sound_model $SYSTEM/etc/g.prop $SYSTEM/config.prop
   for f in $SYSTEM/usr $SYSTEM/product/usr $SYSTEM/system_ext/usr; do
     rm -rf $f/share/ime $f/srec
@@ -5174,7 +5174,7 @@ microg_install_wipe() {
     rm -rf $SYSTEM_ETC_CONFIG/$i $SYSTEM_ETC_DEFAULT/$i $SYSTEM_ETC_PERM/$i $SYSTEM_ETC_PREF/$i
   done
   rm -rf $SYSTEM_OVERLAY/PlayStoreOverlay $ANDROID_DATA/adb/service.d/runtime.sh
-  rm -rf $SYSTEM_ADDOND/microg.sh $SYSTEM_ADDOND/backup.sh $SYSTEM_ADDOND/restore.sh
+  rm -rf $SYSTEM_ADDOND/microg.sh $SYSTEM_ADDOND/backup.sh $SYSTEM_ADDOND/restore.sh $SYSTEM_ADDOND/dummy.sh
   # Remove busybox backup
   rm -rf $ANDROID_DATA/busybox $SECURE_DIR/busybox /cache/busybox /persist/busybox /mnt/vendor/persist/busybox /metadata/busybox
   # Remove properties from system build
