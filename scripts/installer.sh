@@ -1123,7 +1123,13 @@ on_setup_check() { supported_setup_config="$(get_prop "ro.config.setupwizard")";
 on_addon_config() { supported_addon_config="$(get_prop "ro.config.addon")"; }
 
 # Addon Stack Property
-on_addon_stack() { supported_addon_stack="$(get_prop "ro.config.stack")"; }
+on_addon_stack() {
+  if { [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ]; } && [ ! -f "$BITGAPPS_CONFIG" ]; then
+    supported_addon_stack="false"
+  else
+    supported_addon_stack="$(get_prop "ro.config.stack")"
+  fi
+}
 
 # Addon Config Properties
 on_addon_check() {
@@ -6854,7 +6860,7 @@ df_system() {
       $supported_vancedroot_config && VANCED="0" || VANCED="0"; $supported_vancednonroot_config && VANCED="183000" || VANCED="0"
       $supported_vanced_config && VANCED="114000" || VANCED="0"; $supported_wellbeing_config && WELLBEING="11000" || WELLBEING="0"
     fi
-    CAPACITY=`expr $ASSISTANT + $BROMITE + $CALCULATOR + $CALENDAR + $CHROME + $CONTACTS + $DESKCLOCK + $DIALER + $DPS + $GBOARD + $GEARHEAD + $LAUNCHER + $MAPS + $MARKUP + $MESSAGES + $PHOTOS + $SOUNDPICKER + $TTS + $VANCED + $WELLBEING`
+    CAPACITY=$(expr $ASSISTANT + $BROMITE + $CALCULATOR + $CALENDAR + $CHROME + $CONTACTS + $DESKCLOCK + $DIALER + $DPS + $GBOARD + $GEARHEAD + $LAUNCHER + $MAPS + $MARKUP + $MESSAGES + $PHOTOS + $SOUNDPICKER + $TTS + $VANCED + $WELLBEING)
   fi
   if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "sep" ]; then
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
@@ -6896,7 +6902,7 @@ df_system() {
 
 # Check available space is greater than 150MB(150000KB) or 1.335GB(1335000KB)/1.535GB(1535000KB)
 diskfree() {
-  if [[ "$size" -gt "$CAPACITY" ]]; then TARGET_ANDROID_PARTITION="true"; else TARGET_ANDROID_PARTITION="false"; fi
+  if [ "$size" -gt "$CAPACITY" ]; then TARGET_ANDROID_PARTITION="true"; else TARGET_ANDROID_PARTITION="false"; fi
   if [ "$TARGET_ANDROID_PARTITION" == "true" ]; then ui_print "- ${partition} Space: $ds_hr"; fi
   if [ "$TARGET_ANDROID_PARTITION" == "false" ]; then ui_print "! Insufficient space in ${partition}"; on_abort "! Current space: $ds_hr"; fi
 }
