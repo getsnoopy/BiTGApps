@@ -1049,6 +1049,29 @@ get_microg_config() {
   fi
 }
 
+check_dupes() {
+  # Do not declare '/sdcard/ and '/data/media/0' paths under same variable
+  STG_SD="/sdcard /sdcard1 /external_sd /usb_otg /usbstorage /tmp"
+  STG_MD="/sdcard1 /external_sd /usb_otg /usbstorage /data/media/0 /tmp"
+  # Check duplicate BiTGApps config
+  $l/find $STG_SD -type f -iname 'bitgapps-config.prop' 2>/dev/null | $l/awk -F/ '{print $NF}' | sort -f | uniq -i -d >> $TMP/fdupes.lst
+  $l/find $STG_MD -type f -iname 'bitgapps-config.prop' 2>/dev/null | $l/awk -F/ '{print $NF}' | sort -f | uniq -i -d >> $TMP/fdupes.lst
+  # Check duplicate MicroG config
+  $l/find $STG_SD -type f -iname 'microg-config.prop' 2>/dev/null | $l/awk -F/ '{print $NF}' | sort -f | uniq -i -d >> $TMP/fdupes.lst
+  $l/find $STG_MD -type f -iname 'microg-config.prop' 2>/dev/null | $l/awk -F/ '{print $NF}' | sort -f | uniq -i -d >> $TMP/fdupes.lst
+  # Check listed configs
+  if [ "$($l/grep -w -o 'bitgapps-config.prop' $TMP/fdupes.lst)" ]; then
+    ui_print "! Duplicate config found. Aborting..."
+    # Abort installation with a link to documentation
+    on_abort "! To learn more, visit https://git.io/JPYSd"
+  fi
+  if [ "$($l/grep -w -o 'microg-config.prop' $TMP/fdupes.lst)" ]; then
+    ui_print "! Duplicate config found. Aborting..."
+    # Abort installation with a link to documentation
+    on_abort "! To learn more, visit https://git.io/JPYSd"
+  fi
+}
+
 profile() { SYSTEM_PROPFILE="$SYSTEM/build.prop"; VENDOR_PROPFILE="$VENDOR/build.prop"; BITGAPPS_PROPFILE="$BITGAPPS_CONFIG"; MICROG_PROPFILE="$MICROG_CONFIG"; }
 
 get_file_prop() { grep -m1 "^$2=" "$1" | cut -d= -f2; }
@@ -6583,6 +6606,7 @@ pre_install() {
     mount_status
     sideload_config
     get_bitgapps_config
+    check_dupes
     profile
     on_release_tag
     chk_release_tag
@@ -6614,6 +6638,7 @@ pre_install() {
     mount_status
     sideload_config
     get_bitgapps_config
+    check_dupes
     profile
     on_release_tag
     chk_release_tag
@@ -6651,6 +6676,7 @@ pre_install() {
     on_inst_abort
     sideload_config
     get_bitgapps_config
+    check_dupes
     profile
     on_release_tag
     check_release_tag
@@ -6689,6 +6715,7 @@ pre_install() {
     on_inst_abort
     sideload_config
     get_bitgapps_config
+    check_dupes
     profile
     on_release_tag
     check_release_tag
@@ -6728,6 +6755,7 @@ pre_install() {
     on_inst_abort
     sideload_config
     get_microg_config
+    check_dupes
     profile
     on_release_tag
     check_release_tag
@@ -6766,6 +6794,7 @@ pre_install() {
     on_inst_abort
     sideload_config
     get_microg_config
+    check_dupes
     profile
     on_release_tag
     check_release_tag
