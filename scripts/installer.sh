@@ -1354,6 +1354,32 @@ check_platform() {
   done
 }
 
+check_platform_v2() {
+  # Common platform check
+  if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && [ "$ARMEABI" == "32" ]; then
+    ui_print "- Android platform: $device_architecture"
+  fi
+  if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && [ "$AARCH64" == "64" ]; then
+    ui_print "- Android platform: $device_architecture"
+  fi
+  # Specific platform check
+  if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && [ "$ARMEABI" == "true" ]; then
+    ui_print "- Android platform: $device_architecture"
+  fi
+  if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && [ "$AARCH64" == "true" ]; then
+    ui_print "- Android platform: $device_architecture"
+  fi
+  # Abort installation on architecture conflict
+  if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && [ "$AARCH64" == "true" ]; then
+    ui_print "! Unsupported Android platform. Aborting..."
+    on_abort "- Required Android platform: $ANDROID_PLATFORM_ARM32"
+  fi
+  if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && [ "$ARMEABI" == "true" ]; then
+    ui_print "! Unsupported Android platform. Aborting..."
+    on_abort "- Required Android platform: $ANDROID_PLATFORM_ARM64"
+  fi
+}
+
 RTP_v29() {
   # Did this 6.0+ system already boot and generated runtime permissions
   if [ -e /data/system/users/0/runtime-permissions.xml ]; then
@@ -6613,6 +6639,7 @@ pre_install() {
     on_version_check
     on_platform_check
     on_target_platform
+    check_platform_v2
     clean_inst
     on_config_version
     config_version
@@ -6645,6 +6672,7 @@ pre_install() {
     on_version_check
     on_platform_check
     on_target_platform
+    check_platform_v2
     clean_inst
     on_config_version
     config_version
