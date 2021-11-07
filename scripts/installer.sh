@@ -4096,6 +4096,9 @@ set_addon_zip_conf() {
     fi
     if [ "$supported_gboard_config" == "true" ]; then
       ui_print "- Installing Keyboard Google"
+      if [ "$($l/grep -w -o 'com.google.android.inputmethod.latin' /data/system/users/0/settings_secure.xml)" ]; then
+        rm -rf /data/system/users/0/settings_secure.xml
+      fi
       if [ "$supported_module_config" == "false" ] && [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
         insert_line $SYSTEM/config.prop "ro.config.gboard" after '# Begin addon properties' "ro.config.gboard"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
@@ -4603,6 +4606,9 @@ set_addon_zip_sep() {
     fi
     if [ "$TARGET_GBOARD_GOOGLE" == "true" ]; then
       ui_print "- Installing Keyboard Google"
+      if [ "$($l/grep -w -o 'com.google.android.inputmethod.latin' /data/system/users/0/settings_secure.xml)" ]; then
+        rm -rf /data/system/users/0/settings_secure.xml
+      fi
       if [ "$supported_module_config" == "false" ] && [ ! -f "/data/system/users/0/settings_secure.xml" ]; then
         insert_line $SYSTEM/config.prop "ro.config.gboard" after '# Begin addon properties' "ro.config.gboard"
         for i in $SYSTEM/app $SYSTEM/priv-app $SYSTEM/product/app $SYSTEM/product/priv-app $SYSTEM/system_ext/app $SYSTEM/system_ext/priv-app; do
