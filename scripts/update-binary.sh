@@ -43,7 +43,9 @@ chmod +x "$TMP/util_functions.sh"
 
 # Execute installer script
 if [ -e "$TMP/busybox-arm" ]; then
-  exec $TMP/busybox-arm sh "$TMP/installer.sh" "$@" && exit "$?"
+  exec $TMP/busybox-arm sh "$TMP/installer.sh" "$@"
+  exit "$?"
 else
-  source "$TMP/installer.sh" "$@" && exit "$?"
+  source "$TMP/installer.sh" "$@"
+  exit "$?"
 fi

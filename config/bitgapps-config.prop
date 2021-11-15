@@ -34,13 +34,18 @@ ro.config.systemless=false
 ro.config.setupwizard=false
 
 # Property for installing Safetynet patch
+# To learn more, visit https://git.io/J1n9T
 ro.config.safetynet=false
 
 # Property for installing Bootlog patch
+# To learn more, visit https://git.io/J1nSS
 ro.config.bootlog=false
 
 # Property for enabling Addons installation
 ro.config.addon=false
+
+# Property for enabling Addons usage
+ro.config.stack=false
 
 # Property for installing Addons
 ro.config.assistant=false
@@ -65,9 +70,6 @@ ro.config.vanced=false
 ro.config.microg=false
 ro.config.data=false
 ro.config.wellbeing=false
-
-# Property for enabling Addons usage
-ro.config.stack=false
 
 # Property for enabling Addons Uninstall
 ro.addon.wipe=false

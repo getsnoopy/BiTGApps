@@ -34,6 +34,9 @@ setenforce 0
 # Load install functions from utility script
 . $TMP/util_functions.sh
 
+# Set build version
+REL="$REL"
+
 # Set auto-generated fstab
 fstab="/etc/fstab"
 
@@ -77,14 +80,19 @@ toupper() {
 
 grep_cmdline() {
   local REGEX="s/^$1=//p"
-  cat /proc/cmdline | tr '[:space:]' '\n' | $l/sed -n "$REGEX" 2>/dev/null
+  local CL=$(cat /proc/cmdline 2>/dev/null)
+  POSTFIX=$([ $(expr $(echo "$CL" | tr -d -c '"' | wc -m) % 2) == 0 ] && echo -n '' || echo -n '"')
+  { eval "for i in $CL$POSTFIX; do echo \$i; done" ; cat /proc/bootconfig 2>/dev/null | sed 's/[[:space:]]*=[[:space:]]*\(.*\)/=\1/g' | sed 's/"//g'; } | sed -n "$REGEX" 2>/dev/null
 }
 
 grep_prop() {
+  if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then SYSDIR="/system_root/system"; fi
+  if [ "$($TMP/grep -w -o /system $fstab)" ]; then SYSDIR="/system"; fi
+  if [ "$($TMP/grep -w -o /system $fstab)" ] && [ -d "/system/system" ]; then SYSDIR="/system/system"; fi
   local REGEX="s/^$1=//p"
   shift
   local FILES=$@
-  [ -z "$FILES" ] && FILES="$SYSTEM/build.prop"
+  [ -z "$FILES" ] && FILES="$SYSDIR/build.prop"
   cat $FILES 2>/dev/null | dos2unix | $l/sed -n "$REGEX" | head -n 1
 }
 
@@ -169,6 +177,9 @@ ui_print "************************"
 ui_print " BiTGApps Bootlog Patch "
 ui_print "************************"
 
+# Print build version
+ui_print "- Patch revision: $REL"
+
 # Extract busybox
 if [ "$BOOTMODE" == "false" ]; then
   unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
@@ -195,7 +206,7 @@ if [ -e "$bb" ]; then
     if ! ln -sf "$bb" "$l/$i" && ! $bb ln -sf "$bb" "$l/$i" && ! $bb ln -f "$bb" "$l/$i" ; then
       # Create script wrapper if symlinking and hardlinking failed because of restrictive selinux policy
       if ! echo "#!$bb" > "$l/$i" || ! chmod 0755 "$l/$i" ; then
-        ui_print "! Failed to set-up pre-bundled busybox"
+        ui_print "! Failed to set-up pre-bundled busybox. Aborting..."
         ui_print "! Installation failed"
         ui_print " "
         exit 1
@@ -549,6 +560,14 @@ if [ -f "ramdisk/default.prop" ] && [ ! "$(readlink -f "ramdisk/default.prop")" 
   replace_line ramdisk/default.prop 'ro.debuggable=0' 'ro.debuggable=1'
   replace_line ramdisk/default.prop 'persist.sys.usb.config=none' 'persist.sys.usb.config=adb'
 fi
+if [ -f "$SYSTEM/etc/prop.default" ] && [ -f "$ANDROID_ROOT/default.prop" ]; then
+  ui_print "- Set ADB insecure"
+  replace_line $SYSTEM/etc/prop.default 'ro.secure=1' 'ro.secure=0'
+  replace_line $SYSTEM/etc/prop.default 'ro.adb.secure=1' 'ro.adb.secure=0'
+  replace_line $SYSTEM/etc/prop.default 'ro.debuggable=0' 'ro.debuggable=1'
+  replace_line $SYSTEM/etc/prop.default 'persist.sys.usb.config=none' 'persist.sys.usb.config=adb'
+fi
+# Patch ramdisk component
 if [ -f "ramdisk/init.rc" ]; then
   if [ -n "$(cat ramdisk/init.rc | grep init.logcat.rc)" ]; then
     ui_print "- Update logcat script"
@@ -637,14 +656,6 @@ if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/system/etc/init/hw/init.rc" ] &
     chmod 0644 /system/system/etc/init/hw/init.logcat.rc
     chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.logcat.rc"
   fi
-fi
-# Make adb insecure, so that adb logcat work during boot
-if [ -f "$SYSTEM/etc/prop.default" ] && [ -f "$ANDROID_ROOT/default.prop" ]; then
-  ui_print "- Set ADB insecure"
-  replace_line $SYSTEM/etc/prop.default 'ro.secure=1' 'ro.secure=0'
-  replace_line $SYSTEM/etc/prop.default 'ro.adb.secure=1' 'ro.adb.secure=0'
-  replace_line $SYSTEM/etc/prop.default 'ro.debuggable=0' 'ro.debuggable=1'
-  replace_line $SYSTEM/etc/prop.default 'persist.sys.usb.config=none' 'persist.sys.usb.config=adb'
 fi
 
 # Unmount APEX

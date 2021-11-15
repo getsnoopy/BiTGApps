@@ -34,6 +34,9 @@ setenforce 0
 # Load install functions from utility script
 . $TMP/util_functions.sh
 
+# Set build version
+REL="$REL"
+
 # Set auto-generated fstab
 fstab="/etc/fstab"
 
@@ -63,7 +66,20 @@ fi
 
 is_mounted() { grep -q " $(readlink -f $1) " /proc/mounts 2>/dev/null; return $?; }
 
-grep_cmdline() { local REGEX="s/^$1=//p"; cat /proc/cmdline | tr '[:space:]' '\n' | sed -n "$REGEX" 2>/dev/null; }
+grep_cmdline() {
+  local REGEX="s/^$1=//p"
+  local CL=$(cat /proc/cmdline 2>/dev/null)
+  POSTFIX=$([ $(expr $(echo "$CL" | tr -d -c '"' | wc -m) % 2) == 0 ] && echo -n '' || echo -n '"')
+  { eval "for i in $CL$POSTFIX; do echo \$i; done" ; cat /proc/bootconfig 2>/dev/null | sed 's/[[:space:]]*=[[:space:]]*\(.*\)/=\1/g' | sed 's/"//g'; } | sed -n "$REGEX" 2>/dev/null
+}
+
+setup_mountpoint() {
+  test -L $1 && mv -f $1 ${1}_link
+  if [ ! -d $1 ]; then
+    rm -f $1
+    mkdir $1
+  fi
+}
 
 # Output function
 ui_print() {
@@ -81,6 +97,9 @@ ui_print " "
 ui_print "**************************"
 ui_print " BiTGApps Overlay Remover "
 ui_print "**************************"
+
+# Print build version
+ui_print "- Patch revision: $REL"
 
 # Extract busybox
 if [ "$BOOTMODE" == "false" ]; then
@@ -108,7 +127,7 @@ if [ -e "$bb" ]; then
     if ! ln -sf "$bb" "$l/$i" && ! $bb ln -sf "$bb" "$l/$i" && ! $bb ln -f "$bb" "$l/$i" ; then
       # Create script wrapper if symlinking and hardlinking failed because of restrictive selinux policy
       if ! echo "#!$bb" > "$l/$i" || ! chmod 0755 "$l/$i" ; then
-        ui_print "! Failed to set-up pre-bundled busybox"
+        ui_print "! Failed to set-up pre-bundled busybox. Aborting..."
         ui_print "! Installation failed"
         ui_print " "
         exit 1

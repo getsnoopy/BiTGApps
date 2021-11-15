@@ -24,7 +24,6 @@ service boot_lc_main /system/bin/logcat -f /cache/boot_lc_main.txt
     group root system
     disabled
     oneshot
-    seclabel u:r:magisk:s0
 
 service boot_dmesg /system/bin/sh -c "dmesg -w > /cache/boot_dmesg.txt"
     class main
@@ -32,7 +31,6 @@ service boot_dmesg /system/bin/sh -c "dmesg -w > /cache/boot_dmesg.txt"
     group root system
     disabled
     oneshot
-    seclabel u:r:magisk:s0
 
 on fs
     rm /cache/boot_lc_main.txt

@@ -34,6 +34,9 @@ setenforce 0
 # Load install functions from utility script
 . $TMP/util_functions.sh
 
+# Set build version
+REL="$REL"
+
 # Set auto-generated fstab
 fstab="/etc/fstab"
 
@@ -61,9 +64,101 @@ if [ "$dynamic_partitions" == "true" ]; then
   SUPER_PARTITION="true"
 fi
 
+# remove_line <file> <line match string>
+remove_line() {
+  if grep -q "$2" $1; then
+    local line=$(grep -n "$2" $1 | head -n1 | cut -d: -f1)
+    $l/sed -i "${line}d" $1
+  fi
+}
+
 is_mounted() { grep -q " $(readlink -f $1) " /proc/mounts 2>/dev/null; return $?; }
 
-grep_cmdline() { local REGEX="s/^$1=//p"; cat /proc/cmdline | tr '[:space:]' '\n' | sed -n "$REGEX" 2>/dev/null; }
+toupper() {
+  echo "$@" | tr '[:lower:]' '[:upper:]'
+}
+
+grep_cmdline() {
+  local REGEX="s/^$1=//p"
+  local CL=$(cat /proc/cmdline 2>/dev/null)
+  POSTFIX=$([ $(expr $(echo "$CL" | tr -d -c '"' | wc -m) % 2) == 0 ] && echo -n '' || echo -n '"')
+  { eval "for i in $CL$POSTFIX; do echo \$i; done" ; cat /proc/bootconfig 2>/dev/null | sed 's/[[:space:]]*=[[:space:]]*\(.*\)/=\1/g' | sed 's/"//g'; } | sed -n "$REGEX" 2>/dev/null
+}
+
+grep_prop() {
+  if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then SYSDIR="/system_root/system"; fi
+  if [ "$($TMP/grep -w -o /system $fstab)" ]; then SYSDIR="/system"; fi
+  if [ "$($TMP/grep -w -o /system $fstab)" ] && [ -d "/system/system" ]; then SYSDIR="/system/system"; fi
+  local REGEX="s/^$1=//p"
+  shift
+  local FILES=$@
+  [ -z "$FILES" ] && FILES="$SYSDIR/build.prop"
+  cat $FILES 2>/dev/null | dos2unix | $l/sed -n "$REGEX" | head -n 1
+}
+
+setup_mountpoint() {
+  test -L $1 && mv -f $1 ${1}_link
+  if [ ! -d $1 ]; then
+    rm -f $1
+    mkdir $1
+  fi
+}
+
+# find_block [partname...]
+find_block() {
+  local BLOCK DEV DEVICE DEVNAME PARTNAME UEVENT
+  for BLOCK in "$@"; do
+    DEVICE=`find /dev/block \( -type b -o -type c -o -type l \) -iname $BLOCK | head -n 1` 2>/dev/null
+    if [ ! -z $DEVICE ]; then
+      readlink -f $DEVICE
+      return 0
+    fi
+  done
+  # Fallback by parsing sysfs uevents
+  for UEVENT in /sys/dev/block/*/uevent; do
+    DEVNAME=`grep_prop DEVNAME $UEVENT`
+    PARTNAME=`grep_prop PARTNAME $UEVENT`
+    for BLOCK in "$@"; do
+      if [ "$(toupper $BLOCK)" = "$(toupper $PARTNAME)" ]; then
+        echo /dev/block/$DEVNAME
+        return 0
+      fi
+    done
+  done
+  # Look just in /dev in case we're dealing with MTD/NAND without /dev/block devices/links
+  for DEV in "$@"; do
+    DEVICE=`find /dev \( -type b -o -type c -o -type l \) -maxdepth 1 -iname $DEV | head -n 1` 2>/dev/null
+    if [ ! -z $DEVICE ]; then
+      readlink -f $DEVICE
+      return 0
+    fi
+  done
+  return 1
+}
+
+find_boot_image() {
+  block=
+  if $RECOVERYMODE; then
+    block=`find_block recovery_ramdisk$SLOT recovery$SLOT sos`
+  elif [ ! -z $SLOT ]; then
+    block=`find_block ramdisk$SLOT recovery_ramdisk$SLOT boot$SLOT`
+  else
+    block=`find_block ramdisk recovery_ramdisk kern-a android_boot kernel bootimg boot lnx boot_a`
+  fi
+  if [ -z $block ]; then
+    # Lets see what fstabs tells me
+    block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
+  fi
+}
+
+sign_chromeos() {
+  echo > empty
+  ./chromeos/futility vbutil_kernel --pack mboot.img.signed \
+  --keyblock ./chromeos/kernel.keyblock --signprivate ./chromeos/kernel_data_key.vbprivk \
+  --version 1 --vmlinuz mboot.img --config empty --arch arm --bootloader empty --flags 0x1
+  rm -f empty mboot.img
+  mv mboot.img.signed mboot.img
+}
 
 # Output function
 ui_print() {
@@ -81,6 +176,9 @@ ui_print " "
 ui_print "****************************"
 ui_print " BiTGApps Safetynet Restore "
 ui_print "****************************"
+
+# Print build version
+ui_print "- Patch revision: $REL"
 
 # Extract busybox
 if [ "$BOOTMODE" == "false" ]; then
@@ -108,7 +206,7 @@ if [ -e "$bb" ]; then
     if ! ln -sf "$bb" "$l/$i" && ! $bb ln -sf "$bb" "$l/$i" && ! $bb ln -f "$bb" "$l/$i" ; then
       # Create script wrapper if symlinking and hardlinking failed because of restrictive selinux policy
       if ! echo "#!$bb" > "$l/$i" || ! chmod 0755 "$l/$i" ; then
-        ui_print "! Failed to set-up pre-bundled busybox"
+        ui_print "! Failed to set-up pre-bundled busybox. Aborting..."
         ui_print "! Installation failed"
         ui_print " "
         exit 1
@@ -118,6 +216,13 @@ if [ -e "$bb" ]; then
   # Set busybox components in environment
   export PATH="$l:$PATH"
 fi
+
+# Extract boot image modification tool
+if [ "$BOOTMODE" == "false" ]; then
+  unzip -o "$ZIPFILE" "AIK.tar.xz" -d "$TMP"
+fi
+tar -xf $TMP/AIK.tar.xz -C $TMP
+chmod +x $TMP/chromeos/* $TMP/cpio $TMP/magiskboot
 
 # Extract grep utility
 if [ "$BOOTMODE" == "false" ]; then
@@ -398,6 +503,14 @@ if [ -e "$SYSTEM/bin/keystore" ] && [ ! -f "/data/.backup/keystore" ]; then
   exit 1
 fi
 
+# Check keystore backup in /data/unencrypted
+if [ -e "$SYSTEM/bin/keystore" ] && [ ! -f "/data/unencrypted/.backup/keystore" ]; then
+  ui_print "! Cannot find keystore backup. Aborting..."
+  ui_print "! Installation failed"
+  ui_print " "
+  exit 1
+fi
+
 # Check keystore2 backup in /data
 if [ -e "$SYSTEM/bin/keystore2" ] && [ ! -f "/data/.backup/keystore2" ]; then
   ui_print "! Cannot find keystore backup. Aborting..."
@@ -406,8 +519,16 @@ if [ -e "$SYSTEM/bin/keystore2" ] && [ ! -f "/data/.backup/keystore2" ]; then
   exit 1
 fi
 
+# Check keystore2 backup in /data/unencrypted
+if [ -e "$SYSTEM/bin/keystore2" ] && [ ! -f "/data/unencrypted/.backup/keystore2" ]; then
+  ui_print "! Cannot find keystore backup. Aborting..."
+  ui_print "! Installation failed"
+  ui_print " "
+  exit 1
+fi
+
 # Check keystore library backup in /data
-if [ ! -f "/data/.backup/libkeystore" ]; then
+if [ ! -f "/data/.backup/libkeystore" ] && [ ! -f "/data/unencrypted/.backup/libkeystore" ]; then
   ui_print "! Cannot find keystore backup. Aborting..."
   ui_print "! Installation failed"
   ui_print " "
@@ -432,6 +553,87 @@ if [ -e "$SYSTEM/lib64/libkeystore-attestation-application-id.so" ]; then
   cp -f /data/.backup/libkeystore $SYSTEM/lib64/libkeystore-attestation-application-id.so
   chmod 0644 $SYSTEM/lib64/libkeystore-attestation-application-id.so
   chcon -h u:object_r:system_lib_file:s0 "$SYSTEM/lib64/libkeystore-attestation-application-id.so"
+fi
+
+# Hide policy patch does not require Magisk
+if [ ! -d "$ANDROID_DATA/adb/magisk" ]; then
+  ui_print "- Remove hide policies"
+  # Switch path to AIK
+  cd $TMP
+  # Extract boot image
+  [ -z $RECOVERYMODE ] && RECOVERYMODE=false
+  find_boot_image
+  dd if="$block" of="boot.img" > /dev/null 2>&1
+  if [ -z $block ]; then
+    ui_print "! Unable to detect target image"
+    ui_print "! Installation failed"
+    ui_print " "
+    exit 1
+  fi
+  ui_print "- Target image: $block"
+  # Set CHROMEOS status
+  CHROMEOS=false
+  # Unpack boot image
+  ./magiskboot unpack -h boot.img > /dev/null 2>&1
+  case $? in
+    0 ) ;;
+    1 )
+      ui_print "! Unsupported/Unknown image format"
+      ;;
+    2 )
+      CHROMEOS=true
+      ;;
+    * )
+      ui_print "! Unable to unpack boot image"
+      ;;
+  esac
+  if [ -f "ramdisk.cpio" ]; then
+    mkdir ramdisk && cd ramdisk
+    $l/cat $TMP/ramdisk.cpio | $l/cpio -i -d > /dev/null 2>&1
+    # Checkout ramdisk path
+    cd ../
+  fi
+  # Patch ramdisk component
+  if [ -f "ramdisk/init.rc" ]; then
+    [ -n "$(cat ramdisk/init.rc | grep init.init.resetprop.rc)" ] && remove_line ramdisk/init.rc 'import /init.resetprop.rc'
+    rm -rf ramdisk.cpio && cd $TMP/ramdisk
+    $l/find . | $l/cpio -H newc -o | cat > $TMP/ramdisk.cpio
+    # Checkout ramdisk path
+    cd ../
+    ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    # Sign ChromeOS boot image
+    [ "$CHROMEOS" == "true" ] && sign_chromeos
+    dd if="mboot.img" of="$block" > /dev/null 2>&1
+    # Wipe boot dump
+    rm -rf boot.img mboot.img ramdisk
+    ./magiskboot cleanup > /dev/null 2>&1
+    cd ../../..
+  fi
+  if [ ! -f "ramdisk/init.rc" ]; then
+    ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    # Sign ChromeOS boot image
+    [ "$CHROMEOS" == "true" ] && sign_chromeos
+    dd if="mboot.img" of="$block" > /dev/null 2>&1
+    # Wipe boot dump
+    rm -rf boot.img mboot.img
+    ./magiskboot cleanup > /dev/null 2>&1
+    cd ../../..
+  fi
+  # Wipe ramdisk dump
+  rm -rf $TMP/ramdisk
+  # Patch root file system component
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/init.rc" ] && [ -n "$(cat /system_root/init.rc | grep ro.zygote)" ]; }; then
+    [ -n "$(cat /system_root/init.rc | grep init.resetprop.rc)" ] && remove_line /system_root/init.rc 'import /init.resetprop.rc'
+  fi
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+    [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.resetprop.rc)" ] && remove_line /system_root/system/etc/init/hw/init.resetprop.rc 'import /system/etc/init/hw/init.resetprop.rc'
+  fi
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+    [ -n "$(cat /system/system/etc/init/hw/init.rc | grep init.resetprop.rc)" ] && remove_line /system/system/etc/init/hw/init.resetprop.rc 'import /system/etc/init/hw/init.resetprop.rc'
+  fi
+  # Remove resetprop components
+  rm -rf $SYSTEM/xbin/resetprop
+  rm -rf $SYSTEM/xbin/resetprop.sh
 fi
 
 # Unmount APEX

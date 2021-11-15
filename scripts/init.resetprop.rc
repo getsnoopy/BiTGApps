@@ -1,7 +1,7 @@
 ##############################################################
-# File name       : init.vanced.rc
+# File name       : init.resetprop.rc
 #
-# Description     : Install YouTube Vanced
+# Description     : Set Hide Policies
 #
 # Copyright       : Copyright (C) 2018-2021 TheHitMan7
 #
@@ -18,12 +18,12 @@
 # GNU General Public License for more details.
 ##############################################################
 
-service vanced /system/adb/xbin/vanced.sh
-    class late_start
+service resetprop /system/xbin/resetprop.sh
+    class main
     user root
     group root system
     disabled
     oneshot
 
 on property:sys.boot_completed=1
-    start vanced
+  start resetprop

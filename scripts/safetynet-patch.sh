@@ -34,11 +34,14 @@ setenforce 0
 # Storage
 ANDROID_DATA="/data"
 
-# TODO: Set unencrypted
+# Set unencrypted
 SECURE_DIR="/data/unencrypted"
 
 # Load install functions from utility script
 . $TMP/util_functions.sh
+
+# Set build version
+REL="$REL"
 
 # Set auto-generated fstab
 fstab="/etc/fstab"
@@ -68,7 +71,8 @@ if [ "$dynamic_partitions" == "true" ]; then
 fi
 
 # Set temporary package directory
-ZIP_FILE="$TMP/zip"
+TMP_KEYSTORE="$TMP/Keystore"
+TMP_POLICY="$TMP/Policy"
 
 # insert_line <file> <if search string> <before|after> <line match string> <inserted line>
 insert_line() {
@@ -115,14 +119,19 @@ toupper() {
 
 grep_cmdline() {
   local REGEX="s/^$1=//p"
-  cat /proc/cmdline | tr '[:space:]' '\n' | $l/sed -n "$REGEX" 2>/dev/null
+  local CL=$(cat /proc/cmdline 2>/dev/null)
+  POSTFIX=$([ $(expr $(echo "$CL" | tr -d -c '"' | wc -m) % 2) == 0 ] && echo -n '' || echo -n '"')
+  { eval "for i in $CL$POSTFIX; do echo \$i; done" ; cat /proc/bootconfig 2>/dev/null | sed 's/[[:space:]]*=[[:space:]]*\(.*\)/=\1/g' | sed 's/"//g'; } | sed -n "$REGEX" 2>/dev/null
 }
 
 grep_prop() {
+  if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then SYSDIR="/system_root/system"; fi
+  if [ "$($TMP/grep -w -o /system $fstab)" ]; then SYSDIR="/system"; fi
+  if [ "$($TMP/grep -w -o /system $fstab)" ] && [ -d "/system/system" ]; then SYSDIR="/system/system"; fi
   local REGEX="s/^$1=//p"
   shift
   local FILES=$@
-  [ -z "$FILES" ] && FILES="$SYSTEM/build.prop"
+  [ -z "$FILES" ] && FILES="$SYSDIR/build.prop"
   cat $FILES 2>/dev/null | dos2unix | $l/sed -n "$REGEX" | head -n 1
 }
 
@@ -201,13 +210,14 @@ ui_print() {
   fi
 }
 
-set_write() { echo "$1"; }
-
 # Title
 ui_print " "
 ui_print "**************************"
 ui_print " BiTGApps Safetynet Patch "
 ui_print "**************************"
+
+# Print build version
+ui_print "- Patch revision: $REL"
 
 # Extract busybox
 if [ "$BOOTMODE" == "false" ]; then
@@ -235,7 +245,7 @@ if [ -e "$bb" ]; then
     if ! ln -sf "$bb" "$l/$i" && ! $bb ln -sf "$bb" "$l/$i" && ! $bb ln -f "$bb" "$l/$i" ; then
       # Create script wrapper if symlinking and hardlinking failed because of restrictive selinux policy
       if ! echo "#!$bb" > "$l/$i" || ! chmod 0755 "$l/$i" ; then
-        ui_print "! Failed to set-up pre-bundled busybox"
+        ui_print "! Failed to set-up pre-bundled busybox. Aborting..."
         ui_print "! Installation failed"
         ui_print " "
         exit 1
@@ -629,6 +639,156 @@ rm -rf boot.img mboot.img
 ./magiskboot cleanup > /dev/null 2>&1
 cd ../
 
+# Hide policy function, trigger after boot is completed
+if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ ! -d "$ANDROID_DATA/adb/magisk" ]; then
+  ui_print "- Set hide policies"
+  # Set default package
+  ZIP="Policy/Policy.tar.xz"
+  # Unpack target package
+  if [ "$BOOTMODE" == "false" ]; then
+    for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  fi
+  # Extract resetprop components
+  tar -xf $TMP_POLICY/Policy.tar.xz -C $TMP
+  # Switch path to AIK
+  cd $TMP
+  # Extract boot image
+  [ -z $RECOVERYMODE ] && RECOVERYMODE=false
+  find_boot_image
+  dd if="$block" of="boot.img" > /dev/null 2>&1
+  # Set CHROMEOS status
+  CHROMEOS=false
+  # Unpack boot image
+  ./magiskboot unpack -h boot.img > /dev/null 2>&1
+  case $? in
+    0 ) ;;
+    1 )
+      ui_print "! Unsupported/Unknown image format"
+      ;;
+    2 )
+      CHROMEOS=true
+      ;;
+    * )
+      ui_print "! Unable to unpack boot image"
+      ;;
+  esac
+  if [ -f "header" ] && [ "$($l/grep -w -o 'androidboot.selinux=enforcing' header)" ]; then
+    # Change selinux state to permissive from enforcing
+    $l/sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
+  fi
+  if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
+    # Change selinux state to permissive, without this Hide Policy scripts failed to execute
+    $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
+  fi
+  if [ -f "ramdisk.cpio" ]; then
+    mkdir ramdisk && cd ramdisk
+    $l/cat $TMP/ramdisk.cpio | $l/cpio -i -d > /dev/null 2>&1
+    # Checkout ramdisk path
+    cd ../
+  fi
+  # Patch ramdisk component
+  if [ -f "ramdisk/init.rc" ]; then
+    if [ -n "$(cat ramdisk/init.rc | grep init.resetprop.rc)" ]; then
+      rm -rf ramdisk/init.resetprop.rc
+      cp -f $TMP/init.resetprop.rc ramdisk/init.resetprop.rc
+      chmod 0750 ramdisk/init.resetprop.rc
+      chcon -h u:object_r:rootfs:s0 "ramdisk/init.resetprop.rc"
+    fi
+    if [ ! -n "$(cat ramdisk/init.rc | grep init.resetprop.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.resetprop.rc' ramdisk/init.rc
+      cp -f $TMP/init.resetprop.rc ramdisk/init.resetprop.rc
+      chmod 0750 ramdisk/init.resetprop.rc
+      chcon -h u:object_r:rootfs:s0 "ramdisk/init.resetprop.rc"
+    fi
+    rm -rf ramdisk.cpio && cd $TMP/ramdisk
+    $l/find . | $l/cpio -H newc -o | cat > $TMP/ramdisk.cpio
+    # Checkout ramdisk path
+    cd ../
+    ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    # Sign ChromeOS boot image
+    [ "$CHROMEOS" == "true" ] && sign_chromeos
+    dd if="mboot.img" of="$block" > /dev/null 2>&1
+    # Wipe boot dump
+    rm -rf boot.img mboot.img ramdisk
+    ./magiskboot cleanup > /dev/null 2>&1
+    cd ../../..
+  fi
+  if [ ! -f "ramdisk/init.rc" ]; then
+    ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    # Sign ChromeOS boot image
+    [ "$CHROMEOS" == "true" ] && sign_chromeos
+    dd if="mboot.img" of="$block" > /dev/null 2>&1
+    # Wipe boot dump
+    rm -rf boot.img mboot.img
+    ./magiskboot cleanup > /dev/null 2>&1
+    cd ../../..
+  fi
+  # Wipe ramdisk dump
+  rm -rf $TMP/ramdisk
+  # Patch root file system component
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/init.rc" ] && [ -n "$(cat /system_root/init.rc | grep ro.zygote)" ]; }; then
+    if [ -n "$(cat /system_root/init.rc | grep init.resetprop.rc)" ]; then
+      rm -rf /system_root/init.resetprop.rc
+      cp -f $TMP/init.resetprop.rc /system_root/init.resetprop.rc
+      chmod 0750 /system_root/init.resetprop.rc
+      chcon -h u:object_r:rootfs:s0 "/system_root/init.resetprop.rc"
+    fi
+    if [ ! -n "$(cat /system_root/init.rc | grep init.resetprop.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.resetprop.rc' /system_root/init.rc
+      cp -f $TMP/init.resetprop.rc /system_root/init.resetprop.rc
+      chmod 0750 /system_root/init.resetprop.rc
+      chcon -h u:object_r:rootfs:s0 "/system_root/init.resetprop.rc"
+    fi
+  fi
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+    if [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.resetprop.rc)" ]; then
+      rm -rf /system_root/system/etc/init/hw/init.resetprop.rc
+      cp -f $TMP/init.resetprop.rc /system_root/system/etc/init/hw/init.resetprop.rc
+      chmod 0644 /system_root/system/etc/init/hw/init.resetprop.rc
+      chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.resetprop.rc"
+    fi
+    if [ ! -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.resetprop.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.resetprop.rc' /system_root/system/etc/init/hw/init.rc
+      cp -f $TMP/init.resetprop.rc /system_root/system/etc/init/hw/init.resetprop.rc
+      chmod 0644 /system_root/system/etc/init/hw/init.resetprop.rc
+      chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.resetprop.rc"
+    fi
+  fi
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+    if [ -n "$(cat /system/system/etc/init/hw/init.rc | grep init.resetprop.rc)" ]; then
+      rm -rf /system/system/etc/init/hw/init.resetprop.rc
+      cp -f $TMP/init.resetprop.rc /system/system/etc/init/hw/init.resetprop.rc
+      chmod 0644 /system/system/etc/init/hw/init.resetprop.rc
+      chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.resetprop.rc"
+    fi
+    if [ ! -n "$(cat /system/system/etc/init/hw/init.rc | grep init.resetprop.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.resetprop.rc' /system/system/etc/init/hw/init.rc
+      cp -f $TMP/init.resetprop.rc /system/system/etc/init/hw/init.resetprop.rc
+      chmod 0644 /system/system/etc/init/hw/init.resetprop.rc
+      chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.resetprop.rc"
+    fi
+  fi
+  # Set default package
+  ZIP="Policy/Policy.tar.xz"
+  # Unpack target package
+  if [ "$BOOTMODE" == "false" ]; then
+    for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  fi
+  # Extract resetprop components
+  tar -xf $TMP_POLICY/Policy.tar.xz -C $TMP
+  # Create XBIN
+  test -d $SYSTEM/xbin || install -d $SYSTEM/xbin; chmod 0755 $SYSTEM/xbin
+  # Install resetprop components
+  cp -f $TMP/resetprop $SYSTEM/xbin/resetprop
+  cp -f $TMP/resetprop.sh $SYSTEM/xbin/resetprop.sh
+  chmod 0755 $SYSTEM/xbin/resetprop
+  chmod 0755 $SYSTEM/xbin/resetprop.sh
+  chcon -h u:object_r:system_file:s0 "$SYSTEM/xbin/resetprop"
+  chcon -h u:object_r:system_file:s0 "$SYSTEM/xbin/resetprop.sh"
+  # Update file GROUP
+  chown -h root:shell $SYSTEM/xbin/resetprop.sh
+fi
+
 if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
   ui_print "- Updating system properties"
   # Ext Build fingerprint
@@ -766,7 +926,8 @@ fi
 # Backup system files before install
 if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
   test -d $ANDROID_DATA/.backup || mkdir -p $ANDROID_DATA/.backup
-  chmod 0755 $ANDROID_DATA/.backup
+  test -d $SECURE_DIR/.backup || mkdir -p $SECURE_DIR/.backup
+  chmod 0755 $ANDROID_DATA/.backup; chmod 0755 $SECURE_DIR/.backup
 fi
 
 # Set SDK check property
@@ -777,23 +938,23 @@ ui_print "- Android SDK version: $android_sdk"
 device_architecture="$(get_prop "ro.product.cpu.abi")"
 ui_print "- Android platform: $device_architecture"
 
-# TODO: Universal SafetyNet Fix; Works together with CTS patch
+# Universal SafetyNet Fix; Works together with CTS patch
 if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ "$TARGET_ANDROID_ARCH" == "ARM" ]; then
   ui_print "! SKip installing patched keystore"
 fi
 
-# TODO: Universal SafetyNet Fix; Works together with CTS patch
+# Universal SafetyNet Fix; Works together with CTS patch
 if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ "$TARGET_ANDROID_ARCH" == "ARM64" ]; then
   ui_print "- Installing patched keystore"
   if [ "$BOOTMODE" == "false" ]; then unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }; fi
   if [ "$BOOTMODE" == "true" ]; then unpack_zip() { return 0; }; fi
   # Set defaults and unpack
-  if [ "$android_sdk" == "26" ]; then ZIP="zip/Keystore26.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore26.tar.xz -C $TMP; fi
-  if [ "$android_sdk" == "27" ]; then ZIP="zip/Keystore27.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore27.tar.xz -C $TMP; fi
-  if [ "$android_sdk" == "28" ]; then ZIP="zip/Keystore28.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore28.tar.xz -C $TMP; fi
-  if [ "$android_sdk" == "29" ]; then ZIP="zip/Keystore29.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore29.tar.xz -C $TMP; fi
-  if [ "$android_sdk" == "30" ]; then ZIP="zip/Keystore30.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore30.tar.xz -C $TMP; fi
-  if [ "$android_sdk" == "31" ]; then ZIP="zip/Keystore31.tar.xz"; unpack_zip; tar -xf $ZIP_FILE/Keystore31.tar.xz -C $TMP; fi
+  if [ "$android_sdk" == "26" ]; then ZIP="Keystore/Keystore26.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore26.tar.xz -C $TMP; fi
+  if [ "$android_sdk" == "27" ]; then ZIP="Keystore/Keystore27.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore27.tar.xz -C $TMP; fi
+  if [ "$android_sdk" == "28" ]; then ZIP="Keystore/Keystore28.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore28.tar.xz -C $TMP; fi
+  if [ "$android_sdk" == "29" ]; then ZIP="Keystore/Keystore29.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore29.tar.xz -C $TMP; fi
+  if [ "$android_sdk" == "30" ]; then ZIP="Keystore/Keystore30.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore30.tar.xz -C $TMP; fi
+  if [ "$android_sdk" == "31" ]; then ZIP="Keystore/Keystore31.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore31.tar.xz -C $TMP; fi
   # Do not backup, if Android SDK 25 detected
   if [ ! "$android_sdk" == "25" ]; then
     # Up-to Android SDK 29, patched keystore executable required
@@ -802,8 +963,8 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ "$TARGET_ANDROID_ARCH" == "ARM64" ];
       cp -f $SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
       cp -f $SYSTEM/bin/keystore $SECURE_DIR/.backup/keystore
       # Write backup type
-      set_write "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
-      set_write "KEYSTORE" >> $SECURE_DIR/.backup/.backup
+      [ "$(grep -w -o 'KEYSTORE' $ANDROID_DATA/.backup/.backup 2>/dev/null)" ] || echo "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
+      [ "$(grep -w -o 'KEYSTORE' $SECURE_DIR/.backup/.backup 2>/dev/null)" ] || echo "KEYSTORE" >> $SECURE_DIR/.backup/.backup
     fi
   fi
   # For Android SDK 30, patched keystore executable and library required
@@ -814,8 +975,8 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ "$TARGET_ANDROID_ARCH" == "ARM64" ];
     cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
     cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $SECURE_DIR/.backup/libkeystore
     # Write backup type
-    set_write "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
-    set_write "KEYSTORE" >> $SECURE_DIR/.backup/.backup
+    [ "$(grep -w -o 'KEYSTORE' $ANDROID_DATA/.backup/.backup 2>/dev/null)" ] || echo "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
+    [ "$(grep -w -o 'KEYSTORE' $SECURE_DIR/.backup/.backup 2>/dev/null)" ] || echo "KEYSTORE" >> $SECURE_DIR/.backup/.backup
   fi
   # For Android SDK 31, patched keystore executable and library required
   if [ "$android_sdk" == "31" ]; then
@@ -825,8 +986,8 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ "$TARGET_ANDROID_ARCH" == "ARM64" ];
     cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
     cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $SECURE_DIR/.backup/libkeystore
     # Write backup type
-    set_write "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
-    set_write "KEYSTORE" >> $SECURE_DIR/.backup/.backup
+    [ "$(grep -w -o 'KEYSTORE' $ANDROID_DATA/.backup/.backup 2>/dev/null)" ] || echo "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
+    [ "$(grep -w -o 'KEYSTORE' $SECURE_DIR/.backup/.backup 2>/dev/null)" ] || echo "KEYSTORE" >> $SECURE_DIR/.backup/.backup
   fi
   # Mount keystore
   if [ "$BOOTMODE" == "true" ]; then
@@ -917,6 +1078,6 @@ ui_print "- Installation complete"
 ui_print " "
 
 # Cleanup
-for f in AIK.tar.xz chromeos cpio grep installer.sh keystore* libkeystore* magiskboot updater util_functions.sh zip; do
+for f in AIK.tar.xz chromeos cpio grep init.resetprop.rc installer.sh Keystore keystore* libkeystore* magiskboot Policy resetprop* updater util_functions.sh zip; do
   rm -rf $TMP/$f
 done

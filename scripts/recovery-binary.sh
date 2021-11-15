@@ -34,6 +34,9 @@ setenforce 0
 # Load install functions from utility script
 . $TMP/util_functions.sh
 
+# Set build version
+REL="$REL"
+
 # Output function
 ui_print() {
   if [ "$BOOTMODE" == "true" ]; then
@@ -50,6 +53,9 @@ ui_print " "
 ui_print "************************"
 ui_print " BiTGApps Recovery Tool "
 ui_print "************************"
+
+# Print build version
+ui_print "- Patch revision: $REL"
 
 # Check device architecture
 ARCH=$(uname -m)

@@ -29,9 +29,11 @@ ro.config.version=
 ro.config.systemless=false
 
 # Property for installing Safetynet patch
+# To learn more, visit https://git.io/J1n9T
 ro.config.safetynet=false
 
 # Property for installing Bootlog patch
+# To learn more, visit https://git.io/J1nSS
 ro.config.bootlog=false
 
 # Property for enabling Addons Uninstall

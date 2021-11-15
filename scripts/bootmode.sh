@@ -4,9 +4,8 @@
 # File name       : bootmode.sh
 #
 # Description     : Install BiTGApps package directly from booted
-#                   system
-#                   Setup installation, environmental variables
-#                   and helper functions
+#                   system. Setup installation, environmental
+#                   variables and helper functions.
 #
 # Copyright       : Copyright (C) 2018-2021 TheHitMan7
 #
