@@ -53,6 +53,9 @@ resetprop ro.boot.hwcountry "GLOBAL"
 # Reset SELinux State
 resetprop --delete ro.build.selinux
 
+# Reset Privileged Permission
+resetprop ro.control_privapp_permissions "enforce"
+
 # Hide SELinux State
 chmod 0640 /sys/fs/selinux/enforce
 chmod 0440 /sys/fs/selinux/policy
