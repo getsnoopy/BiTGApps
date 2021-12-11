@@ -32,6 +32,10 @@ service npci /system/xbin/su-nci.sh
     group root system
     disabled
 
+on post-fs-data
+  rm /data/local/tmp/myjio
+  rm /data/local/tmp/npci
+
 on property:sys.boot_completed=1
   start myjio
   start npci

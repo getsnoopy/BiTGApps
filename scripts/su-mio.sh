@@ -32,14 +32,15 @@ while true
 do
   mount -o remount,rw,errors=continue /
   mount -o remount,rw,errors=continue /system
-  local myjio pid process
-  mkfifo myjio
-  logcat | grep com.jio.myjio > myjio &
+  local root myjio pid process
+  root="/data/local/tmp"
+  mkfifo $root/myjio
+  logcat | grep com.jio.myjio > $root/myjio &
   pid="$!"
-  if grep -qm1 --line-buffered 'com.jio.myjio/.dashboard.activities.DashboardActivity' < myjio; then
+  if grep -qm1 --line-buffered 'com.jio.myjio/.dashboard.activities.DashboardActivity' < $root/myjio; then
     log -p v -t "myjio" "Handling PID: [$pid]"
     kill "$pid"
-    rm -rf myjio
+    rm -rf $root/myjio
     logcat -b all -c
     if [ -e "/sbin/su" ]; then mv -f /sbin/su /sbin/su.d; fi
     if [ -e "/system/bin/su" ]; then mv -f /system/bin/su /system/bin/su.d; fi

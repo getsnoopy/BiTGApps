@@ -32,14 +32,15 @@ while true
 do
   mount -o remount,rw,errors=continue /
   mount -o remount,rw,errors=continue /system
-  local npci pid process
-  mkfifo npci
-  logcat | grep in.org.npci.upiapp > npci &
+  local root npci pid process
+  root="/data/local/tmp"
+  mkfifo $root/npci
+  logcat | grep in.org.npci.upiapp > $root/npci &
   pid="$!"
-  if grep -qm1 --line-buffered 'in.org.npci.upiapp/.HomeActivity' < npci; then
+  if grep -qm1 --line-buffered 'in.org.npci.upiapp/.HomeActivity' < $root/npci; then
     log -p v -t "npci" "Handling PID: [$pid]"
     kill "$pid"
-    rm -rf npci
+    rm -rf $root/npci
     logcat -b all -c
     if [ -e "/sbin/su" ]; then mv -f /sbin/su /sbin/su.d; fi
     if [ -e "/system/bin/su" ]; then mv -f /system/bin/su /system/bin/su.d; fi
