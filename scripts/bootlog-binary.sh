@@ -500,6 +500,7 @@ if [ ! "$system_as_rw" == "rw" ]; then
   exit 1
 fi
 
+# Bootlog function, trigger at 'late-fs' stage
 ui_print "- Set SELinux permissive"
 # Switch path to AIK
 cd $TMP

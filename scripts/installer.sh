@@ -6002,7 +6002,7 @@ find_boot_image() {
   fi
 }
 
-# Bootlog function, trigger at 'on fs' stage
+# Bootlog function, trigger at 'late-fs' stage
 on_bootlog_patch() {
   ui_print "- Installing Bootlog Patch"
   # Extract logcat script
