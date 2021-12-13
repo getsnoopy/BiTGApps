@@ -628,7 +628,7 @@ case $? in
     ui_print "! Unable to unpack boot image"
     ;;
 esac
-if [ -f "header" ]; then $l/sed -i '/os_patch_level/c\os_patch_level=2021-11' header; fi
+if [ -f "header" ]; then $l/sed -i '/os_patch_level/c\os_patch_level=2021-12' header; fi
 [ -f "header" ] && TARGET_SPLIT_IMAGE="true" || TARGET_SPLIT_IMAGE="false"
 ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
 # Sign ChromeOS boot image
@@ -799,7 +799,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
     cp -f $TMP/system.prop $SYSTEM/build.prop
     chmod 0644 $SYSTEM/build.prop
     rm -rf $TMP/system.prop
-    CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/redfin/redfin:12/SP1A.211105.003/7757856:user/release-keys"
+    CTS_SYSTEM_EXT_BUILD_FINGERPRINT="ro.system.build.fingerprint=google/redfin/redfin:12/SQ1A.211205.008/7888514:user/release-keys"
     insert_line $SYSTEM/build.prop "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT" after 'ro.system.build.date.utc=' "$CTS_SYSTEM_EXT_BUILD_FINGERPRINT"
   fi
   # Build fingerprint
@@ -810,7 +810,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
     cp -f $TMP/system.prop $SYSTEM/build.prop
     chmod 0644 $SYSTEM/build.prop
     rm -rf $TMP/system.prop
-    CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/redfin/redfin:12/SP1A.211105.003/7757856:user/release-keys"
+    CTS_SYSTEM_BUILD_FINGERPRINT="ro.build.fingerprint=google/redfin/redfin:12/SQ1A.211205.008/7888514:user/release-keys"
     insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_FINGERPRINT" after 'ro.build.description=' "$CTS_SYSTEM_BUILD_FINGERPRINT"
   fi
   # Build security patch
@@ -821,7 +821,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
     cp -f $TMP/system.prop $SYSTEM/build.prop
     chmod 0644 $SYSTEM/build.prop
     rm -rf $TMP/system.prop
-    CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-11-05";
+    CTS_SYSTEM_BUILD_SEC_PATCH="ro.build.version.security_patch=2021-12-05";
     insert_line $SYSTEM/build.prop "$CTS_SYSTEM_BUILD_SEC_PATCH" after 'ro.build.version.release=' "$CTS_SYSTEM_BUILD_SEC_PATCH"
   fi
   if [ "$device_vendorpartition" == "false" ]; then
@@ -834,7 +834,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
       cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
       chmod 0644 $SYSTEM/vendor/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-11-05";
+      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-12-05";
       insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
     fi
     # Build fingerprint
@@ -845,7 +845,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
       cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
       chmod 0644 $SYSTEM/vendor/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/redfin/redfin:12/SP1A.211105.003/7757856:user/release-keys"
+      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/redfin/redfin:12/SQ1A.211205.008/7888514:user/release-keys"
       insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build fingerprint
@@ -856,7 +856,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
       cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
       chmod 0644 $SYSTEM/vendor/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint=google/redfin/redfin:12/SP1A.211105.003/7757856:user/release-keys"
+      CTS_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint=google/redfin/redfin:12/SQ1A.211205.008/7888514:user/release-keys"
       insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'keyguard.no_require_sim=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build bootimage
@@ -867,7 +867,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
       cp -f $TMP/vendor.prop $SYSTEM/vendor/build.prop
       chmod 0644 $SYSTEM/vendor/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/redfin/redfin:12/SP1A.211105.003/7757856:user/release-keys"
+      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/redfin/redfin:12/SQ1A.211205.008/7888514:user/release-keys"
       insert_line $SYSTEM/vendor/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
     fi
   fi
@@ -881,7 +881,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-11-05";
+      CTS_VENDOR_BUILD_SEC_PATCH="ro.vendor.build.security_patch=2021-12-05";
       insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_SEC_PATCH" after 'ro.product.first_api_level=' "$CTS_VENDOR_BUILD_SEC_PATCH"
     fi
     # Build fingerprint
@@ -892,7 +892,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/redfin/redfin:12/SP1A.211105.003/7757856:user/release-keys"
+      CTS_VENDOR_BUILD_FINGERPRINT="ro.vendor.build.fingerprint=google/redfin/redfin:12/SQ1A.211205.008/7888514:user/release-keys"
       insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'ro.vendor.build.date.utc=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build fingerprint
@@ -903,7 +903,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint=google/redfin/redfin:12/SP1A.211105.003/7757856:user/release-keys"
+      CTS_VENDOR_BUILD_FINGERPRINT="ro.build.fingerprint=google/redfin/redfin:12/SQ1A.211205.008/7888514:user/release-keys"
       insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_FINGERPRINT" after 'keyguard.no_require_sim=' "$CTS_VENDOR_BUILD_FINGERPRINT"
     fi
     # Build bootimage
@@ -914,7 +914,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
       cp -f $TMP/vendor.prop $VENDOR/build.prop
       chmod 0644 $VENDOR/build.prop
       rm -rf $TMP/vendor.prop
-      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/redfin/redfin:12/SP1A.211105.003/7757856:user/release-keys"
+      CTS_VENDOR_BUILD_BOOTIMAGE="ro.bootimage.build.fingerprint=google/redfin/redfin:12/SQ1A.211205.008/7888514:user/release-keys"
       insert_line $VENDOR/build.prop "$CTS_VENDOR_BUILD_BOOTIMAGE" after 'ro.bootimage.build.date.utc=' "$CTS_VENDOR_BUILD_BOOTIMAGE"
     fi
   fi
