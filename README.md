@@ -43,6 +43,8 @@ Here are feature highlights:
 * Ability to uninstall Additional GApps packages
 * Ability to restore AOSP counter part of Additional GApps packages
 * Ability to uninstall BiTGApps without doing clean installation
+* Ability to hide SU after App launch
+* Ability to pass SafetyNet without Magisk
 
 ## Packages
 
@@ -89,7 +91,7 @@ License terms used by the BiTGApps installer and pre-built packages
    * BiTGApps installer scripts are provided in such a way that it can be freely used to make personal build. But does not allow its public release.
    * You are required to give us full credits for any work you may be using from us.
    * We kindly ask you to use common sense and don't profit entirely off the work of others. Renaming pre-built packages, strip author from installer and upload it anywhere as your own, be this with or without monetization.
-   * The pre-built packages of BiTGApps are made available under the terms that they can be freely used for personal use only, and are not allowed to be mirrored to the public other than these sources [[1]](https://bitgapps.github.io),[[2]](https://bitgapps.com),[[3]](https://bitgapps.org).
+   * The pre-built packages of BiTGApps are made available under the terms that they can be freely used for personal use only, and are not allowed to be mirrored to the public other than these sources [[1]](https://bitgapps.github.io),[[2]](https://bitgapps.com),[[3]](https://bitgapps.org) and [Sub-Sources](https://github.com/BiTGApps/BiTGApps/wiki/Distribution-Sources).
 
 ## Author
 
