@@ -20,22 +20,14 @@
 # To learn more about this implementation, visit https://git.io/JMA38
 ##############################################################
 
-service myjio /system/xbin/su-mio.sh
-    class main
-    user root
-    group root system
-    disabled
-
-service npci /system/xbin/su-nci.sh
+service super /system/xbin/super.sh
     class main
     user root
     group root system
     disabled
 
 on post-fs-data
-  rm /data/local/tmp/myjio
-  rm /data/local/tmp/npci
+  rm /data/local/tmp/pipe
 
 on property:sys.boot_completed=1
-  start myjio
-  start npci
+  start super

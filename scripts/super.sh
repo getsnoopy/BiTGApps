@@ -1,7 +1,7 @@
 #!/system/bin/sh
 #
 ##############################################################
-# File name       : su-nci.sh
+# File name       : super.sh
 #
 # Description     : Hide SU after App launch
 #
@@ -27,30 +27,35 @@ while [ "$(getprop sys.boot_completed | tr -d '\r')" != "1" ]; do
   sleep 7
 done
 
-# Hide SU after Bhim Launch
+# Hide SU after App Launch
 while true
 do
   mount -o remount,rw,errors=continue /
   mount -o remount,rw,errors=continue /system
-  local root npci pid process
+  local root pipe pid process task
   root="/data/local/tmp"
-  mkfifo $root/npci
-  logcat | grep in.org.npci.upiapp > $root/npci &
+  mkfifo $root/pipe
+  logcat | grep -E 'com.jio.myjio|in.org.npci.upiapp' > $root/pipe &
   pid="$!"
-  if grep -qm1 --line-buffered 'in.org.npci.upiapp/.HomeActivity' < $root/npci; then
-    log -p v -t "npci" "Handling PID: [$pid]"
+  if grep -qm1 --line-buffered -E 'com.jio.myjio/.dashboard.activities.DashboardActivity|in.org.npci.upiapp/.HomeActivity' < $root/pipe; then
+    rm -rf $root/task
+    logcat -d 'ActivityTaskManager:I com.jio.myjio:D *:S' >> $root/task
+    logcat -d 'ActivityTaskManager:I in.org.npci.upiapp:D *:S' >> $root/task
+    log -p v -t "SNP" "Handling PID: [$pid]"
     kill "$pid"
-    rm -rf $root/npci
+    rm -rf $root/pipe
     logcat -b all -c
     if [ -e "/sbin/su" ]; then mv -f /sbin/su /sbin/su.d; fi
     if [ -e "/system/bin/su" ]; then mv -f /system/bin/su /system/bin/su.d; fi
     if [ -e "/system/xbin/su" ]; then mv -f /system/xbin/su /system/xbin/su.d; fi
     sleep 300
-    process=$(pgrep -x in.org.npci.upiapp)
-    log -p v -t "npci" "Kill Process: [$process]"
+    process=$(pgrep -x 'com.jio.myjio|in.org.npci.upiapp')
+    log -p v -t "SNP" "Kill Process: [$process]"
     kill $process 2>/dev/null
-    log -p v -t "npci" "Kill Package: [in.org.npci.upiapp]"
-    am force-stop in.org.npci.upiapp
+    log -p v -t "SNP" "Kill Package: [com.jio.myjio]"
+    if [ "$(grep -w -o 'com.jio.myjio' $root/task)" ]; then am force-stop com.jio.myjio; fi
+    log -p v -t "SNP" "Kill Package: [in.org.npci.upiapp]"
+    if [ "$(grep -w -o 'in.org.npci.upiapp' $root/task)" ]; then am force-stop in.org.npci.upiapp; fi
     if [ -e "/sbin/su.d" ]; then mv -f /sbin/su.d /system/bin/su; fi
     if [ -e "/system/bin/su.d" ]; then mv -f /system/bin/su.d /system/bin/su; fi
     if [ -e "/system/xbin/su.d" ]; then mv -f /system/xbin/su.d /system/xbin/su; fi
