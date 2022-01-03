@@ -1,52 +1,61 @@
-##############################################################
-# File name       : bitgapps-config.prop
-#
-# Description     : Install BiTGApps systemless
-#                   Install SetupWizard components
-#                   Install Safetynet patch
-#                   Install Bootlog patch
-#                   Install Additional GApps packages
-#                   Uninstall Additional GApps packages
-#                   Uninstall BiTGApps components
-#
-# Copyright       : Copyright (C) 2018-2021 TheHitMan7
-#
-# License         : GPL-3.0-or-later
-##############################################################
-# The BiTGApps scripts are free software: you can redistribute it
-# and/or modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation, either version 3 of
-# the License, or (at your option) any later version.
-#
-# These scripts are distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-##############################################################
+##############################################
+# BiTGApps Configuration File
+# To learn more, visit https://git.io/JSzPy
+# Properties usage, visit https://git.io/JSVJF
+# Documentation, visit https://git.io/JSa7f
+##############################################
 
 # Do not modify version property; Auto generated
 ro.config.version=
 
+# Enable below property, if you want to install
+# BiTGApps systemless as Magisk module.
+# To learn more, visit https://git.io/JSz6S
 # Property for installing BiTGApps systemless
 ro.config.systemless=false
 
+# Enable below property, if you want to install
+# BiTGApps with Google's SetupWizard.
+# To learn more, visit https://git.io/JSzi3
 # Property for installing SetupWizard components
 ro.config.setupwizard=false
 
-# Property for installing Safetynet patch
+# Enable below property, if you want to install
+# BiTGApps with Safetynet patch. This is an advance
+# feature. Do not proceed without getting necessary
+# information. As it may cause unexpected issues.
 # To learn more, visit https://git.io/J1n9T
+# Property for installing Safetynet patch
 ro.config.safetynet=false
 
-# Property for installing Bootlog patch
+# Enable below property, if you want to install
+# BiTGApps with Bootlog patch. This is an advance
+# feature. Do not proceed without getting necessary
+# information. As it may cause unexpected issues.
 # To learn more, visit https://git.io/J1nSS
+# Property for installing Bootlog patch
 ro.config.bootlog=false
 
+# Enable below property, if you want to install
+# BiTGApps Additional GApps Package. Without this
+# you cannot install Addons or extra Google Apps.
+# To learn more, visit https://git.io/JSzXP
 # Property for enabling Addons installation
 ro.config.addon=false
 
+# Enable below property, if you want to install
+# selected Addons from BiTGApps Additional GApps
+# Package. If you skip this, installation will
+# proceed with calculating free space against
+# full Addon Package.
+# To learn more, visit https://git.io/JSzXP
 # Property for enabling Addons usage
 ro.config.stack=false
 
+# Enable below property(s), if you want to install
+# Addons or extra Google Apps. Ending name of
+# property let you know about specific Google App.
+# To learn more, visit https://git.io/JSzXP
 # Property for installing Addons
 ro.config.assistant=false
 ro.config.bromite=false
@@ -71,9 +80,23 @@ ro.config.microg=false
 ro.config.data=false
 ro.config.wellbeing=false
 
+# Enable below property, if you want to uninstall
+# BiTGApps Additional GApps Package. Without this
+# you cannot uninstall Addons or extra Google Apps.
+# This is an advance feature. Do not proceed without
+# getting necessary information. As it may cause
+# unexpected issues.
+# To learn more, visit https://git.io/JSzDA
 # Property for enabling Addons Uninstall
 ro.addon.wipe=false
 
+# Enable below property(s), if you want to uninstall
+# Addons or extra Google Apps. Middle name of property
+# let you know about specific Google App. Default
+# system apps will be restored. This is an advance
+# feature. Do not proceed without getting necessary
+# information. As it may cause unexpected issues.
+# To learn more, visit https://git.io/JSzDA
 # Property for uninstalling Addons
 ro.assistant.wipe=false
 ro.bromite.wipe=false
@@ -98,5 +121,11 @@ ro.microg.wipe=false
 ro.data.wipe=false
 ro.wellbeing.wipe=false
 
+# Enable below property, if you want to uninstall
+# BiTGApps including Addons. This will take your
+# ROM to default state. This is an advance
+# feature. Do not proceed without getting necessary
+# information. As it may cause unexpected issues.
+# To learn more, visit https://git.io/JSzSc
 # Property for wiping BiTGApps components
 ro.config.wipe=false
