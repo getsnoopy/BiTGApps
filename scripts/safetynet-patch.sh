@@ -73,6 +73,7 @@ fi
 # Set temporary package directory
 TMP_KEYSTORE="$TMP/Keystore"
 TMP_POLICY="$TMP/Policy"
+TMP_SUPER="$TMP/Super"
 
 # insert_line <file> <if search string> <before|after> <line match string> <inserted line>
 insert_line() {
@@ -787,6 +788,153 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ ! -d "$ANDROID_DATA/adb/magisk" ]; t
   chcon -h u:object_r:system_file:s0 "$SYSTEM/xbin/resetprop.sh"
   # Update file GROUP
   chown -h root:shell $SYSTEM/xbin/resetprop.sh
+fi
+
+# SU Hide function, trigger after boot is completed
+if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ -d "$ANDROID_DATA/adb/magisk" ]; then
+  ui_print "- Set hide policies"
+  # Set default package
+  ZIP="SUHide/SUHide.tar.xz"
+  # Unpack target package
+  if [ "$BOOTMODE" == "false" ]; then
+    for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  fi
+  # Extract SU Hide components
+  tar -xf $TMP_SUPER/SUHide.tar.xz -C $TMP
+  # Switch path to AIK
+  cd $TMP
+  # Extract boot image
+  [ -z $RECOVERYMODE ] && RECOVERYMODE=false
+  find_boot_image
+  dd if="$block" of="boot.img" > /dev/null 2>&1
+  # Set CHROMEOS status
+  CHROMEOS=false
+  # Unpack boot image
+  ./magiskboot unpack -h boot.img > /dev/null 2>&1
+  case $? in
+    0 ) ;;
+    1 )
+      ui_print "! Unsupported/Unknown image format"
+      ;;
+    2 )
+      CHROMEOS=true
+      ;;
+    * )
+      ui_print "! Unable to unpack boot image"
+      ;;
+  esac
+  if [ -f "header" ] && [ "$($l/grep -w -o 'androidboot.selinux=enforcing' header)" ]; then
+    # Change selinux state to permissive from enforcing
+    $l/sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
+  fi
+  if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
+    # Change selinux state to permissive, without this Hide Policy scripts failed to execute
+    $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
+  fi
+  if [ -f "ramdisk.cpio" ]; then
+    mkdir ramdisk && cd ramdisk
+    $l/cat $TMP/ramdisk.cpio | $l/cpio -i -d > /dev/null 2>&1
+    # Checkout ramdisk path
+    cd ../
+  fi
+  # Patch ramdisk component
+  if [ -f "ramdisk/init.rc" ]; then
+    if [ -n "$(cat ramdisk/init.rc | grep init.super.rc)" ]; then
+      rm -rf ramdisk/init.super.rc
+      cp -f $TMP/init.super.rc ramdisk/init.super.rc
+      chmod 0750 ramdisk/init.super.rc
+      chcon -h u:object_r:rootfs:s0 "ramdisk/init.super.rc"
+    fi
+    if [ ! -n "$(cat ramdisk/init.rc | grep init.super.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.super.rc' ramdisk/init.rc
+      cp -f $TMP/init.super.rc ramdisk/init.super.rc
+      chmod 0750 ramdisk/init.super.rc
+      chcon -h u:object_r:rootfs:s0 "ramdisk/init.super.rc"
+    fi
+    rm -rf ramdisk.cpio && cd $TMP/ramdisk
+    $l/find . | $l/cpio -H newc -o | cat > $TMP/ramdisk.cpio
+    # Checkout ramdisk path
+    cd ../
+    ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    # Sign ChromeOS boot image
+    [ "$CHROMEOS" == "true" ] && sign_chromeos
+    dd if="mboot.img" of="$block" > /dev/null 2>&1
+    # Wipe boot dump
+    rm -rf boot.img mboot.img ramdisk
+    ./magiskboot cleanup > /dev/null 2>&1
+    cd ../../..
+  fi
+  if [ ! -f "ramdisk/init.rc" ]; then
+    ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+    # Sign ChromeOS boot image
+    [ "$CHROMEOS" == "true" ] && sign_chromeos
+    dd if="mboot.img" of="$block" > /dev/null 2>&1
+    # Wipe boot dump
+    rm -rf boot.img mboot.img
+    ./magiskboot cleanup > /dev/null 2>&1
+    cd ../../..
+  fi
+  # Wipe ramdisk dump
+  rm -rf $TMP/ramdisk
+  # Patch root file system component
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/init.rc" ] && [ -n "$(cat /system_root/init.rc | grep ro.zygote)" ]; }; then
+    if [ -n "$(cat /system_root/init.rc | grep init.super.rc)" ]; then
+      rm -rf /system_root/init.super.rc
+      cp -f $TMP/init.super.rc /system_root/init.super.rc
+      chmod 0750 /system_root/init.super.rc
+      chcon -h u:object_r:rootfs:s0 "/system_root/init.super.rc"
+    fi
+    if [ ! -n "$(cat /system_root/init.rc | grep init.super.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /init.super.rc' /system_root/init.rc
+      cp -f $TMP/init.super.rc /system_root/init.super.rc
+      chmod 0750 /system_root/init.super.rc
+      chcon -h u:object_r:rootfs:s0 "/system_root/init.super.rc"
+    fi
+  fi
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system_root/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+    if [ -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.super.rc)" ]; then
+      rm -rf /system_root/system/etc/init/hw/init.super.rc
+      cp -f $TMP/init.super.rc /system_root/system/etc/init/hw/init.super.rc
+      chmod 0644 /system_root/system/etc/init/hw/init.super.rc
+      chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.super.rc"
+    fi
+    if [ ! -n "$(cat /system_root/system/etc/init/hw/init.rc | grep init.super.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.super.rc' /system_root/system/etc/init/hw/init.rc
+      cp -f $TMP/init.super.rc /system_root/system/etc/init/hw/init.super.rc
+      chmod 0644 /system_root/system/etc/init/hw/init.super.rc
+      chcon -h u:object_r:system_file:s0 "/system_root/system/etc/init/hw/init.super.rc"
+    fi
+  fi
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+    if [ -n "$(cat /system/system/etc/init/hw/init.rc | grep init.super.rc)" ]; then
+      rm -rf /system/system/etc/init/hw/init.super.rc
+      cp -f $TMP/init.super.rc /system/system/etc/init/hw/init.super.rc
+      chmod 0644 /system/system/etc/init/hw/init.super.rc
+      chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.super.rc"
+    fi
+    if [ ! -n "$(cat /system/system/etc/init/hw/init.rc | grep init.super.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.super.rc' /system/system/etc/init/hw/init.rc
+      cp -f $TMP/init.super.rc /system/system/etc/init/hw/init.super.rc
+      chmod 0644 /system/system/etc/init/hw/init.super.rc
+      chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.super.rc"
+    fi
+  fi
+  # Set default package
+  ZIP="SUHide/SUHide.tar.xz"
+  # Unpack target package
+  if [ "$BOOTMODE" == "false" ]; then
+    for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  fi
+  # Extract SU Hide components
+  tar -xf $TMP_SUPER/SUHide.tar.xz -C $TMP
+  # Create XBIN
+  test -d $SYSTEM/xbin || install -d $SYSTEM/xbin; chmod 0755 $SYSTEM/xbin
+  # Install SU Hide components
+  cp -f $TMP/super.sh $SYSTEM/xbin/super.sh
+  chmod 0755 $SYSTEM/xbin/super.sh
+  chcon -h u:object_r:system_file:s0 "$SYSTEM/xbin/super.sh"
+  # Update file GROUP
+  chown -h root:shell $SYSTEM/xbin/super.sh
 fi
 
 if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
