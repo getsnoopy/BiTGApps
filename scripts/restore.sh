@@ -770,9 +770,8 @@ pkg_System() {
     rm -rf $S/etc/$i $S/product/etc/$i $S/system_ext/etc/$i
   done
   for i in \
-    GoogleConfigOverlay* Gms* PixelConfigOverlay* ChromeOverlay* TelegramOverlay* WhatsAppOverlay*
-    GmsConfigOverlay* GooglePermissionController* GoogleWebViewOverlay* ManagedProvisioningPixel*
-    TelegramOverlay* WhatsAppOverlay* PixelSetupWizard* SettingsGoogle* SystemUIGoogle* SystemUIGXOverlay*; do
+    GoogleConfigOverlay* GmsConfigOverlay* PixelConfigOverlay* PixelSetupWizard* \
+    ManagedProvisioningPixel* ChromeOverlay* TelegramOverlay* WhatsAppOverlay*; do
     rm -rf $S/overlay/$i $S/product/overlay/$i $S/system_ext/overlay/$i
   done
   for i in $S/usr $S/product/usr $S/system_ext/usr; do
