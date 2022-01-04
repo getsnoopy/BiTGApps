@@ -769,6 +769,20 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ ! -d "$ANDROID_DATA/adb/magisk" ]; t
       chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.resetprop.rc"
     fi
   fi
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+    if [ -n "$(cat /system/etc/init/hw/init.rc | grep init.resetprop.rc)" ]; then
+      rm -rf /system/etc/init/hw/init.resetprop.rc
+      cp -f $TMP/init.resetprop.rc /system/etc/init/hw/init.resetprop.rc
+      chmod 0644 /system/etc/init/hw/init.resetprop.rc
+      chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.resetprop.rc"
+    fi
+    if [ ! -n "$(cat /system/etc/init/hw/init.rc | grep init.resetprop.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.resetprop.rc' /system/etc/init/hw/init.rc
+      cp -f $TMP/init.resetprop.rc /system/etc/init/hw/init.resetprop.rc
+      chmod 0644 /system/etc/init/hw/init.resetprop.rc
+      chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.resetprop.rc"
+    fi
+  fi
   # Set default package
   ZIP="Policy/Policy.tar.xz"
   # Unpack target package
@@ -917,6 +931,20 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ -d "$ANDROID_DATA/adb/magisk" ]; the
       cp -f $TMP/init.super.rc /system/system/etc/init/hw/init.super.rc
       chmod 0644 /system/system/etc/init/hw/init.super.rc
       chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.super.rc"
+    fi
+  fi
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+    if [ -n "$(cat /system/etc/init/hw/init.rc | grep init.super.rc)" ]; then
+      rm -rf /system/etc/init/hw/init.super.rc
+      cp -f $TMP/init.super.rc /system/etc/init/hw/init.super.rc
+      chmod 0644 /system/etc/init/hw/init.super.rc
+      chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.super.rc"
+    fi
+    if [ ! -n "$(cat /system/etc/init/hw/init.rc | grep init.super.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.super.rc' /system/etc/init/hw/init.rc
+      cp -f $TMP/init.super.rc /system/etc/init/hw/init.super.rc
+      chmod 0644 /system/etc/init/hw/init.super.rc
+      chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.super.rc"
     fi
   fi
   # Set default package

@@ -6146,6 +6146,20 @@ on_bootlog_patch() {
       chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.logcat.rc"
     fi
   fi
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+    if [ -n "$(cat /system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
+      rm -rf /system/etc/init/hw/init.logcat.rc
+      cp -f $TMP/init.logcat.rc /system/etc/init/hw/init.logcat.rc
+      chmod 0644 /system/etc/init/hw/init.logcat.rc
+      chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.logcat.rc"
+    fi
+    if [ ! -n "$(cat /system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' /system/etc/init/hw/init.rc
+      cp -f $TMP/init.logcat.rc /system/etc/init/hw/init.logcat.rc
+      chmod 0644 /system/etc/init/hw/init.logcat.rc
+      chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.logcat.rc"
+    fi
+  fi
 }
 
 # Make bootlog patch config dependent
@@ -6321,6 +6335,20 @@ on_hide_policy() {
       chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.resetprop.rc"
     fi
   fi
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+    if [ -n "$(cat /system/etc/init/hw/init.rc | grep init.resetprop.rc)" ]; then
+      rm -rf /system/etc/init/hw/init.resetprop.rc
+      cp -f $TMP_POLICY/init.resetprop.rc /system/etc/init/hw/init.resetprop.rc
+      chmod 0644 /system/etc/init/hw/init.resetprop.rc
+      chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.resetprop.rc"
+    fi
+    if [ ! -n "$(cat /system/etc/init/hw/init.rc | grep init.resetprop.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.resetprop.rc' /system/etc/init/hw/init.rc
+      cp -f $TMP_POLICY/init.resetprop.rc /system/etc/init/hw/init.resetprop.rc
+      chmod 0644 /system/etc/init/hw/init.resetprop.rc
+      chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.resetprop.rc"
+    fi
+  fi
   # Set default package
   ZIP="zip/Policy.tar.xz"
   # Unpack target package
@@ -6471,6 +6499,20 @@ on_super_hide() {
       cp -f $TMP_SUPER/init.super.rc /system/system/etc/init/hw/init.super.rc
       chmod 0644 /system/system/etc/init/hw/init.super.rc
       chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.super.rc"
+    fi
+  fi
+  if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+    if [ -n "$(cat /system/etc/init/hw/init.rc | grep init.super.rc)" ]; then
+      rm -rf /system/etc/init/hw/init.super.rc
+      cp -f $TMP_SUPER/init.super.rc /system/etc/init/hw/init.super.rc
+      chmod 0644 /system/etc/init/hw/init.super.rc
+      chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.super.rc"
+    fi
+    if [ ! -n "$(cat /system/etc/init/hw/init.rc | grep init.super.rc)" ]; then
+      $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.super.rc' /system/etc/init/hw/init.rc
+      cp -f $TMP_SUPER/init.super.rc /system/etc/init/hw/init.super.rc
+      chmod 0644 /system/etc/init/hw/init.super.rc
+      chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.super.rc"
     fi
   fi
   # Set default package

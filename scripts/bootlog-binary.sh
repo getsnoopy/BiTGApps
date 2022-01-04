@@ -658,6 +658,22 @@ if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/system/etc/init/hw/init.rc" ] &
     chcon -h u:object_r:system_file:s0 "/system/system/etc/init/hw/init.logcat.rc"
   fi
 fi
+if [ ! -f "ramdisk/init.rc" ] && { [ -f "/system/etc/init/hw/init.rc" ] && [ -n "$(cat /system/etc/init/hw/init.rc | grep ro.zygote)" ]; }; then
+  if [ -n "$(cat /system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
+    ui_print "- Update logcat script"
+    rm -rf /system/etc/init/hw/init.logcat.rc
+    cp -f $TMP/init.logcat.rc /system/etc/init/hw/init.logcat.rc
+    chmod 0644 /system/etc/init/hw/init.logcat.rc
+    chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.logcat.rc"
+  fi
+  if [ ! -n "$(cat /system/etc/init/hw/init.rc | grep init.logcat.rc)" ]; then
+    ui_print "- Install logcat script"
+    $l/sed -i '/init.${ro.zygote}.rc/a\\import /system/etc/init/hw/init.logcat.rc' /system/etc/init/hw/init.rc
+    cp -f $TMP/init.logcat.rc /system/etc/init/hw/init.logcat.rc
+    chmod 0644 /system/etc/init/hw/init.logcat.rc
+    chcon -h u:object_r:system_file:s0 "/system/etc/init/hw/init.logcat.rc"
+  fi
+fi
 
 # Unmount APEX
 if [ "$BOOTMODE" == "false" ]; then
