@@ -325,12 +325,12 @@ mount_all() {
   OLD_ANDROID_ROOT=$ANDROID_ROOT
   unset ANDROID_ROOT
   # Wipe conflicting layouts
-  rm -rf /system_root
-  rm -rf /product
-  rm -rf /system_ext
+  ($(! is_mounted '/system_root') && rm -rf /system_root)
+  ($(! is_mounted '/product') && rm -rf /product)
+  ($(! is_mounted '/system_ext') && rm -rf /system_ext)
   # Do not wipe system, if it create symlinks in root
   if [ ! "$(readlink -f "/bin")" = "/system/bin" ] && [ ! "$(readlink -f "/etc")" = "/system/etc" ]; then
-    rm -rf /system
+    ($(! is_mounted '/system') && rm -rf /system)
   fi
   # Create initial path and set ANDROID_ROOT in the global environment
   if [ "$($BB grep -w -o /system_root $fstab)" ]; then mkdir /system_root; export ANDROID_ROOT="/system_root"; fi
