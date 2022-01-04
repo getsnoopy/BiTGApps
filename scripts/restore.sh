@@ -486,6 +486,8 @@ system_layout() {
   if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($BB grep -w -o /system_root /proc/mounts)" ]; then
     export S="/system_root/system"
   fi
+  # Adaptation to A/B OTAs
+  if [ ! -z $backuptool_ab ]; then export S="/postinstall/system"; fi
 }
 
 get_file_prop() { grep -m1 "^$2=" "$1" | cut -d= -f2; }

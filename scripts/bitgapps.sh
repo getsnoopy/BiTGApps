@@ -24,7 +24,7 @@
 if [ -z $backuptool_ab ]; then TMP="/tmp"; else TMP="/postinstall/tmp"; fi
 
 # Set busybox
-BBDIR="/tmp"
+if [ -z $backuptool_ab ]; then BBDIR="/tmp"; else BBDIR="/postinstall/tmp"; fi
 
 # Always use busybox backup from /data
 BBBAK="/data/busybox"
