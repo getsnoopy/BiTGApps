@@ -2263,7 +2263,7 @@ ota_prop_file() {
   fi
 }
 
-# OTA survival script
+# Functional OTA survival script
 backup_script() {
   if [ -d "$SYSTEM_ADDOND" ] && [ "$supported_module_config" == "false" ]; then
     ui_print "- Installing OTA survival script"
@@ -7409,7 +7409,7 @@ post_install() {
     set_setup_config
     print_title_setup
     on_setup_install
-    dummy_script
+    backup_script
     opt_v25
     whitelist_patch
     sdk_fix
@@ -7452,7 +7452,7 @@ post_install() {
     build_prop_file
     ota_prop_file
     rwg_ota_prop
-    dummy_script
+    backup_script
     runtime_permissions
     opt_v25
     whitelist_patch
