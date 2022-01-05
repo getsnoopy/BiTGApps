@@ -806,7 +806,9 @@ fi
 
 # SU Hide function, trigger after boot is completed
 if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ -d "$ANDROID_DATA/adb/magisk" ]; then
-  ui_print "- Set hide policies"
+  ui_print "- Install SU Hide"
+  # Skip installing SU Hide
+  return 1
   # Set default package
   ZIP="SUHide/SUHide.tar.xz"
   # Unpack target package

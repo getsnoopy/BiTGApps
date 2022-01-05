@@ -6374,6 +6374,8 @@ set_hide_policy() { if [ ! -d "$ANDROID_DATA/adb/magisk" ]; then on_hide_policy;
 
 # SU Hide function, trigger after boot is completed
 on_super_hide() {
+  # Skip installing SU Hide
+  return 1
   # Set default package
   ZIP="zip/SUHide.tar.xz"
   # Unpack target package
