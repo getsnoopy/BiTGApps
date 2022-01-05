@@ -26,8 +26,15 @@ if [ -z $backuptool_ab ]; then TMP="/tmp"; else TMP="/postinstall/tmp"; fi
 # Set busybox
 if [ -z $backuptool_ab ]; then BBDIR="/tmp"; else BBDIR="/postinstall/tmp"; fi
 
-# Always use busybox backup from /data
+# Use busybox backup from /data
 BBBAK="/data/busybox"
+
+# Use busybox backup from /data/unencrypted
+BBBAC="/data/unencrypted/busybox"
+
+# Copy busybox backup
+[ -e "$BBBAK/busybox-arm" ] && cp -f $BBBAK/busybox-arm $BBDIR/busybox-arm
+[ -e "$BBBAC/busybox-arm" ] && cp -f $BBBAC/busybox-arm $BBDIR/busybox-arm
 
 # Mount backup partitions
 for i in /cache /persist /metadata; do
@@ -57,6 +64,8 @@ case "$1" in
       exec $BBDIR/busybox-arm sh "$TMP/addon.d/backup.sh" "$@"
     elif [ -e "$BBBAK/busybox-arm" ]; then
       exec $BBBAK/busybox-arm sh "$TMP/addon.d/backup.sh" "$@"
+    elif [ -e "$BBBAC/busybox-arm" ]; then
+      exec $BBBAC/busybox-arm sh "$TMP/addon.d/backup.sh" "$@"
     else
       source "$TMP/addon.d/backup.sh" "$@"
     fi
@@ -69,6 +78,8 @@ case "$1" in
       exec $BBDIR/busybox-arm sh "$TMP/addon.d/restore.sh" "$@"
     elif [ -e "$BBBAK/busybox-arm" ]; then
       exec $BBBAK/busybox-arm sh "$TMP/addon.d/restore.sh" "$@"
+    elif [ -e "$BBBAC/busybox-arm" ]; then
+      exec $BBBAC/busybox-arm sh "$TMP/addon.d/restore.sh" "$@"
     else
       source "$TMP/addon.d/restore.sh" "$@"
     fi
