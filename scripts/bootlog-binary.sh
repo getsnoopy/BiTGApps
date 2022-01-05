@@ -283,10 +283,10 @@ if [ "$BOOTMODE" == "false" ]; then
   # Unset predefined environmental variable
   OLD_ANDROID_ROOT=$ANDROID_ROOT && unset ANDROID_ROOT
   # Wipe conflicting layout
-  rm -rf /system_root
+  ($(! is_mounted '/system_root') && rm -rf /system_root)
   # Do not wipe system, if it create symlinks in root
   if [ ! "$(readlink -f "/bin")" = "/system/bin" ] && [ ! "$(readlink -f "/etc")" = "/system/etc" ]; then
-    rm -rf /system
+    ($(! is_mounted '/system') && rm -rf /system)
   fi
   # Create initial path and set ANDROID_ROOT in the global environment
   if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then mkdir /system_root; export ANDROID_ROOT="/system_root"; fi
