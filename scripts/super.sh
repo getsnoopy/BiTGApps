@@ -32,12 +32,14 @@ while true
 do
   mount -o remount,rw,errors=continue /
   mount -o remount,rw,errors=continue /system
-  local root pipe pid process task
+  local root pkg act pipe pid process task
   root="/data/local/tmp"
+  pkg='com.jio.myjio|in.org.npci.upiapp'
+  act='com.jio.myjio/.dashboard.activities.DashboardActivity|in.org.npci.upiapp/.HomeActivity'
   mkfifo $root/pipe
-  logcat | grep -E 'com.jio.myjio|in.org.npci.upiapp' > $root/pipe &
+  logcat | grep -E "$pkg" > $root/pipe &
   pid="$!"
-  if grep -qm1 --line-buffered -E 'com.jio.myjio/.dashboard.activities.DashboardActivity|in.org.npci.upiapp/.HomeActivity' < $root/pipe; then
+  if grep -qm1 --line-buffered -E "$act" < $root/pipe; then
     rm -rf $root/task
     logcat -d 'ActivityTaskManager:I com.jio.myjio:D *:S' >> $root/task
     logcat -d 'ActivityTaskManager:I in.org.npci.upiapp:D *:S' >> $root/task
