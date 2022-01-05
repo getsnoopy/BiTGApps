@@ -842,7 +842,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ -d "$ANDROID_DATA/adb/magisk" ]; the
     $l/sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
   fi
   if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
-    # Change selinux state to permissive, without this Hide Policy scripts failed to execute
+    # Change selinux state to permissive, without this SU Hide scripts failed to execute
     $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
   if [ -f "ramdisk.cpio" ]; then
