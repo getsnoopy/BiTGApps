@@ -24,7 +24,8 @@ A collection of information and use of BiTGApps.
 * [**Upgrade Instructions**](https://github.com/BiTGApps/BiTGApps/wiki/Upgrade-Instructions)
 * [**Backup and Restore**](https://github.com/BiTGApps/BiTGApps/wiki/Backup-And-Restore)
 * [**Uninstall and Restore**](https://github.com/BiTGApps/BiTGApps/wiki/Uninstall-and-Restore)
-* [**Common Installation Issues**](https://github.com/BiTGApps/BiTGApps/wiki/Common-Installation-Issues)
+* [**Installation Issues**](https://github.com/BiTGApps/BiTGApps/wiki/Common-Installation-Issues)
+* [**Pre-built Packages**](https://github.com/BiTGApps/BiTGApps/wiki/Prebuilt-Packages)
 * [**Bugs Report Format**](https://github.com/BiTGApps/BiTGApps/wiki/Bugs-Report-Format)
 * [**Installation Logs**](https://github.com/BiTGApps/BiTGApps/wiki/Installation-Logs)
 * [**Installation Status**](https://github.com/BiTGApps/BiTGApps/wiki/Installation-Status)
@@ -36,12 +37,6 @@ A collection of information and use of BiTGApps.
 * [**Distribution Sources**](https://github.com/BiTGApps/BiTGApps/wiki/Distribution-Sources)
 * [**Support Project**](https://github.com/BiTGApps/BiTGApps/wiki/Support-Project)
 
-#### Changelogs
-
-* [**BiTGApps Package**](https://github.com/BiTGApps/BiTGApps/wiki/BiTGApps)
-* [**MicroG Package**](https://github.com/BiTGApps/BiTGApps/wiki/microG-Changelogs)
-* [**Additional Package**](https://github.com/BiTGApps/BiTGApps/wiki/Additional-Packages)
-
 #### microG
 
 * [**Introduction**](https://github.com/BiTGApps/BiTGApps/wiki/microG)
@@ -52,6 +47,13 @@ A collection of information and use of BiTGApps.
 * [**Usage**](https://github.com/BiTGApps/BiTGApps/wiki/microG-Usage)
 * [**Changelogs**](https://github.com/BiTGApps/BiTGApps/wiki/microG-Changelogs)
 * [**Downloads**](https://github.com/BiTGApps/BiTGApps/wiki/Download-Portals)
+* [**Donation**](https://github.com/BiTGApps/BiTGApps/wiki/Donate)
+
+#### Changelogs
+
+* [**BiTGApps Package**](https://github.com/BiTGApps/BiTGApps/wiki/BiTGApps)
+* [**MicroG Package**](https://github.com/BiTGApps/BiTGApps/wiki/microG-Changelogs)
+* [**Additional Package**](https://github.com/BiTGApps/BiTGApps/wiki/Additional-Packages)
 
 #### Developer Guide
 
@@ -61,3 +63,11 @@ A collection of information and use of BiTGApps.
 * [**Safetynet Patch**](https://github.com/BiTGApps/BiTGApps/wiki/Safetynet-Patch)
 * [**Whitelist Patch**](https://github.com/BiTGApps/BiTGApps/wiki/Whitelist-Patch)
 * [**Bootlog Patch**](https://github.com/BiTGApps/BiTGApps/wiki/Bootlog-Patch)
+
+#### Miscellaneous
+
+* [**Features**](https://github.com/BiTGApps/BiTGApps/wiki/Advance-Features)
+* [**Donation**](https://github.com/BiTGApps/BiTGApps/wiki/Donate)
+* [**Source**](https://github.com/BiTGApps)
+* [**License**](https://github.com/BiTGApps/BiTGApps#license)
+* [**About**](https://github.com/BiTGApps/BiTGApps/wiki/About)

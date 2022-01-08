@@ -64,9 +64,7 @@ Here are feature highlights:
 ## Useful Links
 
 * [Development Forum](https://forum.xda-developers.com/t/custom-gapps-bitgapps-for-android.4012165)
-* [Support for Pre-built Packages](https://github.com/BiTGApps/BiTGApps/wiki/Prebuilt-Packages)
 * [Frequently Asked Questions](https://github.com/BiTGApps/BiTGApps/wiki/Frequently-Asked-Questions-(FAQ))
-* [Common Installation Issues](https://github.com/BiTGApps/BiTGApps/wiki/Common-Installation-Issues)
 * [BiTGApps Documentation](https://github.com/BiTGApps/BiTGApps/wiki)
 * [microG Support](https://github.com/BiTGApps/BiTGApps/wiki#microg)
 
