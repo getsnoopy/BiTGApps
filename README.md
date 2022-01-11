@@ -45,6 +45,7 @@ Here are feature highlights:
 * Ability to uninstall BiTGApps without doing clean installation
 * Ability to hide SU after App launch
 * Ability to pass SafetyNet without Magisk
+* Google Photos Unlimited Backup
 
 ## Packages
 
@@ -94,4 +95,4 @@ License terms used by the BiTGApps installer and pre-built packages
 
 ## Author
 
-The BiTGApps Project is authored by [TheHitMan](https://TheHitMan7.github.io)
+The BiTGApps Project is authored by [TheHitMan7](https://TheHitMan7.github.io)
