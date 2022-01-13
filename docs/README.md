@@ -1,5 +1,5 @@
 <div style="float: right">
-<img align="right" src="https://raw.githubusercontent.com/BiTGApps/BiTGApps/master/logo.png" width="330" height="330" alt="BiTGApps" />
+<a href="https://github.com/BiTGApps/BiTGApps/wiki/Quick-Guide" target="_blank"><img align="right" src="https://raw.githubusercontent.com/BiTGApps/BiTGApps/master/logo.png" width="330" height="330" alt="BiTGApps" /></a>
 </div>
 
 #### Welcome to the BiTGApps wiki!
