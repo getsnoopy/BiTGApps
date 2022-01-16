@@ -16,7 +16,8 @@ ro.config.systemless=false
 
 # Enable below property, if you want to install
 # MicroG with Safetynet patch. This is an advance
-# feature. Do not proceed without getting necessary
+# feature and will change your ROM SELinux State.
+# Do not proceed without getting necessary
 # information. As it may cause unexpected issues.
 # To learn more, visit https://git.io/J1n9T
 # Property for installing Safetynet patch
@@ -24,7 +25,8 @@ ro.config.safetynet=false
 
 # Enable below property, if you want to install
 # MicroG with Bootlog patch. This is an advance
-# feature. Do not proceed without getting necessary
+# feature and will change your ROM SELinux State.
+# Do not proceed without getting necessary
 # information. As it may cause unexpected issues.
 # To learn more, visit https://git.io/J1nSS
 # Property for installing Bootlog patch

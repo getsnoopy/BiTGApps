@@ -6374,8 +6374,6 @@ set_hide_policy() { if [ ! -d "$ANDROID_DATA/adb/magisk" ]; then on_hide_policy;
 
 # SU Hide function, trigger after boot is completed
 on_super_hide() {
-  # Skip installing SU Hide
-  return 1
   # Set default package
   ZIP="zip/SUHide.tar.xz"
   # Unpack target package
@@ -6714,6 +6712,7 @@ usf_v26() {
   # Mount keystore
   if [ "$BOOTMODE" == "true" ]; then
     # Mount independent system block
+    mount -o rw,remount,errors=continue /dev/*/.magisk/block/system > /dev/null 2>&1
     mount -o rw,remount,errors=continue /dev/*/.magisk/block/system_root > /dev/null 2>&1
     # Mount magisk based symlink
     mount -o rw,remount $SYSTEM_AS_SYSTEM/bin > /dev/null 2>&1

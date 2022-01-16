@@ -807,8 +807,6 @@ fi
 # SU Hide function, trigger after boot is completed
 if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ -d "$ANDROID_DATA/adb/magisk" ]; then
   ui_print "- Install SU Hide"
-  # Skip installing SU Hide
-  return 1
   # Set default package
   ZIP="SUHide/SUHide.tar.xz"
   # Unpack target package
@@ -1170,6 +1168,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ "$TARGET_ANDROID_ARCH" == "ARM64" ];
   # Mount keystore
   if [ "$BOOTMODE" == "true" ]; then
     # Mount independent system block
+    mount -o rw,remount,errors=continue /dev/*/.magisk/block/system > /dev/null 2>&1
     mount -o rw,remount,errors=continue /dev/*/.magisk/block/system_root > /dev/null 2>&1
     # Mount magisk based symlink
     mount -o rw,remount $SYSTEM/bin > /dev/null 2>&1
