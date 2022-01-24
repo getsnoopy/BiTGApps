@@ -1,24 +1,26 @@
 #!/sbin/sh
 #
-##############################################################
-# File name       : installer.sh
+#####################################################
+# File name   : installer.sh
 #
-# Description     : Remove vendor overlay
+# Description : Set SELinux state to enforcing
 #
-# Copyright       : Copyright (C) 2018-2021 TheHitMan7
+# Copyright   : Copyright (C) 2018-2021 TheHitMan7
 #
-# License         : GPL-3.0-or-later
-##############################################################
-# The BiTGApps scripts are free software: you can redistribute it
-# and/or modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation, either version 3 of
-# the License, or (at your option) any later version.
+# License     : GPL-3.0-or-later
+#####################################################
+# The BiTGApps scripts are free software: you can
+# redistribute it and/or modify it under the terms of
+# the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
-# These scripts are distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-##############################################################
+# These scripts are distributed in the hope that it
+# will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#####################################################
 
 # Check boot state
 BOOTMODE=false
@@ -66,11 +68,26 @@ fi
 
 is_mounted() { grep -q " $(readlink -f $1) " /proc/mounts 2>/dev/null; return $?; }
 
+toupper() {
+  echo "$@" | tr '[:lower:]' '[:upper:]'
+}
+
 grep_cmdline() {
   local REGEX="s/^$1=//p"
   local CL=$(cat /proc/cmdline 2>/dev/null)
   POSTFIX=$([ $(expr $(echo "$CL" | tr -d -c '"' | wc -m) % 2) == 0 ] && echo -n '' || echo -n '"')
   { eval "for i in $CL$POSTFIX; do echo \$i; done" ; cat /proc/bootconfig 2>/dev/null | sed 's/[[:space:]]*=[[:space:]]*\(.*\)/=\1/g' | sed 's/"//g'; } | sed -n "$REGEX" 2>/dev/null
+}
+
+grep_prop() {
+  if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then SYSDIR="/system_root/system"; fi
+  if [ "$($TMP/grep -w -o /system $fstab)" ]; then SYSDIR="/system"; fi
+  if [ "$($TMP/grep -w -o /system $fstab)" ] && [ -d "/system/system" ]; then SYSDIR="/system/system"; fi
+  local REGEX="s/^$1=//p"
+  shift
+  local FILES=$@
+  [ -z "$FILES" ] && FILES="$SYSDIR/build.prop"
+  cat $FILES 2>/dev/null | dos2unix | $l/sed -n "$REGEX" | head -n 1
 }
 
 setup_mountpoint() {
@@ -79,6 +96,62 @@ setup_mountpoint() {
     rm -f $1
     mkdir $1
   fi
+}
+
+# find_block [partname...]
+find_block() {
+  local BLOCK DEV DEVICE DEVNAME PARTNAME UEVENT
+  for BLOCK in "$@"; do
+    DEVICE=`find /dev/block \( -type b -o -type c -o -type l \) -iname $BLOCK | head -n 1` 2>/dev/null
+    if [ ! -z $DEVICE ]; then
+      readlink -f $DEVICE
+      return 0
+    fi
+  done
+  # Fallback by parsing sysfs uevents
+  for UEVENT in /sys/dev/block/*/uevent; do
+    DEVNAME=`grep_prop DEVNAME $UEVENT`
+    PARTNAME=`grep_prop PARTNAME $UEVENT`
+    for BLOCK in "$@"; do
+      if [ "$(toupper $BLOCK)" = "$(toupper $PARTNAME)" ]; then
+        echo /dev/block/$DEVNAME
+        return 0
+      fi
+    done
+  done
+  # Look just in /dev in case we're dealing with MTD/NAND without /dev/block devices/links
+  for DEV in "$@"; do
+    DEVICE=`find /dev \( -type b -o -type c -o -type l \) -maxdepth 1 -iname $DEV | head -n 1` 2>/dev/null
+    if [ ! -z $DEVICE ]; then
+      readlink -f $DEVICE
+      return 0
+    fi
+  done
+  return 1
+}
+
+find_boot_image() {
+  block=
+  if $RECOVERYMODE; then
+    block=`find_block recovery_ramdisk$SLOT recovery$SLOT sos`
+  elif [ ! -z $SLOT ]; then
+    block=`find_block ramdisk$SLOT recovery_ramdisk$SLOT boot$SLOT`
+  else
+    block=`find_block ramdisk recovery_ramdisk kern-a android_boot kernel bootimg boot lnx boot_a`
+  fi
+  if [ -z $block ]; then
+    # Lets see what fstabs tells me
+    block=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
+  fi
+}
+
+sign_chromeos() {
+  echo > empty
+  ./chromeos/futility vbutil_kernel --pack mboot.img.signed \
+  --keyblock ./chromeos/kernel.keyblock --signprivate ./chromeos/kernel_data_key.vbprivk \
+  --version 1 --vmlinuz mboot.img --config empty --arch arm --bootloader empty --flags 0x1
+  rm -f empty mboot.img
+  mv mboot.img.signed mboot.img
 }
 
 # Output function
@@ -92,18 +165,18 @@ ui_print() {
   fi
 }
 
-# Print title
+# Title
 ui_print " "
-ui_print "**************************"
-ui_print " BiTGApps Overlay Remover "
-ui_print "**************************"
+ui_print "****************************"
+ui_print " BiTGApps SELinux Enforcing "
+ui_print "****************************"
 
 # Print build version
 ui_print "- Patch revision: $REL"
 
 # Extract busybox
 if [ "$BOOTMODE" == "false" ]; then
-  unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
+  unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP" 2>/dev/null
 fi
 chmod +x "$TMP/busybox-arm"
 
@@ -137,6 +210,13 @@ if [ -e "$bb" ]; then
   # Set busybox components in environment
   export PATH="$l:$PATH"
 fi
+
+# Extract boot image modification tool
+if [ "$BOOTMODE" == "false" ]; then
+  unzip -o "$ZIPFILE" "AIK.tar.xz" -d "$TMP"
+fi
+tar -xf $TMP/AIK.tar.xz -C $TMP
+chmod +x $TMP/chromeos/* $TMP/cpio $TMP/magiskboot
 
 # Extract grep utility
 if [ "$BOOTMODE" == "false" ]; then
@@ -211,10 +291,8 @@ if [ "$BOOTMODE" == "false" ]; then
   local_slot() { local slot=$(getprop ro.boot.slot_suffix 2>/dev/null); }; local_slot
   if [ "$SUPER_PARTITION" == "true" ]; then
     if [ "$device_abpartition" == "true" ]; then
-      for block in system product; do
-        for slot in "" _a _b; do
-          blockdev --setrw /dev/block/mapper/$block$slot > /dev/null 2>&1
-        done
+      for slot in "" _a _b; do
+        blockdev --setrw /dev/block/mapper/system$slot > /dev/null 2>&1
       done
       ui_print "- Mounting /system"
       mount -o ro -t auto /dev/block/mapper/system$slot $ANDROID_ROOT > /dev/null 2>&1
@@ -230,30 +308,12 @@ if [ "$BOOTMODE" == "false" ]; then
         mount -o ro -t auto $SYSTEM_MAPPER $ANDROID_ROOT > /dev/null 2>&1
         mount -o rw,remount -t auto $SYSTEM_MAPPER $ANDROID_ROOT > /dev/null 2>&1
       fi
-      if [ "$($TMP/grep -w -o /product $fstab)" ]; then
-        ui_print "- Mounting /product"
-        mount -o ro -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
-        is_mounted /product || PRODUCT_DM_MOUNT="true"
-        if [ "$PRODUCT_DM_MOUNT" == "true" ]; then
-          PRODUCT_MAPPER=`$TMP/grep -v '#' $fstab | $TMP/grep -E '/product' | $TMP/grep -oE '/dev/block/dm-[0-9]' | head -n 1`
-          mount -o ro -t auto $PRODUCT_MAPPER /product > /dev/null 2>&1
-          mount -o rw,remount -t auto $PRODUCT_MAPPER /product > /dev/null 2>&1
-        fi
-      fi
     fi
     if [ "$device_abpartition" == "false" ]; then
-      for block in system product; do
-        blockdev --setrw /dev/block/mapper/$block > /dev/null 2>&1
-      done
+      blockdev --setrw /dev/block/mapper/system > /dev/null 2>&1
       ui_print "- Mounting /system"
       mount -o ro -t auto /dev/block/mapper/system $ANDROID_ROOT > /dev/null 2>&1
       mount -o rw,remount -t auto /dev/block/mapper/system $ANDROID_ROOT > /dev/null 2>&1
-      if [ "$($TMP/grep -w -o /product $fstab)" ]; then
-        ui_print "- Mounting /product"
-        mount -o ro -t auto /dev/block/mapper/product /product > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/product /product > /dev/null 2>&1
-      fi
     fi
   fi
   if [ "$SUPER_PARTITION" == "false" ]; then
@@ -277,11 +337,6 @@ if [ "$BOOTMODE" == "false" ]; then
         # Mount using block device
         mount $BLK $ANDROID_ROOT > /dev/null 2>&1
       fi
-      if [ "$($TMP/grep -w -o /product $fstab)" ]; then
-        ui_print "- Mounting /product"
-        mount -o ro -t auto /product > /dev/null 2>&1
-        mount -o rw,remount -t auto /product > /dev/null 2>&1
-      fi
     fi
     if [ "$device_abpartition" == "true" ] && [ "$system_as_root" == "true" ]; then
       ui_print "- Mounting /system"
@@ -293,15 +348,11 @@ if [ "$BOOTMODE" == "false" ]; then
         mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
         mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
       fi
-      if [ "$($TMP/grep -w -o /product $fstab)" ]; then
-        ui_print "- Mounting /product"
-        mount -o ro -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
-      fi
     fi
   fi
 fi
 
+# Mount APEX
 if [ "$BOOTMODE" == "false" ]; then
   if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then SYSTEM="/system_root/system"; fi
   if [ "$($TMP/grep -w -o /system $fstab)" ]; then SYSTEM="/system"; fi
@@ -401,16 +452,6 @@ if [ "$BOOTMODE" == "false" ]; then
   fi
 fi
 
-# Check product partition mount status
-if [ "$BOOTMODE" == "false" ] && [ "$($TMP/grep -w -o /product $fstab)" ]; then
-  if ! is_mounted /product; then
-    ui_print "! Cannot mount /product. Aborting..."
-    ui_print "! Installation failed"
-    ui_print " "
-    exit 1
-  fi
-fi
-
 # Check installation layout
 if [ ! -f "$SYSTEM/build.prop" ]; then
   ui_print "! Unable to find installation layout. Aborting..."
@@ -430,9 +471,6 @@ if [ "$BOOTMODE" == "false" ]; then
   if [ "$($TMP/grep -w -o /system $fstab)" ]; then
     system_as_rw=`$TMP/grep -v '#' /proc/mounts | $TMP/grep -E '/system?[^a-zA-Z]' | $TMP/grep -oE 'rw' | head -n 1`
   fi
-  if [ "$($TMP/grep -w -o /product $fstab)" ]; then
-    product_as_rw=`$TMP/grep -v '#' /proc/mounts | $TMP/grep -E '/product?[^a-zA-Z]' | $TMP/grep -oE 'rw' | head -n 1`
-  fi
 fi
 if [ "$BOOTMODE" == "true" ]; then
   if [ "$($TMP/grep -w -o /dev/root /proc/mounts)" ]; then
@@ -440,9 +478,6 @@ if [ "$BOOTMODE" == "true" ]; then
   fi
   if [ "$($TMP/grep -w -o /dev/block/dm-0 /proc/mounts)" ]; then
     system_as_rw=`$TMP/grep -w /dev/block/dm-0 /proc/mounts | $TMP/grep -w / | $TMP/grep -ow rw | head -n 1`
-  fi
-  if [ "$($TMP/grep -w -o /product /proc/mounts)" ]; then
-    product_as_rw=`$TMP/grep -w /product /proc/mounts | $TMP/grep -ow rw | head -n 1`
   fi
 fi
 
@@ -454,28 +489,48 @@ if [ ! "$system_as_rw" == "rw" ]; then
   exit 1
 fi
 
-# Check Product RW status
-if [ "$BOOTMODE" == "false" ] && [ "$($TMP/grep -w -o /product $fstab)" ]; then
-  if [ ! "$product_as_rw" == "rw" ]; then
-    ui_print "! Read-only /product partition. Aborting..."
-    ui_print "! Installation failed"
-    ui_print " "
-    exit 1
-  fi
+ui_print "- Set SELinux enforcing"
+# Switch path to AIK
+cd $TMP
+# Extract boot image
+[ -z $RECOVERYMODE ] && RECOVERYMODE=false
+find_boot_image
+dd if="$block" of="boot.img" > /dev/null 2>&1
+if [ -z $block ]; then
+  ui_print "! Unable to detect target image"
+  ui_print "! Installation failed"
+  ui_print " "
+  exit 1
 fi
-
-if [ "$BOOTMODE" == "true" ] && [ "$($TMP/grep -w -o /product /proc/mounts)" ]; then
-  if [ ! "$product_as_rw" == "rw" ]; then
-    ui_print "! Read-only /product partition. Aborting..."
-    ui_print "! Installation failed"
-    ui_print " "
-    exit 1
-  fi
+ui_print "- Target image: $block"
+# Set CHROMEOS status
+CHROMEOS=false
+# Unpack boot image
+./magiskboot unpack -h boot.img > /dev/null 2>&1
+case $? in
+  0 ) ;;
+  1 )
+    ui_print "! Unsupported/Unknown image format"
+    ;;
+  2 )
+    CHROMEOS=true
+    ;;
+  * )
+    ui_print "! Unable to unpack boot image"
+    ;;
+esac
+if [ -f "header" ] && [ "$($TMP/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
+  # Change selinux state to enforcing
+  sed -i 's/androidboot.selinux=permissive/androidboot.selinux=enforcing/g' header
 fi
-
-ui_print "- Wipe vendor overlay";
-rm -rf $SYSTEM/product/vendor_overlay/30/build.prop
-rm -rf $SYSTEM/product/vendor_overlay/31/build.prop
+./magiskboot repack boot.img mboot.img > /dev/null 2>&1
+# Sign ChromeOS boot image
+[ "$CHROMEOS" == "true" ] && sign_chromeos
+dd if="mboot.img" of="$block" > /dev/null 2>&1
+# Wipe boot dump
+rm -rf boot.img mboot.img
+./magiskboot cleanup > /dev/null 2>&1
+cd ../
 
 # Unmount APEX
 if [ "$BOOTMODE" == "false" ]; then
@@ -499,7 +554,6 @@ fi
 ui_print "- Unmounting partitions"
 if [ "$BOOTMODE" == "false" ]; then
   umount $ANDROID_ROOT > /dev/null 2>&1
-  umount /product > /dev/null 2>&1
   umount /persist > /dev/null 2>&1
   umount /metadata > /dev/null 2>&1
 fi
@@ -515,6 +569,6 @@ ui_print "- Installation complete"
 ui_print " "
 
 # Cleanup
-for f in grep installer.sh updater util_functions.sh; do
+for f in AIK.tar.xz chromeos cpio grep installer.sh magiskboot updater util_functions.sh; do
   rm -rf $TMP/$f
 done

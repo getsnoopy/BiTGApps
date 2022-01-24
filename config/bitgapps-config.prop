@@ -1,64 +1,14 @@
-##############################################
-# BiTGApps Configuration File
-# To learn more, visit https://git.io/JSzPy
-# Properties usage, visit https://git.io/JSVJF
-# Documentation, visit https://git.io/JSa7f
-##############################################
+###############################
+# BiTGApps Configuration File #
+###############################
 
-# Do not modify version property; Auto generated
-ro.config.version=
-
-# Enable below property, if you want to install
-# BiTGApps systemless as Magisk module.
-# To learn more, visit https://git.io/JSz6S
-# Property for installing BiTGApps systemless
+# Enable systemless installation
 ro.config.systemless=false
 
-# Enable below property, if you want to install
-# BiTGApps with Google's SetupWizard.
-# To learn more, visit https://git.io/JSzi3
-# Property for installing SetupWizard components
+# Enable setupWizard installation
 ro.config.setupwizard=false
 
-# Enable below property, if you want to install
-# BiTGApps with Safetynet patch. This is an advance
-# feature and will change your ROM SELinux State.
-# Do not proceed without getting necessary
-# information. As it may cause unexpected issues.
-# To learn more, visit https://git.io/J1n9T
-# Property for installing Safetynet patch
-ro.config.safetynet=false
-
-# Enable below property, if you want to install
-# BiTGApps with Bootlog patch. This is an advance
-# feature and will change your ROM SELinux State.
-# Do not proceed without getting necessary
-# information. As it may cause unexpected issues.
-# To learn more, visit https://git.io/J1nSS
-# Property for installing Bootlog patch
-ro.config.bootlog=false
-
-# Enable below property, if you want to install
-# BiTGApps Additional GApps Package. Without this
-# you cannot install Addons or extra Google Apps.
-# To learn more, visit https://git.io/JSzXP
-# Property for enabling Addons installation
-ro.config.addon=false
-
-# Enable below property, if you want to install
-# selected Addons from BiTGApps Additional GApps
-# Package. If you skip this, installation will
-# proceed with calculating free space against
-# full Addon Package.
-# To learn more, visit https://git.io/JSzXP
-# Property for enabling Addons usage
-ro.config.stack=false
-
-# Enable below property(s), if you want to install
-# Addons or extra Google Apps. Ending name of
-# property let you know about specific Google App.
-# To learn more, visit https://git.io/JSzXP
-# Property for installing Addons
+# Enable Addons installation
 ro.config.assistant=false
 ro.config.bromite=false
 ro.config.calculator=false
@@ -81,53 +31,3 @@ ro.config.vanced=false
 ro.config.microg=false
 ro.config.data=false
 ro.config.wellbeing=false
-
-# Enable below property, if you want to uninstall
-# BiTGApps Additional GApps Package. Without this
-# you cannot uninstall Addons or extra Google Apps.
-# This is an advance feature. Do not proceed without
-# getting necessary information. As it may cause
-# unexpected issues.
-# To learn more, visit https://git.io/JSzDA
-# Property for enabling Addons Uninstall
-ro.addon.wipe=false
-
-# Enable below property(s), if you want to uninstall
-# Addons or extra Google Apps. Middle name of property
-# let you know about specific Google App. Default
-# system apps will be restored. This is an advance
-# feature. Do not proceed without getting necessary
-# information. As it may cause unexpected issues.
-# To learn more, visit https://git.io/JSzDA
-# Property for uninstalling Addons
-ro.assistant.wipe=false
-ro.bromite.wipe=false
-ro.calculator.wipe=false
-ro.calendar.wipe=false
-ro.chrome.wipe=false
-ro.contacts.wipe=false
-ro.deskclock.wipe=false
-ro.dialer.wipe=false
-ro.dps.wipe=false
-ro.gboard.wipe=false
-ro.gearhead.wipe=false
-ro.launcher.wipe=false
-ro.maps.wipe=false
-ro.markup.wipe=false
-ro.messages.wipe=false
-ro.photos.wipe=false
-ro.soundpicker.wipe=false
-ro.tts.wipe=false
-ro.vanced.wipe=false
-ro.microg.wipe=false
-ro.data.wipe=false
-ro.wellbeing.wipe=false
-
-# Enable below property, if you want to uninstall
-# BiTGApps including Addons. This will take your
-# ROM to default state. This is an advance
-# feature. Do not proceed without getting necessary
-# information. As it may cause unexpected issues.
-# To learn more, visit https://git.io/JSzSc
-# Property for wiping BiTGApps components
-ro.config.wipe=false

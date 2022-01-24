@@ -1,38 +1,38 @@
 #!/system/bin/sh
 #
-##############################################################
-# File name       : bootmode.sh
+#####################################################
+# File name   : bootmode.sh
 #
-# Description     : Install BiTGApps package directly from booted
-#                   system. Setup installation, environmental
-#                   variables and helper functions.
+# Description : Setup for bootmode installation
 #
-# Copyright       : Copyright (C) 2018-2021 TheHitMan7
+# Copyright   : Copyright (C) 2018-2021 TheHitMan7
 #
-# License         : GPL-3.0-or-later
-##############################################################
-# The BiTGApps scripts are free software: you can redistribute it
-# and/or modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation, either version 3 of
-# the License, or (at your option) any later version.
+# License     : GPL-3.0-or-later
+#####################################################
+# The BiTGApps scripts are free software: you can
+# redistribute it and/or modify it under the terms of
+# the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
-# These scripts are distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-##############################################################
+# These scripts are distributed in the hope that it
+# will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#####################################################
 
 # Check root
 id=`id`; id=`echo ${id#*=}`; id=`echo ${id%%\(*}`; id=`echo ${id%% *}`
 if [ "$id" != "0" ] && [ "$id" != "root" ]; then
 sleep 1
-echo $divider
+printf '\n%.0s'
 echo "You are NOT running as root..."
-echo $divider
+printf '\n%.0s'
 sleep 1
-echo $divider
+printf '\n%.0s'
 echo "Please type 'su' first before typing 'bootmode.sh'..."
-echo $divider
+printf '\n%.0s'
 exit 1
 fi
 
@@ -42,15 +42,17 @@ if [ ! -d "/data/adb/magisk" ]; then
   exit 1
 fi
 
-# Set standalone mode and busybox in the global environment
+# Set busybox in the global environment
 if [ -f "/data/adb/magisk/busybox" ]; then
-  export ASH_STANDALONE=1
   export BB="/data/adb/magisk/busybox"
 fi
 if [ ! -f "/data/adb/magisk/busybox" ]; then
   echo "! Busybox not found. Aborting..."
   exit 1
 fi
+
+# Set busybox standalone mode
+export ASH_STANDALONE=1
 
 # Check Magisk version
 if [ ! -f /data/adb/magisk/util_functions.sh ]; then

@@ -1,24 +1,26 @@
 #!/sbin/sh
 #
-##############################################################
-# File name       : installer.sh
+#####################################################
+# File name   : installer.sh
 #
-# Description     : Main installation script of BiTGApps
+# Description : Main installation script of BiTGApps
 #
-# Copyright       : Copyright (C) 2018-2021 TheHitMan7
+# Copyright   : Copyright (C) 2018-2021 TheHitMan7
 #
-# License         : GPL-3.0-or-later
-##############################################################
-# The BiTGApps scripts are free software: you can redistribute it
-# and/or modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation, either version 3 of
-# the License, or (at your option) any later version.
+# License     : GPL-3.0-or-later
+#####################################################
+# The BiTGApps scripts are free software: you can
+# redistribute it and/or modify it under the terms of
+# the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
-# These scripts are distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-##############################################################
+# These scripts are distributed in the hope that it
+# will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#####################################################
 
 # Check boot state
 BOOTMODE=false
@@ -124,7 +126,7 @@ set_bb() {
   if [ ! "$ARCH" == "x86" ] || [ ! "$ARCH" == "x86_64" ]; then
     # Extract busybox
     if [ ! -e "$TMP/busybox-arm" ]; then
-      [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
+      [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP" 2>/dev/null
     fi
     chmod 0755 "$TMP/busybox-arm"
     ui_print "- Installing toolbox"
@@ -841,6 +843,9 @@ backup_target_v2() { if [ ! -d "$SECURE_DIR/.backup" ]; then ui_print "- Secure 
 on_build_prop() { if [ ! "$($l/grep -w -o 'ro.gapps.release_tag' $SYSTEM/build.prop)" ] && [ ! -f "$SYSTEM/etc/g.prop" ]; then BUILDPROP="false"; else BUILDPROP="true"; fi; }
 
 check_build_prop() {
+  # Override function
+  return 255
+  # Discard execution of below functions
   if "$TARGET_DIRTY_INSTALL" && [ -f "$ANDROID_DATA/.backup/.backup" ]; then
     on_build_prop
     # Skip checking secure backup
@@ -1137,6 +1142,9 @@ on_config_version() { supported_config_version="$(get_prop "ro.config.version")"
 
 # Match config version prior to current release
 config_version() {
+  # Override function
+  return 255
+  # Discard execution of below functions
   if [ "$ZIPTYPE" == "basic" ]; then
     if [ -f "$BITGAPPS_CONFIG" ] && [ ! -n "$(cat $BITGAPPS_CONFIG | grep ro.config.version)" ]; then
       on_abort "! Invalid config found. Aborting..."
@@ -1219,7 +1227,7 @@ on_addon_check() {
 on_addon_wipe() { supported_addon_wipe="$(get_prop "ro.addon.wipe")"; }
 
 # Addon Config Properties
-on_addon_chk() {
+on_addon_check_v2() {
   supported_assistant_wipe="$(get_prop "ro.assistant.wipe")"
   supported_bromite_wipe="$(get_prop "ro.bromite.wipe")"
   supported_calculator_wipe="$(get_prop "ro.calculator.wipe")"
@@ -1346,6 +1354,7 @@ chk_release_tag() {
 
 # Avoid installing Additional Packages with microG
 check_addon_install() {
+  local supported_addon_config="true"
   if [ "$($l/grep -w -o 'ro.microg.device' $SYSTEM/build.prop)" ] && [ "$supported_addon_config" == "true" ]; then
     on_abort "! MicroG install detected. Aborting..."
   fi
@@ -2443,6 +2452,12 @@ on_setup_install() {
 }
 
 set_addon_config() {
+  if [ -f "$BITGAPPS_CONFIG" ]; then
+    local supported_addon_config="true"
+  else
+    local supported_addon_config="false"
+  fi
+  # Override function
   addon_config="false"
   if [ "$supported_addon_config" == "true" ]; then
     addon_config="true"
@@ -3810,6 +3825,9 @@ vanced_config() {
 }
 
 vanced_boot_patch() {
+  # Override function
+  return 255
+  # Discard execution of below functions
   boot_image_editor
   # Switch path to AIK
   cd $TMP_AIK
@@ -3834,10 +3852,12 @@ vanced_boot_patch() {
       ;;
   esac
   if [ -f "header" ] && [ "$($l/grep -w -o 'androidboot.selinux=enforcing' header)" ]; then
+    ui_print "- Set SELinux permissive"
     # Change selinux state to permissive from enforcing
     $l/sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
   fi
   if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
+    ui_print "- Set SELinux permissive"
     # Change selinux state to permissive, without this YouTubeVanced scripts failed to execute
     $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
@@ -4401,6 +4421,10 @@ set_addon_zip_conf() {
       PKG_SYS="YouTube"
       target_sys
       vanced_boot_patch
+      # Override function
+      for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
+        rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
+      done
       # Restore default layout
       if [ "$supported_module_config" == "true" ]; then
         set_module_path
@@ -4931,6 +4955,10 @@ set_addon_zip_sep() {
       PKG_SYS="YouTube"
       target_sys
       vanced_boot_patch
+      # Override function
+      for i in $SYSTEM/adb/app $SYSTEM/adb/priv-app $SYSTEM/product/adb/app $SYSTEM/product/adb/priv-app $SYSTEM/system_ext/adb/app $SYSTEM/system_ext/adb/priv-app; do
+        rm -rf $i/YouTube* $i/Youtube* $SYSTEM/adb/xbin/vanced.sh $SYSTEM/etc/init/hw/init.vanced.rc /system_root/init.vanced.rc
+      done
       # Restore default layout
       if [ "$supported_module_config" == "true" ]; then
         set_module_path
@@ -5073,6 +5101,9 @@ purge_whitelist_permission() {
 }
 
 whitelist_vendor_overlay() {
+  # Override function
+  return 255
+  # Discard execution of below functions
   if [ "$SUPER_PARTITION" == "true" ] && [ "$android_sdk" -ge "30" ]; then
     # Set vndk version
     [ "$android_sdk" == "30" ] && VNDK="30"
@@ -5938,6 +5969,9 @@ post_uninstall() {
 }
 
 boot_image_editor() {
+  # Override function
+  return 255
+  # Discard execution of below functions
   ui_print "- Installing Boot Image Patcher"
   # Set default package
   ZIP="zip/AIK.tar.xz"
@@ -6005,6 +6039,9 @@ find_boot_image() {
 
 # Bootlog function, trigger at 'late-fs' stage
 on_bootlog_patch() {
+  # Override function
+  return 255
+  # Discard execution of below functions
   ui_print "- Installing Bootlog Patch"
   # Extract logcat script
   [ "$BOOTMODE" == "false" ] && unzip -o "$ZIPFILE" "init.logcat.rc" -d "$TMP"
@@ -6031,10 +6068,12 @@ on_bootlog_patch() {
       ;;
   esac
   if [ -f "header" ] && [ "$($l/grep -w -o 'androidboot.selinux=enforcing' header)" ]; then
+    ui_print "- Set SELinux permissive"
     # Change selinux state to permissive from enforcing
     $l/sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
   fi
   if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
+    ui_print "- Set SELinux permissive"
     # Change selinux state to permissive, without this bootlog script failed to execute
     $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
@@ -6239,10 +6278,12 @@ on_hide_policy() {
       ;;
   esac
   if [ -f "header" ] && [ "$($l/grep -w -o 'androidboot.selinux=enforcing' header)" ]; then
+    ui_print "- Set SELinux permissive"
     # Change selinux state to permissive from enforcing
     $l/sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
   fi
   if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
+    ui_print "- Set SELinux permissive"
     # Change selinux state to permissive, without this Hide Policy scripts failed to execute
     $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
@@ -6405,10 +6446,12 @@ on_super_hide() {
       ;;
   esac
   if [ -f "header" ] && [ "$($l/grep -w -o 'androidboot.selinux=enforcing' header)" ]; then
+    ui_print "- Set SELinux permissive"
     # Change selinux state to permissive from enforcing
     $l/sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
   fi
   if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
+    ui_print "- Set SELinux permissive"
     # Change selinux state to permissive, without this SU Hide scripts failed to execute
     $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
@@ -6763,6 +6806,9 @@ usf_v26() {
 
 # Apply CTS patch
 on_cts_patch() {
+  # Override function
+  return 255
+  # Discard execution of below functions
   if [ "$supported_safetynet_config" == "true" ]; then
     ui_print "- Installing SafetyNet Patch"
     spl_update_boot
@@ -6785,6 +6831,9 @@ on_cts_patch() {
 
 # Remove Privileged App Whitelist property from boot image
 boot_whitelist_permission() {
+  # Override function
+  return 255
+  # Discard execution of below functions
   ui_print "- Installing Whitelist Patch"
   # Switch path to AIK
   cd $TMP_AIK
@@ -7272,10 +7321,14 @@ chk_system_Ext() {
 df_system() {
   if [ "$ZIPTYPE" == "basic" ]; then CAPACITY="150000"; fi
   if [ "$ZIPTYPE" == "microg" ]; then CAPACITY="60000"; fi
+  # Override function
+  local supported_addon_stack="false"
   if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$supported_addon_stack" == "false" ]; then
     [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ] && CAPACITY="1335000"
     [ "$device_architecture" == "$ANDROID_PLATFORM_ARM64" ] && CAPACITY="1535000"
   fi
+  # Override function
+  local supported_addon_stack="true"
   if [ "$ZIPTYPE" == "addon" ] && [ "$ADDON" == "conf" ] && [ "$supported_addon_stack" == "true" ]; then
     if [ "$device_architecture" == "$ANDROID_PLATFORM_ARM32" ]; then
       $supported_assistant_config && ASSISTANT="188000" || ASSISTANT="0"; $supported_bromite_config && BROMITE="91000" || BROMITE="0"
@@ -7372,7 +7425,7 @@ post_install() {
     system_module_pathmap
     on_addon_config
     on_addon_check
-    on_addon_chk
+    on_addon_check_v2
     set_addon_config
     on_addon_install
     fix_module_perm

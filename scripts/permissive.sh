@@ -1,24 +1,26 @@
 #!/sbin/sh
 #
-##############################################################
-# File name       : installer.sh
+#####################################################
+# File name   : installer.sh
 #
-# Description     : Set SELinux state to enforcing
+# Description : Set SELinux state to permissive
 #
-# Copyright       : Copyright (C) 2018-2021 TheHitMan7
+# Copyright   : Copyright (C) 2018-2021 TheHitMan7
 #
-# License         : GPL-3.0-or-later
-##############################################################
-# The BiTGApps scripts are free software: you can redistribute it
-# and/or modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation, either version 3 of
-# the License, or (at your option) any later version.
+# License     : GPL-3.0-or-later
+#####################################################
+# The BiTGApps scripts are free software: you can
+# redistribute it and/or modify it under the terms of
+# the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
-# These scripts are distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-##############################################################
+# These scripts are distributed in the hope that it
+# will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#####################################################
 
 # Check boot state
 BOOTMODE=false
@@ -165,16 +167,16 @@ ui_print() {
 
 # Title
 ui_print " "
-ui_print "****************************"
-ui_print " BiTGApps SELinux Enforcing "
-ui_print "****************************"
+ui_print "*****************************"
+ui_print " BiTGApps SELinux Permissive "
+ui_print "*****************************"
 
 # Print build version
 ui_print "- Patch revision: $REL"
 
 # Extract busybox
 if [ "$BOOTMODE" == "false" ]; then
-  unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
+  unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP" 2>/dev/null
 fi
 chmod +x "$TMP/busybox-arm"
 
@@ -487,7 +489,7 @@ if [ ! "$system_as_rw" == "rw" ]; then
   exit 1
 fi
 
-ui_print "- Set SELinux enforcing"
+ui_print "- Set SELinux permissive"
 # Switch path to AIK
 cd $TMP
 # Extract boot image
@@ -517,9 +519,13 @@ case $? in
     ui_print "! Unable to unpack boot image"
     ;;
 esac
-if [ -f "header" ] && [ "$($TMP/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
-  # Change selinux state to enforcing
-  sed -i 's/androidboot.selinux=permissive/androidboot.selinux=enforcing/g' header
+if [ -f "header" ] && [ "$($l/grep -w -o 'androidboot.selinux=enforcing' header)" ]; then
+  # Change selinux state to permissive from enforcing
+  sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
+fi
+if [ -f "header" ] && [ ! "$($TMP/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
+  # Change selinux state to permissive
+  sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
 fi
 ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
 # Sign ChromeOS boot image

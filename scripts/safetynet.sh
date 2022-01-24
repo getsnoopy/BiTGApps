@@ -1,24 +1,26 @@
 #!/sbin/sh
 #
-##############################################################
-# File name       : installer.sh
+#####################################################
+# File name   : installer.sh
 #
-# Description     : Install Safetynet Patch
+# Description : Install Safetynet Patch
 #
-# Copyright       : Copyright (C) 2018-2021 TheHitMan7
+# Copyright   : Copyright (C) 2018-2021 TheHitMan7
 #
-# License         : GPL-3.0-or-later
-##############################################################
-# The BiTGApps scripts are free software: you can redistribute it
-# and/or modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation, either version 3 of
-# the License, or (at your option) any later version.
+# License     : GPL-3.0-or-later
+#####################################################
+# The BiTGApps scripts are free software: you can
+# redistribute it and/or modify it under the terms of
+# the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
-# These scripts are distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-##############################################################
+# These scripts are distributed in the hope that it
+# will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#####################################################
 
 # Check boot state
 BOOTMODE=false
@@ -73,7 +75,7 @@ fi
 # Set temporary package directory
 TMP_KEYSTORE="$TMP/Keystore"
 TMP_POLICY="$TMP/Policy"
-TMP_SUPER="$TMP/Super"
+TMP_SUHIDE="$TMP/SUHide"
 
 # insert_line <file> <if search string> <before|after> <line match string> <inserted line>
 insert_line() {
@@ -222,7 +224,7 @@ ui_print "- Patch revision: $REL"
 
 # Extract busybox
 if [ "$BOOTMODE" == "false" ]; then
-  unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP"
+  unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP" 2>/dev/null
 fi
 chmod +x "$TMP/busybox-arm"
 
@@ -674,10 +676,12 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ ! -d "$ANDROID_DATA/adb/magisk" ]; t
       ;;
   esac
   if [ -f "header" ] && [ "$($l/grep -w -o 'androidboot.selinux=enforcing' header)" ]; then
+    ui_print "- Set SELinux permissive"
     # Change selinux state to permissive from enforcing
     $l/sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
   fi
   if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
+    ui_print "- Set SELinux permissive"
     # Change selinux state to permissive, without this Hide Policy scripts failed to execute
     $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
@@ -814,7 +818,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ -d "$ANDROID_DATA/adb/magisk" ]; the
     for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   fi
   # Extract SU Hide components
-  tar -xf $TMP_SUPER/SUHide.tar.xz -C $TMP
+  tar -xf $TMP_SUHIDE/SUHide.tar.xz -C $TMP
   # Switch path to AIK
   cd $TMP
   # Extract boot image
@@ -838,10 +842,12 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ -d "$ANDROID_DATA/adb/magisk" ]; the
       ;;
   esac
   if [ -f "header" ] && [ "$($l/grep -w -o 'androidboot.selinux=enforcing' header)" ]; then
+    ui_print "- Set SELinux permissive"
     # Change selinux state to permissive from enforcing
     $l/sed -i 's/androidboot.selinux=enforcing/androidboot.selinux=permissive/g' header
   fi
   if [ -f "header" ] && [ ! "$($l/grep -w -o 'androidboot.selinux=permissive' header)" ]; then
+    ui_print "- Set SELinux permissive"
     # Change selinux state to permissive, without this SU Hide scripts failed to execute
     $l/sed -i -e '/buildvariant/s/$/ androidboot.selinux=permissive/' header
   fi
@@ -954,7 +960,7 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ -d "$ANDROID_DATA/adb/magisk" ]; the
     for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   fi
   # Extract SU Hide components
-  tar -xf $TMP_SUPER/SUHide.tar.xz -C $TMP
+  tar -xf $TMP_SUHIDE/SUHide.tar.xz -C $TMP
   # Create XBIN
   test -d $SYSTEM/xbin || install -d $SYSTEM/xbin; chmod 0755 $SYSTEM/xbin
   # Install SU Hide components
@@ -1255,6 +1261,8 @@ ui_print "- Installation complete"
 ui_print " "
 
 # Cleanup
-for f in AIK.tar.xz chromeos cpio grep init.resetprop.rc installer.sh Keystore keystore* libkeystore* magiskboot Policy resetprop* updater util_functions.sh zip; do
+for f in \
+  AIK.tar.xz chromeos cpio grep init.resetprop.rc init.super.rc installer.sh Keystore keystore* \
+  libkeystore* magiskboot Policy resetprop* SUHide super.sh updater util_functions.sh zip; do
   rm -rf $TMP/$f
 done
