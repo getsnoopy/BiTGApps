@@ -183,7 +183,8 @@ microg_install_wipe() {
   for i in \
     AppleNLPBackend DejaVuNLPBackend FossDroid LocalGSMNLPBackend \
     LocalWiFiNLPBackend MozillaUnifiedNLPBackend NominatimNLPBackend \
-    AuroraServices DroidGuard MicroGGMSCore MicroGGSFProxy Phonesky YouTube; do
+    AuroraServices DroidGuard Extension MicroGGMSCore MicroGGSFProxy \
+    Phonesky YouTube; do
     rm -rf $SYSTEM_APP/$i $SYSTEM_PRIV_APP/$i
   done
   for i in microg.xml default-permissions.xml privapp-permissions-microg.xml; do

@@ -548,6 +548,7 @@ backupdirSYS() {
   SYS_PRIVAPP="
     $SYSTEM/priv-app/AuroraServices
     $SYSTEM/priv-app/DroidGuard
+    $SYSTEM/priv-app/Extension
     $SYSTEM/priv-app/MicroGGMSCore
     $SYSTEM/priv-app/MicroGGSFProxy
     $SYSTEM/priv-app/Phonesky"

@@ -1912,7 +1912,7 @@ pre_installed_microg() {
   for i in AppleNLPBackend DejaVuNLPBackend FossDroid LocalGSMNLPBackend LocalWiFiNLPBackend MozillaUnifiedNLPBackend NominatimNLPBackend; do
     rm -rf $SYSTEM_APP/$i
   done
-  for i in AuroraServices DroidGuard MicroGGMSCore MicroGGSFProxy Phonesky; do
+  for i in AuroraServices DroidGuard Extension MicroGGMSCore MicroGGSFProxy Phonesky; do
     rm -rf $SYSTEM_PRIV_APP/$i
   done
   for i in $SYSTEM_ETC_CONFIG/microg.xml $SYSTEM_ETC_DEFAULT/default-permissions.xml $SYSTEM_ETC_PERM/privapp-permissions-microg.xml; do
@@ -2168,13 +2168,13 @@ microg_install() {
   ui_print "- Installing MicroG"
   # Set default packages
   ZIP="zip/core/AuroraServices.tar.xz zip/core/DroidGuard.tar.xz
-       zip/core/MicroGGMSCore.tar.xz zip/core/MicroGGSFProxy.tar.xz
-       zip/core/Phonesky.tar.xz zip/sys/AppleNLPBackend.tar.xz
-       zip/sys/DejaVuNLPBackend.tar.xz zip/sys/FossDroid.tar.xz
-       zip/sys/LocalGSMNLPBackend.tar.xz zip/sys/LocalWiFiNLPBackend.tar.xz
-       zip/sys/MozillaUnifiedNLPBackend.tar.xz zip/sys/NominatimNLPBackend.tar.xz
-       zip/Sysconfig.tar.xz zip/Default.tar.xz zip/Permissions.tar.xz
-       zip/overlay/PlayStoreOverlay.tar.xz"
+       zip/core/Extension.tar.xz zip/core/MicroGGMSCore.tar.xz
+       zip/core/MicroGGSFProxy.tar.xz zip/core/Phonesky.tar.xz
+       zip/sys/AppleNLPBackend.tar.xz zip/sys/DejaVuNLPBackend.tar.xz
+       zip/sys/FossDroid.tar.xz zip/sys/LocalGSMNLPBackend.tar.xz
+       zip/sys/LocalWiFiNLPBackend.tar.xz zip/sys/MozillaUnifiedNLPBackend.tar.xz
+       zip/sys/NominatimNLPBackend.tar.xz zip/Sysconfig.tar.xz zip/Default.tar.xz
+       zip/Permissions.tar.xz zip/overlay/PlayStoreOverlay.tar.xz"
   # Unpack system files
   [ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   # Common packages
@@ -2187,6 +2187,7 @@ microg_install() {
   tar -xf $ZIP_FILE/sys/NominatimNLPBackend.tar.xz -C $TMP_SYS
   tar -xf $ZIP_FILE/core/AuroraServices.tar.xz -C $TMP_PRIV
   tar -xf $ZIP_FILE/core/DroidGuard.tar.xz -C $TMP_PRIV
+  tar -xf $ZIP_FILE/core/Extension.tar.xz -C $TMP_PRIV
   tar -xf $ZIP_FILE/core/MicroGGMSCore.tar.xz -C $TMP_PRIV
   tar -xf $ZIP_FILE/core/MicroGGSFProxy.tar.xz -C $TMP_PRIV
   tar -xf $ZIP_FILE/core/Phonesky.tar.xz -C $TMP_PRIV
@@ -5289,7 +5290,8 @@ microg_install_wipe() {
   for i in \
     AppleNLPBackend DejaVuNLPBackend FossDroid LocalGSMNLPBackend \
     LocalWiFiNLPBackend MozillaUnifiedNLPBackend NominatimNLPBackend \
-    AuroraServices DroidGuard MicroGGMSCore MicroGGSFProxy Phonesky YouTube; do
+    AuroraServices DroidGuard Extension MicroGGMSCore MicroGGSFProxy \
+    Phonesky YouTube; do
     rm -rf $SYSTEM_APP/$i $SYSTEM_PRIV_APP/$i
   done
   for i in microg.xml default-permissions.xml privapp-permissions-microg.xml; do

@@ -797,6 +797,7 @@ restoredirTMP() {
   TMP_PRIVAPP="
     $TMP/priv-app/AuroraServices
     $TMP/priv-app/DroidGuard
+    $TMP/priv-app/Extension
     $TMP/priv-app/MicroGGMSCore
     $TMP/priv-app/MicroGGSFProxy
     $TMP/priv-app/Phonesky"
