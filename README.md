@@ -4,10 +4,10 @@
 
 <div align="center">
   <!-- Version -->
-    <img src="https://img.shields.io/badge/Revision-44-blue.svg?longCache=true&style=flat-square"
+    <img src="https://img.shields.io/badge/Revision-45-blue.svg?longCache=true&style=flat-square"
       alt="Version" />
   <!-- Last Updated -->
-    <img src="https://img.shields.io/badge/Updated-November 26, 2021-orange.svg?longCache=true&style=flat-square"
+    <img src="https://img.shields.io/badge/Updated-January 26, 2022-orange.svg?longCache=true&style=flat-square"
       alt="_time_stamp_" />
   <!-- License -->
     <a href="https://www.gnu.org/licenses/gpl-3.0" target="_blank"><img src="https://img.shields.io/badge/License-GPLv3-yellow.svg?longCache=true&style=flat-square"></a>
@@ -54,9 +54,9 @@ Here are feature highlights:
 
 ## Release Tag
 
-![](https://img.shields.io/badge/BiTGApps-%20R44-green.svg?style=flat-square)
-![](https://img.shields.io/badge/MicroG-%20R44-blue.svg?style=flat-square)
-![](https://img.shields.io/badge/Addon-%20R32-red.svg?style=flat-square)
+![](https://img.shields.io/badge/BiTGApps-%20R45-green.svg?style=flat-square)
+![](https://img.shields.io/badge/MicroG-%20R45-blue.svg?style=flat-square)
+![](https://img.shields.io/badge/Addon-%20R33-red.svg?style=flat-square)
 
 ## Downloads
 
