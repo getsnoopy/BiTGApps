@@ -26,8 +26,8 @@
 if [ -z $backuptool_ab ]; then TMP="/tmp"; else TMP="/postinstall/tmp"; fi
 
 # Set busybox
-if [ -e "/data/busybox/busybox-arm" ]; then
-  BB="/data/busybox/busybox-arm"
+if [ -e "/data/toybox/toybox-arm" ]; then
+  BB="/data/toybox/toybox-arm"
 elif [ -e "$TMP/busybox-arm" ]; then
   BB="$TMP/busybox-arm"
 else

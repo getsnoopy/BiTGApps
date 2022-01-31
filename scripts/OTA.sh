@@ -29,14 +29,14 @@ if [ -z $backuptool_ab ]; then TMP="/tmp"; else TMP="/postinstall/tmp"; fi
 if [ -z $backuptool_ab ]; then BBDIR="/tmp"; else BBDIR="/postinstall/tmp"; fi
 
 # Use busybox backup from /data
-BBBAK="/data/busybox"
+BBBAK="/data/toybox"
 
 # Use busybox backup from /data/unencrypted
-BBBAC="/data/unencrypted/busybox"
+BBBAC="/data/unencrypted/toybox"
 
 # Copy busybox backup
-[ -e "$BBBAK/busybox-arm" ] && cp -f $BBBAK/busybox-arm $BBDIR/busybox-arm
-[ -e "$BBBAC/busybox-arm" ] && cp -f $BBBAC/busybox-arm $BBDIR/busybox-arm
+[ -e "$BBBAK/toybox-arm" ] && cp -f $BBBAK/toybox-arm $BBDIR/busybox-arm
+[ -e "$BBBAC/toybox-arm" ] && cp -f $BBBAC/toybox-arm $BBDIR/busybox-arm
 
 # Mount backup partitions
 for i in /cache /persist /metadata; do
@@ -44,9 +44,9 @@ for i in /cache /persist /metadata; do
 done
 
 # Copy busybox backup
-[ -e "/cache/busybox/busybox-arm" ] && cp -f /cache/busybox/busybox-arm $BBDIR/busybox-arm
-[ -e "/persist/busybox/busybox-arm" ] && cp -f /persist/busybox/busybox-arm $BBDIR/busybox-arm
-[ -e "/metadata/busybox/busybox-arm" ]&& cp -f /metadata/busybox/busybox-arm $BBDIR/busybox-arm
+[ -e "/cache/toybox/toybox-arm" ] && cp -f /cache/toybox/toybox-arm $BBDIR/busybox-arm
+[ -e "/persist/toybox/toybox-arm" ] && cp -f /persist/toybox/toybox-arm $BBDIR/busybox-arm
+[ -e "/metadata/toybox/toybox-arm" ]&& cp -f /metadata/toybox/toybox-arm $BBDIR/busybox-arm
 
 # Set runtime permission
 [ -e "$BBDIR/busybox-arm" ] && chmod +x $BBDIR/busybox-arm

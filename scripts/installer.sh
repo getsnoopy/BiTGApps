@@ -151,13 +151,15 @@ set_bb() {
       export PATH="$l:$PATH"
       if [ ! -z "$(ls -A $ANDROID_DATA)" ]; then
         # Backup busybox in data partition for OTA script
-        rm -rf $ANDROID_DATA/busybox && mkdir $ANDROID_DATA/busybox
-        cp -f $TMP/busybox-arm $ANDROID_DATA/busybox/busybox-arm
-        chmod -R 0755 $ANDROID_DATA/busybox
+        rm -rf $ANDROID_DATA/toybox && mkdir $ANDROID_DATA/toybox
+        cp -f $TMP/busybox-arm $ANDROID_DATA/toybox/toybox-arm
+        chmod -R 0755 $ANDROID_DATA/toybox
         # Backup busybox in unencrypted data
-        rm -rf $SECURE_DIR/busybox && mkdir $SECURE_DIR/busybox
-        cp -f $TMP/busybox-arm $SECURE_DIR/busybox/busybox-arm
-        chmod -R 0755 $SECURE_DIR/busybox
+        rm -rf $SECURE_DIR/toybox && mkdir $SECURE_DIR/toybox
+        cp -f $TMP/busybox-arm $SECURE_DIR/toybox/toybox-arm
+        chmod -R 0755 $SECURE_DIR/toybox
+        # Prevent busybox detection
+        rm -rf $ANDROID_DATA/busybox $SECURE_DIR/busybox
       fi
     fi
   fi
@@ -176,44 +178,48 @@ set_bb() {
 mk_busybox_backup_v1() {
   # Backup busybox in cache partition for OTA script
   if [ "$($l/grep -w -o /cache $fstab)" ]; then
-    rm -rf /cache/busybox && mkdir /cache/busybox
-    cp -f $TMP/busybox-arm /cache/busybox/busybox-arm
-    chmod -R 0755 /cache/busybox
+    rm -rf /cache/toybox && mkdir /cache/toybox
+    cp -f $TMP/busybox-arm /cache/toybox/toybox-arm
+    chmod -R 0755 /cache/toybox
   fi
   # Backup busybox in persist partition for OTA script
   if [ -d "/persist" ]; then
-    rm -rf /persist/busybox && mkdir /persist/busybox
-    cp -f $TMP/busybox-arm /persist/busybox/busybox-arm
-    chmod -R 0755 /persist/busybox
+    rm -rf /persist/toybox && mkdir /persist/toybox
+    cp -f $TMP/busybox-arm /persist/toybox/toybox-arm
+    chmod -R 0755 /persist/toybox
   fi
   # Backup busybox in metadata partition for OTA script
   if [ "$($l/grep -w -o /metadata $fstab)" ]; then
-    rm -rf /metadata/busybox && mkdir /metadata/busybox
-    cp -f $TMP/busybox-arm /metadata/busybox/busybox-arm
-    chmod -R 0755 /metadata/busybox
+    rm -rf /metadata/toybox && mkdir /metadata/toybox
+    cp -f $TMP/busybox-arm /metadata/toybox/toybox-arm
+    chmod -R 0755 /metadata/toybox
   fi
+  # Prevent busybox detection
+  rm -rf /cache/busybox /persist/busybox /metadata/busybox
 }
 
 # Create busybox backup in multiple locations to overcome encryption conflict
 mk_busybox_backup_v2() {
   # Backup busybox in cache partition for OTA script
   if [ "$($l/grep -w -o /cache /proc/mounts)" ]; then
-    rm -rf /cache/busybox && mkdir /cache/busybox
-    cp -f $TMP/busybox-arm /cache/busybox/busybox-arm
-    chmod -R 0755 /cache/busybox
+    rm -rf /cache/toybox && mkdir /cache/toybox
+    cp -f $TMP/busybox-arm /cache/toybox/toybox-arm
+    chmod -R 0755 /cache/toybox
   fi
   # Backup busybox in persist partition for OTA script
   if [ -d "/mnt/vendor/persist" ]; then
-    rm -rf /mnt/vendor/persist/busybox && mkdir /mnt/vendor/persist/busybox
-    cp -f $TMP/busybox-arm /mnt/vendor/persist/busybox/busybox-arm
-    chmod -R 0755 /mnt/vendor/persist/busybox
+    rm -rf /mnt/vendor/persist/toybox && mkdir /mnt/vendor/persist/toybox
+    cp -f $TMP/busybox-arm /mnt/vendor/persist/toybox/toybox-arm
+    chmod -R 0755 /mnt/vendor/persist/toybox
   fi
   # Backup busybox in metadata partition for OTA script
   if [ "$($l/grep -w -o /metadata /proc/mounts)" ]; then
-    rm -rf /metadata/busybox && mkdir /metadata/busybox
-    cp -f $TMP/busybox-arm /metadata/busybox/busybox-arm
-    chmod -R 0755 /metadata/busybox
+    rm -rf /metadata/toybox && mkdir /metadata/toybox
+    cp -f $TMP/busybox-arm /metadata/toybox/toybox-arm
+    chmod -R 0755 /metadata/toybox
   fi
+  # Prevent busybox detection
+  rm -rf /cache/busybox /mnt/vendor/persist/busybox /metadata/busybox
 }
 
 mk_busybox_backup() { { [ "$BOOTMODE" == "false" ] && mk_busybox_backup_v1; }; { [ "$BOOTMODE" == "true" ] && mk_busybox_backup_v2; }; }
@@ -491,13 +497,13 @@ mount_all() {
     chmod 0700 /data/unencrypted
     chcon -h u:object_r:unencrypted_data_file:s0 "/data/unencrypted"
     # Backup busybox in data partition for OTA script
-    rm -rf $ANDROID_DATA/busybox && mkdir $ANDROID_DATA/busybox
-    cp -f $TMP/busybox-arm $ANDROID_DATA/busybox/busybox-arm
-    chmod -R 0755 $ANDROID_DATA/busybox
+    rm -rf $ANDROID_DATA/toybox && mkdir $ANDROID_DATA/toybox
+    cp -f $TMP/busybox-arm $ANDROID_DATA/toybox/toybox-arm
+    chmod -R 0755 $ANDROID_DATA/toybox
     # Backup busybox in unencrypted data
-    rm -rf $SECURE_DIR/busybox && mkdir $SECURE_DIR/busybox
-    cp -f $TMP/busybox-arm $SECURE_DIR/busybox/busybox-arm
-    chmod -R 0755 $SECURE_DIR/busybox
+    rm -rf $SECURE_DIR/toybox && mkdir $SECURE_DIR/toybox
+    cp -f $TMP/busybox-arm $SECURE_DIR/toybox/toybox-arm
+    chmod -R 0755 $SECURE_DIR/toybox
   fi
   if [ "$($l/grep -w -o /cache $fstab)" ]; then
     mount -o ro -t auto /cache > /dev/null 2>&1
