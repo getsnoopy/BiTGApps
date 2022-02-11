@@ -1,9 +1,9 @@
 #!/sbin/sh
 #
 #####################################################
-# File name   : updater-script
+# File name   : util_functions.sh
 #
-# Description : Set user file-creation mode
+# Description : Set installation variables
 #
 # Copyright   : Copyright (C) 2018-2021 TheHitMan7
 #
@@ -22,8 +22,15 @@
 # General Public License for more details.
 #####################################################
 
-# Default Permission
-umask 022
-
-# Mark package compatible with Magisk App installation
-#MAGISK
+REL=""
+ZIPTYPE=""
+TARGET_GAPPS_RELEASE=""
+TARGET_ADDON_RELEASE=""
+TARGET_DIRTY_INSTALL=""
+TARGET_ANDROID_SDK=""
+TARGET_ANDROID_ARCH=""
+ADDON=""
+ARMEABI=""
+AARCH64=""
+TARGET_RELEASE_TAG=""
+TARGET_CONFIG_VERSION=""

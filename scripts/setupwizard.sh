@@ -23,9 +23,9 @@
 #####################################################
 
 # Check boot state
-BOOTMODE=false
-ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
-$BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
+BOOTMODE="false"
+ps | grep zygote | grep -v grep >/dev/null && BOOTMODE="true"
+$BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE="true"
 
 # Set boot state
 BOOTMODE="$BOOTMODE"
@@ -73,6 +73,8 @@ fi
 ZIP_FILE="$TMP/zip"
 UNZIP_DIR="$TMP/unzip"
 TMP_PRIV_SETUP="$UNZIP_DIR/tmp_priv_setup"
+
+# Create installation components
 mkdir $UNZIP_DIR $TMP_PRIV_SETUP
 
 # insert_line <file> <if search string> <before|after> <line match string> <inserted line>
@@ -92,7 +94,9 @@ insert_line() {
   fi
 }
 
-get_file_prop() { grep -m1 "^$2=" "$1" | cut -d= -f2; }
+get_file_prop() {
+  grep -m1 "^$2=" "$1" | cut -d= -f2
+}
 
 get_prop() {
   # Check known .prop files using get_file_prop
@@ -112,7 +116,10 @@ get_prop() {
   fi
 }
 
-is_mounted() { grep -q " $(readlink -f $1) " /proc/mounts 2>/dev/null; return $?; }
+is_mounted() {
+  grep -q " $(readlink -f $1) " /proc/mounts 2>/dev/null
+  return $?
+}
 
 toupper() {
   echo "$@" | tr '[:lower:]' '[:upper:]'
@@ -120,9 +127,9 @@ toupper() {
 
 grep_cmdline() {
   local REGEX="s/^$1=//p"
-  local CL=$(cat /proc/cmdline 2>/dev/null)
-  POSTFIX=$([ $(expr $(echo "$CL" | tr -d -c '"' | wc -m) % 2) == 0 ] && echo -n '' || echo -n '"')
-  { eval "for i in $CL$POSTFIX; do echo \$i; done" ; cat /proc/bootconfig 2>/dev/null | sed 's/[[:space:]]*=[[:space:]]*\(.*\)/=\1/g' | sed 's/"//g'; } | sed -n "$REGEX" 2>/dev/null
+  { echo $(cat /proc/cmdline)$(sed -e 's/[^"]//g' -e 's/""//g' /proc/cmdline) | xargs -n 1; \
+    sed -e 's/ = /=/g' -e 's/, /,/g' -e 's/"//g' /proc/bootconfig; \
+  } 2>/dev/null | sed -n "$REGEX"
 }
 
 setup_mountpoint() {
@@ -143,6 +150,14 @@ pkg_TMPSetup() {
   for dir in $dir_list; do
     chmod 0755 "$SYSTEM_PRIV_APP/${dir}"
   done
+}
+
+# Remove SBIN/SHELL to prevent conflicts with Magisk
+resolve() {
+  if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+    $SBIN && rm -rf /sbin
+    $SHELL && rm -rf /sbin/sh
+  fi
 }
 
 # Output function
@@ -169,6 +184,10 @@ ui_print "- Patch revision: $REL"
 if [ "$BOOTMODE" == "false" ]; then
   unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP" 2>/dev/null
 fi
+# Allow unpack, when installation base is Magisk not bootmode script
+if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+  $(unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP" >/dev/null 2>&1)
+fi
 chmod +x "$TMP/busybox-arm"
 
 # Check device architecture
@@ -178,6 +197,7 @@ if [ "$ARCH" == "x86" ] || [ "$ARCH" == "x86_64" ]; then
   ui_print "! Wrong architecture detected. Aborting..."
   ui_print "! Installation failed"
   ui_print " "
+  resolve
   exit 1
 fi
 
@@ -194,6 +214,7 @@ if [ -e "$bb" ]; then
         ui_print "! Failed to set-up pre-bundled busybox. Aborting..."
         ui_print "! Installation failed"
         ui_print " "
+        resolve
         exit 1
       fi
     fi
@@ -206,13 +227,21 @@ fi
 if [ "$BOOTMODE" == "false" ]; then
   unzip -o "$ZIPFILE" "grep" -d "$TMP"
 fi
+# Allow unpack, when installation base is Magisk not bootmode script
+if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+  $(unzip -o "$ZIPFILE" "grep" -d "$TMP" >/dev/null 2>&1)
+fi
 chmod +x $TMP/grep
 
 # Unmount partitions
 if [ "$BOOTMODE" == "false" ]; then
-  for i in /system_root /system /product /system_ext /vendor /persist /metadata; do
-    umount -l $i > /dev/null 2>&1
-  done
+  umount -l /system_root > /dev/null 2>&1
+  umount -l /system > /dev/null 2>&1
+  umount -l /product > /dev/null 2>&1
+  umount -l /system_ext > /dev/null 2>&1
+  umount -l /vendor > /dev/null 2>&1
+  umount -l /persist > /dev/null 2>&1
+  umount -l /metadata > /dev/null 2>&1
 fi
 
 # Unset predefined environmental variable
@@ -254,7 +283,7 @@ if [ "$BOOTMODE" == "false" ]; then
   fi
   [ -z $SLOT ] || ui_print "- Current boot slot: $SLOT"
   # Unset predefined environmental variable
-  OLD_ANDROID_ROOT=$ANDROID_ROOT && unset ANDROID_ROOT
+  OLD_ANDROID_ROOT=$ANDROID_ROOT; unset ANDROID_ROOT
   # Wipe conflicting layout
   ($(! is_mounted '/system_root') && rm -rf /system_root)
   ($(! is_mounted '/product') && rm -rf /product)
@@ -264,19 +293,27 @@ if [ "$BOOTMODE" == "false" ]; then
     ($(! is_mounted '/system') && rm -rf /system)
   fi
   # Create initial path and set ANDROID_ROOT in the global environment
-  if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then mkdir /system_root; export ANDROID_ROOT="/system_root"; fi
-  if [ "$($TMP/grep -w -o /system $fstab)" ]; then mkdir /system; export ANDROID_ROOT="/system"; fi
-  if [ "$($TMP/grep -w -o /product $fstab)" ]; then mkdir /product; fi
-  if [ "$($TMP/grep -w -o /system_ext $fstab)" ]; then mkdir /system_ext; fi
+  if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then
+    mkdir /system_root; export ANDROID_ROOT="/system_root"
+  fi
+  if [ "$($TMP/grep -w -o /system $fstab)" ]; then
+    mkdir /system; export ANDROID_ROOT="/system"
+  fi
+  if [ "$($TMP/grep -w -o /product $fstab)" ]; then
+    mkdir /product
+  fi
+  if [ "$($TMP/grep -w -o /system_ext $fstab)" ]; then
+    mkdir /system_ext
+  fi
   # Set '/system_root' as mount point, if previous check failed. This adaption,
   # for recoveries using "/" as mount point in auto-generated fstab but not,
   # actually mounting to "/" and using some other mount location. At this point,
   # we can mount system using its block device to any location.
   if [ -z "$ANDROID_ROOT" ]; then
-    mkdir /system_root && export ANDROID_ROOT="/system_root"
+    mkdir /system_root; export ANDROID_ROOT="/system_root"
   fi
   # Set A/B slot property
-  local_slot() { local slot=$(getprop ro.boot.slot_suffix 2>/dev/null); }; local_slot
+  slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
   if [ "$SUPER_PARTITION" == "true" ]; then
     if [ "$device_abpartition" == "true" ]; then
       for block in system system_ext product; do
@@ -353,10 +390,12 @@ if [ "$BOOTMODE" == "false" ]; then
           BLK="/dev/block/bootdevice/by-name/system"
         elif [ -e "/dev/block/platform/*/by-name/system" ]; then
           BLK="/dev/block/platform/*/by-name/system"
-        elif [ -e "/dev/block/platform/*/*/by-name/system" ]; then
-          BLK="/dev/block/platform/*/*/by-name/system"
         else
-          ui_print "! Cannot find system block"
+          BLK="/dev/block/platform/*/*/by-name/system"
+        fi
+        # Do not proceed without system block
+        if [ -z "$BLK" ]; then
+          ui_print "! Cannot find system block" && exit 1
         fi
         # Mount using block device
         mount $BLK $ANDROID_ROOT > /dev/null 2>&1
@@ -387,17 +426,23 @@ if [ "$BOOTMODE" == "false" ]; then
 fi
 
 # Mount APEX
-if [ "$BOOTMODE" == "false" ]; then
-  if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then SYSTEM="/system_root/system"; fi
-  if [ "$($TMP/grep -w -o /system $fstab)" ]; then SYSTEM="/system"; fi
-  if [ "$($TMP/grep -w -o /system $fstab)" ] && [ -d "/system/system" ]; then SYSTEM="/system/system"; fi
+mount_apex() {
+  if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then
+    SYSTEM="/system_root/system"
+  fi
+  if [ "$($TMP/grep -w -o /system $fstab)" ]; then
+    SYSTEM="/system"
+    if [ -d "/system/system" ]; then
+      SYSTEM="/system/system"
+    fi
+  fi
   # Set hardcoded system layout
   if [ -z "$SYSTEM" ]; then
     SYSTEM="/system_root/system"
   fi
-  local_apex() { test -d "$SYSTEM/apex" || return 1; }; local_apex
+  test -d "$SYSTEM/apex" || return 1
   ui_print "- Mounting /apex"
-  local_apex() { local apex dest loop minorx num; }; local_apex
+  local apex dest loop minorx num
   setup_mountpoint /apex
   test -e /dev/block/loop1 && minorx=$(ls -l /dev/block/loop1 | awk '{ print $6 }') || minorx="1"
   num="0"
@@ -418,7 +463,7 @@ if [ "$BOOTMODE" == "false" ]; then
             num=$((num + 1))
             losetup $loop | grep -q $dest.img && break
           done
-          mount -t ext4 -o ro,loop,noatime $loop $dest
+          mount -t ext4 -o ro,loop,noatime $loop $dest 2>/dev/null
           if [ $? != 0 ]; then
             losetup -d $loop 2>/dev/null
           fi
@@ -431,8 +476,8 @@ if [ "$BOOTMODE" == "false" ]; then
   export ANDROID_TZDATA_ROOT="/apex/com.android.tzdata"
   export ANDROID_ART_ROOT="/apex/com.android.art"
   export ANDROID_I18N_ROOT="/apex/com.android.i18n"
-  local_jar() { local APEXJARS=$(find /apex -name '*.jar' | sort | tr '\n' ':'); }; local_jar
-  local_fwk() { local FWK=$SYSTEM/framework; }; local_fwk
+  local APEXJARS=$(find /apex -name '*.jar' | sort | tr '\n' ':')
+  local FWK=$SYSTEM/framework
   export BOOTCLASSPATH="${APEXJARS}\
   $FWK/framework.jar:\
   $FWK/framework-graphics.jar:\
@@ -442,7 +487,13 @@ if [ "$BOOTMODE" == "false" ]; then
   $FWK/ims-common.jar:\
   $FWK/framework-atb-backward-compatibility.jar:\
   $FWK/android.test.base.jar"
-  [ ! -d "$SYSTEM/apex" ] && ui_print "! Cannot mount /apex"
+  if [ ! -d "$SYSTEM/apex" ]; then
+    ui_print "! Cannot mount /apex"
+  fi
+}
+
+if [ "$BOOTMODE" == "false" ]; then
+  mount_apex
 fi
 
 if [ "$BOOTMODE" == "true" ]; then
@@ -474,7 +525,9 @@ if [ "$BOOTMODE" == "false" ]; then
     export SYSTEM="/system_root/system"
   fi
 fi
-if [ "$BOOTMODE" == "true" ]; then export SYSTEM="/system"; fi
+if [ "$BOOTMODE" == "true" ]; then
+  export SYSTEM="/system"
+fi
 
 # Check system partition mount status
 if [ "$BOOTMODE" == "false" ]; then
@@ -509,6 +562,7 @@ if [ ! -f "$SYSTEM/build.prop" ]; then
   ui_print "! Unable to find installation layout. Aborting..."
   ui_print "! Installation failed"
   ui_print " "
+  resolve
   exit 1
 fi
 
@@ -550,6 +604,7 @@ if [ ! "$system_as_rw" == "rw" ]; then
   ui_print "! Read-only /system partition. Aborting..."
   ui_print "! Installation failed"
   ui_print " "
+  resolve
   exit 1
 fi
 
@@ -568,6 +623,7 @@ if [ "$BOOTMODE" == "true" ] && [ "$($TMP/grep -w -o /product /proc/mounts)" ]; 
     ui_print "! Read-only /product partition. Aborting..."
     ui_print "! Installation failed"
     ui_print " "
+    resolve
     exit 1
   fi
 fi
@@ -643,14 +699,32 @@ fi
 
 ui_print "- Installing SetupWizard"
 # Set default packages
-if [ "$android_sdk" -le "27" ]; then ZIP="zip/core/GoogleBackupTransport.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"; fi
-if [ "$android_sdk" == "28" ] && [ "$ARMEABI" == "true" ]; then ZIP="zip/core/GoogleBackupTransport.tar.xz zip/core/GoogleRestore.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"; fi
-if [ "$android_sdk" == "28" ] && [ "$AARCH64" == "true" ]; then ZIP="zip/core/AndroidMigratePrebuilt.tar.xz zip/core/GoogleBackupTransport.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"; fi
-if [ "$android_sdk" == "29" ] && [ "$ARMEABI" == "true" ]; then ZIP="zip/core/GoogleRestore.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"; fi
-if [ "$android_sdk" == "29" ] && [ "$AARCH64" == "true" ]; then ZIP="zip/core/AndroidMigratePrebuilt.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"; fi
-if [ "$android_sdk" -ge "30" ]; then ZIP="zip/core/AndroidMigratePrebuilt.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"; fi
+if [ "$android_sdk" -le "27" ]; then
+  ZIP="zip/core/GoogleBackupTransport.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"
+fi
+if [ "$android_sdk" == "28" ] && [ "$ARMEABI" == "true" ]; then
+  ZIP="zip/core/GoogleBackupTransport.tar.xz zip/core/GoogleRestore.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"
+fi
+if [ "$android_sdk" == "28" ] && [ "$AARCH64" == "true" ]; then
+  ZIP="zip/core/AndroidMigratePrebuilt.tar.xz zip/core/GoogleBackupTransport.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"
+fi
+if [ "$android_sdk" == "29" ] && [ "$ARMEABI" == "true" ]; then
+  ZIP="zip/core/GoogleRestore.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"
+fi
+if [ "$android_sdk" == "29" ] && [ "$AARCH64" == "true" ]; then
+  ZIP="zip/core/AndroidMigratePrebuilt.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"
+fi
+if [ "$android_sdk" -ge "30" ]; then
+  ZIP="zip/core/AndroidMigratePrebuilt.tar.xz zip/core/SetupWizardPrebuilt.tar.xz"
+fi
 # Unpack system files
-[ "$BOOTMODE" == "false" ] && for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+if [ "$BOOTMODE" == "false" ]; then
+  for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+fi
+# Allow unpack, when installation base is Magisk not bootmode script
+if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+  for f in $ZIP; do $(unzip -o "$ZIPFILE" "$f" -d "$TMP" >/dev/null 2>&1); done
+fi
 # API Specific
 if [ "$android_sdk" -le "27" ]; then
   tar -xf $ZIP_FILE/core/GoogleBackupTransport.tar.xz -C $TMP_PRIV_SETUP
@@ -689,9 +763,9 @@ if [ ! -f "$ANDROID_DATA/adb/modules/BiTGApps/etc/g.prop" ]; then
 fi
 
 # Unmount APEX
-if [ "$BOOTMODE" == "false" ]; then
-  local_apex() { test -d /apex || return 1; }; local_apex
-  local_dest() { local dest loop; }; local_dest
+umount_apex() {
+  test -d /apex || return 1
+  local dest loop
   for dest in $(find /apex -type d -mindepth 1 -maxdepth 1); do
     if [ -f $dest.img ]; then
       loop=$(mount | grep $dest | cut -d" " -f1)
@@ -705,6 +779,10 @@ if [ "$BOOTMODE" == "false" ]; then
   unset ANDROID_ART_ROOT
   unset ANDROID_I18N_ROOT
   unset BOOTCLASSPATH
+}
+
+if [ "$BOOTMODE" == "false" ]; then
+  umount_apex
 fi
 
 ui_print "- Unmounting partitions"
@@ -725,6 +803,9 @@ fi
 
 ui_print "- Installation complete"
 ui_print " "
+
+# Remove SBIN/SHELL to prevent conflicts with Magisk
+resolve
 
 # Cleanup
 for f in grep installer.sh updater util_functions.sh zip unzip; do

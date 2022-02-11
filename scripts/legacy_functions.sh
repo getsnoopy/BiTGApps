@@ -1,9 +1,9 @@
 #!/sbin/sh
 #
 #####################################################
-# File name   : updater-script
+# File name   : legacy_functions.sh
 #
-# Description : Set user file-creation mode
+# Description : Set installation variables
 #
 # Copyright   : Copyright (C) 2018-2021 TheHitMan7
 #
@@ -22,8 +22,25 @@
 # General Public License for more details.
 #####################################################
 
-# Default Permission
-umask 022
-
-# Mark package compatible with Magisk App installation
-#MAGISK
+TARGET_ASSISTANT_GOOGLE="false"
+TARGET_BROMITE_GOOGLE="false"
+TARGET_CALCULATOR_GOOGLE="false"
+TARGET_CALENDAR_GOOGLE="false"
+TARGET_CHROME_GOOGLE="false"
+TARGET_CONTACTS_GOOGLE="false"
+TARGET_DESKCLOCK_GOOGLE="false"
+TARGET_DIALER_GOOGLE="false"
+TARGET_DPS_GOOGLE="false"
+TARGET_GBOARD_GOOGLE="false"
+TARGET_GEARHEAD_GOOGLE="false"
+TARGET_LAUNCHER_GOOGLE="false"
+TARGET_MAPS_GOOGLE="false"
+TARGET_MARKUP_GOOGLE="false"
+TARGET_MESSAGES_GOOGLE="false"
+TARGET_PHOTOS_GOOGLE="false"
+TARGET_SOUNDPICKER_GOOGLE="false"
+TARGET_TTS_GOOGLE="false"
+TARGET_VANCED_MICROG="false"
+TARGET_VANCED_ROOT="false"
+TARGET_VANCED_NONROOT="false"
+TARGET_WELLBEING_GOOGLE="false"

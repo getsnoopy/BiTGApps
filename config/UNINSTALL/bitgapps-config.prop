@@ -1,0 +1,39 @@
+###############################
+# BiTGApps Configuration File #
+###############################
+
+# Configuration File Type
+#UNINSTALL
+
+# Enable systemless installation
+ro.config.systemless=false
+
+# Enable Addons Uninstall
+ro.addon.wipe=false
+
+# Select Addons for Uninstall
+ro.assistant.wipe=false
+ro.bromite.wipe=false
+ro.calculator.wipe=false
+ro.calendar.wipe=false
+ro.chrome.wipe=false
+ro.contacts.wipe=false
+ro.deskclock.wipe=false
+ro.dialer.wipe=false
+ro.dps.wipe=false
+ro.gboard.wipe=false
+ro.gearhead.wipe=false
+ro.launcher.wipe=false
+ro.maps.wipe=false
+ro.markup.wipe=false
+ro.messages.wipe=false
+ro.photos.wipe=false
+ro.soundpicker.wipe=false
+ro.tts.wipe=false
+ro.vanced.microg.wipe=false
+ro.vanced.nonroot.wipe=false
+ro.vanced.root.wipe=false
+ro.wellbeing.wipe=false
+
+# Enable Full Uninstall
+ro.config.wipe=false

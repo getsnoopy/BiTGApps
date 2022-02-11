@@ -1,9 +1,9 @@
 #!/sbin/sh
 #
 #####################################################
-# File name   : microg.sh
+# File name   : bitgapps.sh
 #
-# Description : MicroG OTA survival script
+# Description : BiTGApps minimal OTA survival script
 #
 # Copyright   : Copyright (C) 2018-2021 TheHitMan7
 #
@@ -29,18 +29,11 @@ else
   TMP="/postinstall/tmp"
 fi
 
-# Set busybox
-if [ -z $backuptool_ab ]; then
-  BBDIR="/tmp"
-else
-  BBDIR="/postinstall/tmp"
-fi
-
 # Use busybox backup from /data
-BBBAK="/data/busybox"
+BBBAK="/data/toybox"
 
 # Use busybox backup from /data/unencrypted
-BBBAC="/data/unencrypted/busybox"
+BBBAC="/data/unencrypted/toybox"
 
 # Mount data partition
 if ! grep -q " $(readlink -f '/data') " /proc/mounts; then
@@ -52,10 +45,10 @@ fi
 
 # Copy busybox backup
 if [ -e "$BBBAK/toybox-arm" ]; then
-  cp -f $BBBAK/toybox-arm $BBDIR/busybox-arm
+  cp -f $BBBAK/toybox-arm $TMP/busybox-arm
 fi
 if [ -e "$BBBAC/toybox-arm" ]; then
-  cp -f $BBBAC/toybox-arm $BBDIR/busybox-arm
+  cp -f $BBBAC/toybox-arm $TMP/busybox-arm
 fi
 
 # Mount backup partitions
@@ -65,18 +58,18 @@ done
 
 # Copy busybox backup
 if [ -e "/cache/toybox/toybox-arm" ]; then
-  cp -f /cache/toybox/toybox-arm $BBDIR/busybox-arm
+  cp -f /cache/toybox/toybox-arm $TMP/busybox-arm
 fi
 if [ -e "/persist/toybox/toybox-arm" ]; then
-  cp -f /persist/toybox/toybox-arm $BBDIR/busybox-arm
+  cp -f /persist/toybox/toybox-arm $TMP/busybox-arm
 fi
 if [ -e "/metadata/toybox/toybox-arm" ]; then
-  cp -f /metadata/toybox/toybox-arm $BBDIR/busybox-arm
+  cp -f /metadata/toybox/toybox-arm $TMP/busybox-arm
 fi
 
 # Set runtime permission
-if [ -e "$BBDIR/busybox-arm" ]; then
-  chmod +x $BBDIR/busybox-arm
+if [ -e "$TMP/busybox-arm" ]; then
+  chmod +x $TMP/busybox-arm
 fi
 
 # Unmount backup partitions
@@ -89,27 +82,17 @@ case "$1" in
   backup)
     # Wait for post processes to finish
     sleep 7
-    # ASH Standalone Shell Mode
-    export ASH_STANDALONE=1
     # Set backuptool stage
     export RUN_STAGE_BACKUP="true"
-    if [ -e "$BBDIR/busybox-arm" ]; then
-      exec $BBDIR/busybox-arm sh "$TMP/addon.d/backup.sh" "$@"
-    else
-      source "$TMP/addon.d/backup.sh" "$@"
-    fi
+    # Minimal Backup Script
+    source "$TMP/addon.d/backup.sh" "$@"
   ;;
   restore)
     # Wait for post processes to finish
     sleep 7
-    # ASH Standalone Shell Mode
-    export ASH_STANDALONE=1
     # Set backuptool stage
     export RUN_STAGE_RESTORE="true"
-    if [ -e "$BBDIR/busybox-arm" ]; then
-      exec $BBDIR/busybox-arm sh "$TMP/addon.d/restore.sh" "$@"
-    else
-      source "$TMP/addon.d/restore.sh" "$@"
-    fi
+    # Minimal Restore Script
+    source "$TMP/addon.d/restore.sh" "$@"
   ;;
 esac

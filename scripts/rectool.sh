@@ -23,9 +23,9 @@
 #####################################################
 
 # Check boot state
-BOOTMODE=false
-ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
-$BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
+BOOTMODE="false"
+ps | grep zygote | grep -v grep >/dev/null && BOOTMODE="true"
+$BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE="true"
 
 # Set boot state
 BOOTMODE="$BOOTMODE"
@@ -38,6 +38,14 @@ setenforce 0
 
 # Set build version
 REL="$REL"
+
+# Remove SBIN/SHELL to prevent conflicts with Magisk
+resolve() {
+  if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+    $SBIN && rm -rf /sbin
+    $SHELL && rm -rf /sbin/sh
+  fi
+}
 
 # Output function
 ui_print() {
@@ -66,6 +74,7 @@ if [ "$ARCH" == "x86" ] || [ "$ARCH" == "x86_64" ]; then
   ui_print "! Wrong architecture detected. Aborting..."
   ui_print "! Installation failed"
   ui_print " "
+  resolve
   exit 1
 fi
 
@@ -74,10 +83,17 @@ ui_print "- Installing Busybox"
 if [ "$BOOTMODE" == "false" ]; then
   unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP" 2>/dev/null
 fi
+# Allow unpack, when installation base is Magisk not bootmode script
+if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+  $(unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP" 2>/dev/null)
+fi
 chmod +x "$TMP/busybox-arm"
 
 ui_print "- Installation complete"
 ui_print " "
+
+# Remove SBIN/SHELL to prevent conflicts with Magisk
+resolve
 
 # Cleanup
 for f in installer.sh updater util_functions.sh; do

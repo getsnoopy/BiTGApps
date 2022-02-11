@@ -23,9 +23,9 @@
 #####################################################
 
 # Check boot state
-BOOTMODE=false
-ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
-$BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
+BOOTMODE="false"
+ps | grep zygote | grep -v grep >/dev/null && BOOTMODE="true"
+$BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE="true"
 
 # Set boot state
 BOOTMODE="$BOOTMODE"
@@ -94,7 +94,9 @@ insert_line() {
   fi
 }
 
-get_file_prop() { grep -m1 "^$2=" "$1" | cut -d= -f2; }
+get_file_prop() {
+  grep -m1 "^$2=" "$1" | cut -d= -f2
+}
 
 get_prop() {
   # Check known .prop files using get_file_prop
@@ -114,7 +116,10 @@ get_prop() {
   fi
 }
 
-is_mounted() { grep -q " $(readlink -f $1) " /proc/mounts 2>/dev/null; return $?; }
+is_mounted() {
+  grep -q " $(readlink -f $1) " /proc/mounts 2>/dev/null
+  return $?
+}
 
 toupper() {
   echo "$@" | tr '[:lower:]' '[:upper:]'
@@ -122,15 +127,21 @@ toupper() {
 
 grep_cmdline() {
   local REGEX="s/^$1=//p"
-  local CL=$(cat /proc/cmdline 2>/dev/null)
-  POSTFIX=$([ $(expr $(echo "$CL" | tr -d -c '"' | wc -m) % 2) == 0 ] && echo -n '' || echo -n '"')
-  { eval "for i in $CL$POSTFIX; do echo \$i; done" ; cat /proc/bootconfig 2>/dev/null | sed 's/[[:space:]]*=[[:space:]]*\(.*\)/=\1/g' | sed 's/"//g'; } | sed -n "$REGEX" 2>/dev/null
+  { echo $(cat /proc/cmdline)$(sed -e 's/[^"]//g' -e 's/""//g' /proc/cmdline) | xargs -n 1; \
+    sed -e 's/ = /=/g' -e 's/, /,/g' -e 's/"//g' /proc/bootconfig; \
+  } 2>/dev/null | sed -n "$REGEX"
 }
 
 grep_prop() {
-  if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then SYSDIR="/system_root/system"; fi
-  if [ "$($TMP/grep -w -o /system $fstab)" ]; then SYSDIR="/system"; fi
-  if [ "$($TMP/grep -w -o /system $fstab)" ] && [ -d "/system/system" ]; then SYSDIR="/system/system"; fi
+  if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then
+    SYSDIR="/system_root/system"
+  fi
+  if [ "$($TMP/grep -w -o /system $fstab)" ]; then
+    SYSDIR="/system"
+    if [ -d "/system/system" ]; then
+      SYSDIR="/system/system"
+    fi
+  fi
   local REGEX="s/^$1=//p"
   shift
   local FILES=$@
@@ -202,6 +213,14 @@ sign_chromeos() {
   mv mboot.img.signed mboot.img
 }
 
+# Remove SBIN/SHELL to prevent conflicts with Magisk
+resolve() {
+  if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+    $SBIN && rm -rf /sbin
+    $SHELL && rm -rf /sbin/sh
+  fi
+}
+
 # Output function
 ui_print() {
   if [ "$BOOTMODE" == "true" ]; then
@@ -226,6 +245,10 @@ ui_print "- Patch revision: $REL"
 if [ "$BOOTMODE" == "false" ]; then
   unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP" 2>/dev/null
 fi
+# Allow unpack, when installation base is Magisk not bootmode script
+if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+  $(unzip -o "$ZIPFILE" "busybox-arm" -d "$TMP" >/dev/null 2>&1)
+fi
 chmod +x "$TMP/busybox-arm"
 
 # Check device architecture
@@ -235,6 +258,7 @@ if [ "$ARCH" == "x86" ] || [ "$ARCH" == "x86_64" ]; then
   ui_print "! Wrong architecture detected. Aborting..."
   ui_print "! Installation failed"
   ui_print " "
+  resolve
   exit 1
 fi
 
@@ -251,6 +275,7 @@ if [ -e "$bb" ]; then
         ui_print "! Failed to set-up pre-bundled busybox. Aborting..."
         ui_print "! Installation failed"
         ui_print " "
+        resolve
         exit 1
       fi
     fi
@@ -263,6 +288,10 @@ fi
 if [ "$BOOTMODE" == "false" ]; then
   unzip -o "$ZIPFILE" "AIK.tar.xz" -d "$TMP"
 fi
+# Allow unpack, when installation base is Magisk not bootmode script
+if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+  $(unzip -o "$ZIPFILE" "AIK.tar.xz" -d "$TMP" >/dev/null 2>&1)
+fi
 tar -xf $TMP/AIK.tar.xz -C $TMP
 chmod +x $TMP/chromeos/* $TMP/cpio $TMP/magiskboot
 
@@ -270,13 +299,21 @@ chmod +x $TMP/chromeos/* $TMP/cpio $TMP/magiskboot
 if [ "$BOOTMODE" == "false" ]; then
   unzip -o "$ZIPFILE" "grep" -d "$TMP"
 fi
+# Allow unpack, when installation base is Magisk not bootmode script
+if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+  $(unzip -o "$ZIPFILE" "grep" -d "$TMP" >/dev/null 2>&1)
+fi
 chmod +x $TMP/grep
 
 # Unmount partitions
 if [ "$BOOTMODE" == "false" ]; then
-  for i in /system_root /system /product /system_ext /vendor /persist /metadata; do
-    umount -l $i > /dev/null 2>&1
-  done
+  umount -l /system_root > /dev/null 2>&1
+  umount -l /system > /dev/null 2>&1
+  umount -l /product > /dev/null 2>&1
+  umount -l /system_ext > /dev/null 2>&1
+  umount -l /vendor > /dev/null 2>&1
+  umount -l /persist > /dev/null 2>&1
+  umount -l /metadata > /dev/null 2>&1
 fi
 
 # Unset predefined environmental variable
@@ -329,7 +366,7 @@ if [ "$BOOTMODE" == "false" ]; then
   fi
   [ -z $SLOT ] || ui_print "- Current boot slot: $SLOT"
   # Unset predefined environmental variable
-  OLD_ANDROID_ROOT=$ANDROID_ROOT && unset ANDROID_ROOT
+  OLD_ANDROID_ROOT=$ANDROID_ROOT; unset ANDROID_ROOT
   # Wipe conflicting layout
   ($(! is_mounted '/system_root') && rm -rf /system_root)
   # Do not wipe system, if it create symlinks in root
@@ -337,17 +374,21 @@ if [ "$BOOTMODE" == "false" ]; then
     ($(! is_mounted '/system') && rm -rf /system)
   fi
   # Create initial path and set ANDROID_ROOT in the global environment
-  if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then mkdir /system_root; export ANDROID_ROOT="/system_root"; fi
-  if [ "$($TMP/grep -w -o /system $fstab)" ]; then mkdir /system; export ANDROID_ROOT="/system"; fi
+  if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then
+    mkdir /system_root; export ANDROID_ROOT="/system_root"
+  fi
+  if [ "$($TMP/grep -w -o /system $fstab)" ]; then
+    mkdir /system; export ANDROID_ROOT="/system"
+  fi
   # Set '/system_root' as mount point, if previous check failed. This adaption,
   # for recoveries using "/" as mount point in auto-generated fstab but not,
   # actually mounting to "/" and using some other mount location. At this point,
   # we can mount system using its block device to any location.
   if [ -z "$ANDROID_ROOT" ]; then
-    mkdir /system_root && export ANDROID_ROOT="/system_root"
+    mkdir /system_root; export ANDROID_ROOT="/system_root"
   fi
   # Set A/B slot property
-  local_slot() { local slot=$(getprop ro.boot.slot_suffix 2>/dev/null); }; local_slot
+  slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
   if [ "$SUPER_PARTITION" == "true" ]; then
     if [ "$device_abpartition" == "true" ]; then
       for block in system vendor; do
@@ -408,10 +449,12 @@ if [ "$BOOTMODE" == "false" ]; then
           BLK="/dev/block/bootdevice/by-name/system"
         elif [ -e "/dev/block/platform/*/by-name/system" ]; then
           BLK="/dev/block/platform/*/by-name/system"
-        elif [ -e "/dev/block/platform/*/*/by-name/system" ]; then
-          BLK="/dev/block/platform/*/*/by-name/system"
         else
-          ui_print "! Cannot find system block"
+          BLK="/dev/block/platform/*/*/by-name/system"
+        fi
+        # Do not proceed without system block
+        if [ -z "$BLK" ]; then
+          ui_print "! Cannot find system block" && exit 1
         fi
         # Mount using block device
         mount $BLK $ANDROID_ROOT > /dev/null 2>&1
@@ -442,17 +485,23 @@ if [ "$BOOTMODE" == "false" ]; then
 fi
 
 # Mount APEX
-if [ "$BOOTMODE" == "false" ]; then
-  if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then SYSTEM="/system_root/system"; fi
-  if [ "$($TMP/grep -w -o /system $fstab)" ]; then SYSTEM="/system"; fi
-  if [ "$($TMP/grep -w -o /system $fstab)" ] && [ -d "/system/system" ]; then SYSTEM="/system/system"; fi
+mount_apex() {
+  if [ "$($TMP/grep -w -o /system_root $fstab)" ]; then
+    SYSTEM="/system_root/system"
+  fi
+  if [ "$($TMP/grep -w -o /system $fstab)" ]; then
+    SYSTEM="/system"
+    if [ -d "/system/system" ]; then
+      SYSTEM="/system/system"
+    fi
+  fi
   # Set hardcoded system layout
   if [ -z "$SYSTEM" ]; then
     SYSTEM="/system_root/system"
   fi
-  local_apex() { test -d "$SYSTEM/apex" || return 1; }; local_apex
+  test -d "$SYSTEM/apex" || return 1
   ui_print "- Mounting /apex"
-  local_apex() { local apex dest loop minorx num; }; local_apex
+  local apex dest loop minorx num
   setup_mountpoint /apex
   test -e /dev/block/loop1 && minorx=$(ls -l /dev/block/loop1 | awk '{ print $6 }') || minorx="1"
   num="0"
@@ -473,7 +522,7 @@ if [ "$BOOTMODE" == "false" ]; then
             num=$((num + 1))
             losetup $loop | grep -q $dest.img && break
           done
-          mount -t ext4 -o ro,loop,noatime $loop $dest
+          mount -t ext4 -o ro,loop,noatime $loop $dest 2>/dev/null
           if [ $? != 0 ]; then
             losetup -d $loop 2>/dev/null
           fi
@@ -486,8 +535,8 @@ if [ "$BOOTMODE" == "false" ]; then
   export ANDROID_TZDATA_ROOT="/apex/com.android.tzdata"
   export ANDROID_ART_ROOT="/apex/com.android.art"
   export ANDROID_I18N_ROOT="/apex/com.android.i18n"
-  local_jar() { local APEXJARS=$(find /apex -name '*.jar' | sort | tr '\n' ':'); }; local_jar
-  local_fwk() { local FWK=$SYSTEM/framework; }; local_fwk
+  local APEXJARS=$(find /apex -name '*.jar' | sort | tr '\n' ':')
+  local FWK=$SYSTEM/framework
   export BOOTCLASSPATH="${APEXJARS}\
   $FWK/framework.jar:\
   $FWK/framework-graphics.jar:\
@@ -497,7 +546,13 @@ if [ "$BOOTMODE" == "false" ]; then
   $FWK/ims-common.jar:\
   $FWK/framework-atb-backward-compatibility.jar:\
   $FWK/android.test.base.jar"
-  [ ! -d "$SYSTEM/apex" ] && ui_print "! Cannot mount /apex"
+  if [ ! -d "$SYSTEM/apex" ]; then
+    ui_print "! Cannot mount /apex"
+  fi
+}
+
+if [ "$BOOTMODE" == "false" ]; then
+  mount_apex
 fi
 
 if [ "$BOOTMODE" == "true" ]; then
@@ -529,7 +584,9 @@ if [ "$BOOTMODE" == "false" ]; then
     export SYSTEM="/system_root/system"
   fi
 fi
-if [ "$BOOTMODE" == "true" ]; then export SYSTEM="/system"; fi
+if [ "$BOOTMODE" == "true" ]; then
+  export SYSTEM="/system"
+fi
 
 # Check system partition mount status
 if [ "$BOOTMODE" == "false" ]; then
@@ -556,6 +613,7 @@ if [ ! -f "$SYSTEM/build.prop" ]; then
   ui_print "! Unable to find installation layout. Aborting..."
   ui_print "! Installation failed"
   ui_print " "
+  resolve
   exit 1
 fi
 
@@ -591,6 +649,7 @@ if [ ! "$system_as_rw" == "rw" ]; then
   ui_print "! Read-only /system partition. Aborting..."
   ui_print "! Installation failed"
   ui_print " "
+  resolve
   exit 1
 fi
 
@@ -612,6 +671,7 @@ if [ -z $block ]; then
   ui_print "! Unable to detect target image"
   ui_print "! Installation failed"
   ui_print " "
+  resolve
   exit 1
 fi
 ui_print "- Target image: $block"
@@ -631,7 +691,9 @@ case $? in
     ui_print "! Unable to unpack boot image"
     ;;
 esac
-if [ -f "header" ]; then $l/sed -i '/os_patch_level/c\os_patch_level=2022-02' header; fi
+if [ -f "header" ]; then
+  $l/sed -i '/os_patch_level/c\os_patch_level=2022-02' header
+fi
 [ -f "header" ] && TARGET_SPLIT_IMAGE="true" || TARGET_SPLIT_IMAGE="false"
 ./magiskboot repack boot.img mboot.img > /dev/null 2>&1
 # Sign ChromeOS boot image
@@ -650,6 +712,10 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ ! -d "$ANDROID_DATA/adb/magisk" ]; t
   # Unpack target package
   if [ "$BOOTMODE" == "false" ]; then
     for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  fi
+  # Allow unpack, when installation base is Magisk not bootmode script
+  if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+    for f in $ZIP; do $(unzip -o "$ZIPFILE" "$f" -d "$TMP" >/dev/null 2>&1); done
   fi
   # Extract resetprop components
   tar -xf $TMP_POLICY/Policy.tar.xz -C $TMP
@@ -793,10 +859,17 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ ! -d "$ANDROID_DATA/adb/magisk" ]; t
   if [ "$BOOTMODE" == "false" ]; then
     for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   fi
+  # Allow unpack, when installation base is Magisk not bootmode script
+  if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+    for f in $ZIP; do $(unzip -o "$ZIPFILE" "$f" -d "$TMP" >/dev/null 2>&1); done
+  fi
   # Extract resetprop components
   tar -xf $TMP_POLICY/Policy.tar.xz -C $TMP
   # Create XBIN
-  test -d $SYSTEM/xbin || install -d $SYSTEM/xbin; chmod 0755 $SYSTEM/xbin
+  test -d $SYSTEM/xbin || install -d $SYSTEM/xbin
+  if [ ! "$(stat -c '%a' "$SYSTEM/xbin")" == "755" ]; then
+    chmod 0755 $SYSTEM/xbin
+  fi
   # Install resetprop components
   cp -f $TMP/resetprop $SYSTEM/xbin/resetprop
   cp -f $TMP/resetprop.sh $SYSTEM/xbin/resetprop.sh
@@ -816,6 +889,10 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ -d "$ANDROID_DATA/adb/magisk" ]; the
   # Unpack target package
   if [ "$BOOTMODE" == "false" ]; then
     for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
+  fi
+  # Allow unpack, when installation base is Magisk not bootmode script
+  if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+    for f in $ZIP; do $(unzip -o "$ZIPFILE" "$f" -d "$TMP" >/dev/null 2>&1); done
   fi
   # Extract SU Hide components
   tar -xf $TMP_SUHIDE/SUHide.tar.xz -C $TMP
@@ -959,10 +1036,17 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ -d "$ANDROID_DATA/adb/magisk" ]; the
   if [ "$BOOTMODE" == "false" ]; then
     for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done
   fi
+  # Allow unpack, when installation base is Magisk not bootmode script
+  if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+    for f in $ZIP; do $(unzip -o "$ZIPFILE" "$f" -d "$TMP" >/dev/null 2>&1); done
+  fi
   # Extract SU Hide components
   tar -xf $TMP_SUHIDE/SUHide.tar.xz -C $TMP
   # Create XBIN
-  test -d $SYSTEM/xbin || install -d $SYSTEM/xbin; chmod 0755 $SYSTEM/xbin
+  test -d $SYSTEM/xbin || install -d $SYSTEM/xbin
+  if [ ! "$(stat -c '%a' "$SYSTEM/xbin")" == "755" ]; then
+    chmod 0755 $SYSTEM/xbin
+  fi
   # Install SU Hide components
   cp -f $TMP/super.sh $SYSTEM/xbin/super.sh
   chmod 0755 $SYSTEM/xbin/super.sh
@@ -1120,6 +1204,14 @@ ui_print "- Android SDK version: $android_sdk"
 device_architecture="$(get_prop "ro.product.cpu.abi")"
 ui_print "- Android platform: $device_architecture"
 
+# Set supported Android Platform
+if [ "$device_architecture" == "armeabi-v7a" ]; then
+  TARGET_ANDROID_ARCH="ARM"
+fi
+if [ "$device_architecture" == "arm64-v8a" ]; then
+  TARGET_ANDROID_ARCH="ARM64"
+fi
+
 # Universal SafetyNet Fix; Works together with CTS patch
 if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ "$TARGET_ANDROID_ARCH" == "ARM" ]; then
   ui_print "! SKip installing patched keystore"
@@ -1128,16 +1220,37 @@ fi
 # Universal SafetyNet Fix; Works together with CTS patch
 if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ "$TARGET_ANDROID_ARCH" == "ARM64" ]; then
   ui_print "- Installing patched keystore"
-  if [ "$BOOTMODE" == "false" ]; then unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }; fi
-  if [ "$BOOTMODE" == "true" ]; then unpack_zip() { return 0; }; fi
+  if [ "$BOOTMODE" == "false" ]; then
+    unpack_zip() { for f in $ZIP; do unzip -o "$ZIPFILE" "$f" -d "$TMP"; done; }
+  fi
+  # Skip unpack, when installation base is bootmode script not Magisk
+  if [[ "$(getprop "sys.bootmode")" == "1" ]]; then
+    unpack_zip() { return 0; }
+  fi
+  # Allow unpack, when installation base is Magisk not bootmode script
+  if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+    unpack_zip() { for f in $ZIP; do $(unzip -o "$ZIPFILE" "$f" -d "$TMP" >/dev/null 2>&1); done; }
+  fi
   # Set defaults and unpack
-  if [ "$android_sdk" == "26" ]; then ZIP="Keystore/Keystore26.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore26.tar.xz -C $TMP; fi
-  if [ "$android_sdk" == "27" ]; then ZIP="Keystore/Keystore27.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore27.tar.xz -C $TMP; fi
-  if [ "$android_sdk" == "28" ]; then ZIP="Keystore/Keystore28.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore28.tar.xz -C $TMP; fi
-  if [ "$android_sdk" == "29" ]; then ZIP="Keystore/Keystore29.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore29.tar.xz -C $TMP; fi
-  if [ "$android_sdk" == "30" ]; then ZIP="Keystore/Keystore30.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore30.tar.xz -C $TMP; fi
-  if [ "$android_sdk" == "31" ]; then ZIP="Keystore/Keystore31.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore31.tar.xz -C $TMP; fi
-  # Do not backup, if Android SDK 25 detected
+  if [ "$android_sdk" == "26" ]; then
+    ZIP="Keystore/Keystore26.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore26.tar.xz -C $TMP
+  fi
+  if [ "$android_sdk" == "27" ]; then
+    ZIP="Keystore/Keystore27.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore27.tar.xz -C $TMP
+  fi
+  if [ "$android_sdk" == "28" ]; then
+    ZIP="Keystore/Keystore28.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore28.tar.xz -C $TMP
+  fi
+  if [ "$android_sdk" == "29" ]; then
+    ZIP="Keystore/Keystore29.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore29.tar.xz -C $TMP
+  fi
+  if [ "$android_sdk" == "30" ]; then
+    ZIP="Keystore/Keystore30.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore30.tar.xz -C $TMP
+  fi
+  if [ "$android_sdk" == "31" ]; then
+    ZIP="Keystore/Keystore31.tar.xz"; unpack_zip; tar -xf $TMP_KEYSTORE/Keystore31.tar.xz -C $TMP
+  fi
+  # Do not backup, When Android SDK 25 detected
   if [ ! "$android_sdk" == "25" ]; then
     # Up-to Android SDK 29, patched keystore executable required
     if [ "$android_sdk" -le "29" ]; then
@@ -1145,8 +1258,12 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ "$TARGET_ANDROID_ARCH" == "ARM64" ];
       cp -f $SYSTEM/bin/keystore $ANDROID_DATA/.backup/keystore
       cp -f $SYSTEM/bin/keystore $SECURE_DIR/.backup/keystore
       # Write backup type
-      [ "$(grep -w -o 'KEYSTORE' $ANDROID_DATA/.backup/.backup 2>/dev/null)" ] || echo "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
-      [ "$(grep -w -o 'KEYSTORE' $SECURE_DIR/.backup/.backup 2>/dev/null)" ] || echo "KEYSTORE" >> $SECURE_DIR/.backup/.backup
+      if [ ! "$(grep -w -o 'KEYSTORE' $ANDROID_DATA/.backup/.backup 2>/dev/null)" ]; then
+        echo "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
+      fi
+      if [ ! "$(grep -w -o 'KEYSTORE' $SECURE_DIR/.backup/.backup 2>/dev/null)" ]; then
+        echo "KEYSTORE" >> $SECURE_DIR/.backup/.backup
+      fi
     fi
   fi
   # For Android SDK 30, patched keystore executable and library required
@@ -1157,8 +1274,12 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ "$TARGET_ANDROID_ARCH" == "ARM64" ];
     cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
     cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $SECURE_DIR/.backup/libkeystore
     # Write backup type
-    [ "$(grep -w -o 'KEYSTORE' $ANDROID_DATA/.backup/.backup 2>/dev/null)" ] || echo "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
-    [ "$(grep -w -o 'KEYSTORE' $SECURE_DIR/.backup/.backup 2>/dev/null)" ] || echo "KEYSTORE" >> $SECURE_DIR/.backup/.backup
+    if [ ! "$(grep -w -o 'KEYSTORE' $ANDROID_DATA/.backup/.backup 2>/dev/null)" ]; then
+      echo "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
+    fi
+    if [ ! "$(grep -w -o 'KEYSTORE' $SECURE_DIR/.backup/.backup 2>/dev/null)" ]; then
+      echo "KEYSTORE" >> $SECURE_DIR/.backup/.backup
+    fi
   fi
   # For Android SDK 31, patched keystore executable and library required
   if [ "$android_sdk" == "31" ]; then
@@ -1168,8 +1289,12 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ "$TARGET_ANDROID_ARCH" == "ARM64" ];
     cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $ANDROID_DATA/.backup/libkeystore
     cp -f $SYSTEM/lib64/libkeystore-attestation-application-id.so $SECURE_DIR/.backup/libkeystore
     # Write backup type
-    [ "$(grep -w -o 'KEYSTORE' $ANDROID_DATA/.backup/.backup 2>/dev/null)" ] || echo "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
-    [ "$(grep -w -o 'KEYSTORE' $SECURE_DIR/.backup/.backup 2>/dev/null)" ] || echo "KEYSTORE" >> $SECURE_DIR/.backup/.backup
+    if [ ! "$(grep -w -o 'KEYSTORE' $ANDROID_DATA/.backup/.backup 2>/dev/null)" ]; then
+      echo "KEYSTORE" >> $ANDROID_DATA/.backup/.backup
+    fi
+    if [ ! "$(grep -w -o 'KEYSTORE' $SECURE_DIR/.backup/.backup 2>/dev/null)" ]; then
+      echo "KEYSTORE" >> $SECURE_DIR/.backup/.backup
+    fi
   fi
   # Mount keystore
   if [ "$BOOTMODE" == "true" ]; then
@@ -1184,17 +1309,21 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ "$TARGET_ANDROID_ARCH" == "ARM64" ];
     umount -l $SYSTEM/bin/keystore > /dev/null 2>&1
     umount -l $SYSTEM/bin/keystore2 > /dev/null 2>&1
   fi
-  # Do not install, if Android SDK 25 detected
-  if [ ! "$android_sdk" == "25" ]; then
+  # Check against unsupported APIs
+  case $android_sdk in
+    # Do not install, When Android SDK 25 detected
+    "25" )
+      return 0
+      ;;
     # Up-to Android SDK 29, patched keystore executable required
-    if [ "$android_sdk" -le "29" ]; then
+    "26" | "27" | "28" | "29" )
       # Install patched keystore
       rm -rf $SYSTEM/bin/keystore
       cp -f $TMP/keystore $SYSTEM/bin/keystore
       chmod 0755 $SYSTEM/bin/keystore
       chcon -h u:object_r:keystore_exec:s0 "$SYSTEM/bin/keystore"
-    fi
-  fi
+      ;;
+  esac
   # For Android SDK 30, patched keystore executable and library required
   if [ "$android_sdk" == "30" ]; then
     # Install patched keystore
@@ -1223,10 +1352,23 @@ if [ "$TARGET_SPLIT_IMAGE" == "true" ] && [ "$TARGET_ANDROID_ARCH" == "ARM64" ];
   fi
 fi
 
+# Set CONFIG for Hide Policy and SU Hide Patch
+TARGET_BACKUP="$ANDROID_DATA/.backup/.backup"
+SECURE_BACKUP="$SECURE_DIR/.backup/.backup"
+if [ "$TARGET_SPLIT_IMAGE" == "true" ]; then
+  # Allow SafetyNet Patch Restore
+  echo "KEEPSAFTEYNET" >> $TARGET_BACKUP
+  echo "KEEPSAFTEYNET" >> $SECURE_BACKUP
+else
+  # Skip SafetyNet Patch Restore
+  echo "SKIPSAFTEYNET" >> $TARGET_BACKUP
+  echo "SKIPSAFTEYNET" >> $SECURE_BACKUP
+fi
+
 # Unmount APEX
-if [ "$BOOTMODE" == "false" ]; then
-  local_apex() { test -d /apex || return 1; }; local_apex
-  local_dest() { local dest loop; }; local_dest
+umount_apex() {
+  test -d /apex || return 1
+  local dest loop
   for dest in $(find /apex -type d -mindepth 1 -maxdepth 1); do
     if [ -f $dest.img ]; then
       loop=$(mount | grep $dest | cut -d" " -f1)
@@ -1240,6 +1382,10 @@ if [ "$BOOTMODE" == "false" ]; then
   unset ANDROID_ART_ROOT
   unset ANDROID_I18N_ROOT
   unset BOOTCLASSPATH
+}
+
+if [ "$BOOTMODE" == "false" ]; then
+  umount_apex
 fi
 
 ui_print "- Unmounting partitions"
@@ -1259,6 +1405,9 @@ fi
 
 ui_print "- Installation complete"
 ui_print " "
+
+# Remove SBIN/SHELL to prevent conflicts with Magisk
+resolve
 
 # Cleanup
 for f in \

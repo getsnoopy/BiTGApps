@@ -23,9 +23,9 @@
 #####################################################
 
 # Check boot state
-BOOTMODE=false
-ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
-$BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
+BOOTMODE="false"
+ps | grep zygote | grep -v grep >/dev/null && BOOTMODE="true"
+$BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE="true"
 
 # Set boot state
 BOOTMODE="$BOOTMODE"
@@ -53,6 +53,10 @@ ui_print() {
 # Extract find utility
 if [ "$BOOTMODE" == "false" ]; then
   unzip -o "$ZIPFILE" "find" -d "$TMP"
+fi
+# Allow unpack, when installation base is Magisk not bootmode script
+if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+  $(unzip -o "$ZIPFILE" "find" -d "$TMP" 2>/dev/null)
 fi
 chmod +x "$TMP/find"
 
@@ -97,6 +101,12 @@ done
 
 ui_print "- Installation complete"
 ui_print " "
+
+# Remove SBIN/SHELL to prevent conflicts with Magisk
+if [[ "$(getprop "sys.bootmode")" == "2" ]]; then
+  $SBIN && rm -rf /sbin
+  $SHELL && rm -rf /sbin/sh
+fi
 
 # Cleanup
 for f in find installer.sh updater util_functions.sh; do

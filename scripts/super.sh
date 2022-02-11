@@ -32,9 +32,12 @@ done
 # Hide SU after App Launch
 while true
 do
+  # Override function
+  break
+  # Discard execution of below functions
   mount -o remount,rw,errors=continue /
   mount -o remount,rw,errors=continue /system
-  local root pkg act pipe pid process task
+  local root pkg act pipe pid process task tag
   root="/data/local/tmp"
   pkg='com.jio.myjio|in.org.npci.upiapp'
   act='com.jio.myjio/.dashboard.activities.DashboardActivity|in.org.npci.upiapp/.HomeActivity'
@@ -49,19 +52,28 @@ do
     kill "$pid"
     rm -rf $root/pipe
     logcat -b all -c
-    if [ -e "/sbin/su" ]; then mv -f /sbin/su /sbin/su.d; fi
-    if [ -e "/system/bin/su" ]; then mv -f /system/bin/su /system/bin/su.d; fi
-    if [ -e "/system/xbin/su" ]; then mv -f /system/xbin/su /system/xbin/su.d; fi
-    sleep 300
+    [ -e "/sbin/su" ] && mv -f /sbin/su /sbin/su.d
+    [ -e "/system/bin/su" ] && mv -f /system/bin/su /system/bin/su.d
+    [ -e "/system/xbin/su" ] && mv -f /system/xbin/su /system/xbin/su.d
     process=$(pgrep -x 'com.jio.myjio|in.org.npci.upiapp')
+    log -p v -t "SNP" "Suspend Process: [$process]"
+    kill -TSTP $process 2>/dev/null && sleep 10
+    log -p v -t "SNP" "Resume Process: [$process]"
+    kill -CONT $process 2>/dev/null && sleep 300
     log -p v -t "SNP" "Kill Process: [$process]"
-    kill $process 2>/dev/null
+    kill -STOP $process 2>/dev/null && sleep 10
     log -p v -t "SNP" "Kill Package: [com.jio.myjio]"
-    if [ "$(grep -w -o 'com.jio.myjio' $root/task)" ]; then am force-stop com.jio.myjio; fi
+    if [ "$(grep -w -o 'com.jio.myjio' $root/task)" ]; then
+      am force-stop com.jio.myjio
+    fi
     log -p v -t "SNP" "Kill Package: [in.org.npci.upiapp]"
-    if [ "$(grep -w -o 'in.org.npci.upiapp' $root/task)" ]; then am force-stop in.org.npci.upiapp; fi
-    if [ -e "/sbin/su.d" ]; then mv -f /sbin/su.d /system/bin/su; fi
-    if [ -e "/system/bin/su.d" ]; then mv -f /system/bin/su.d /system/bin/su; fi
-    if [ -e "/system/xbin/su.d" ]; then mv -f /system/xbin/su.d /system/xbin/su; fi
+    if [ "$(grep -w -o 'in.org.npci.upiapp' $root/task)" ]; then
+      am force-stop in.org.npci.upiapp
+    fi
+    [ -e "/sbin/su.d" ] && mv -f /sbin/su.d /sbin/su
+    [ -e "/system/bin/su.d" ] && mv -f /system/bin/su.d /system/bin/su
+    [ -e "/system/xbin/su.d" ] && mv -f /system/xbin/su.d /system/xbin/su
+    # Dump TAG Output
+    logcat -s "SNP" > $root/tag &
   fi
 done

@@ -23,12 +23,14 @@
 #####################################################
 
 # Set default
-if [ -z $backuptool_ab ]; then TMP="/tmp"; else TMP="/postinstall/tmp"; fi
+if [ -z $backuptool_ab ]; then
+  TMP="/tmp"
+else
+  TMP="/postinstall/tmp"
+fi
 
 # Set busybox
-if [ -e "/data/toybox/toybox-arm" ]; then
-  BB="/data/toybox/toybox-arm"
-elif [ -e "$TMP/busybox-arm" ]; then
+if [ -e "$TMP/busybox-arm" ]; then
   BB="$TMP/busybox-arm"
 else
   BB="$?"
@@ -38,7 +40,7 @@ fi
 fstab="/etc/fstab"
 
 # Set ADDOND_VERSION
-ADDOND_VERSION=""
+ADDOND_VERSION="3"
 
 # Export functions from backuptool
 . $TMP/backuptool.functions
@@ -85,13 +87,14 @@ recovery_cleanup() {
 # Set pre-bundled busybox
 set_bb() {
   l="$TMP/bin"
+  rm -rf $l
   install -d "$l"
   chmod 0755 $BB
   for i in $($BB --list); do
     if ! ln -sf "$BB" "$l/$i" && ! $BB ln -sf "$BB" "$l/$i" && ! $BB ln -f "$BB" "$l/$i" ; then
       # Create script wrapper if symlinking and hardlinking failed because of restrictive selinux policy
       if ! echo "#!$BB" > "$l/$i" || ! chmod 0755 "$l/$i" ; then
-        ui_print "! Failed to set-up pre-bundled busybox"
+        ui_print "BackupTools: Failed to set-up pre-bundled busybox"
         exit 1
       fi
     fi
@@ -103,8 +106,12 @@ set_bb() {
 # Check device architecture
 set_arch() {
   ARCH=$(uname -m)
-  if [ "$ARCH" == "armv6l" ] || [ "$ARCH" == "armv7l" ]; then ARMEABI="true"; fi
-  if [ "$ARCH" == "armv8b" ] || [ "$ARCH" == "armv8l" ] || [ "$ARCH" == "aarch64" ]; then AARCH64="true"; fi
+  if [ "$ARCH" == "armv6l" ] || [ "$ARCH" == "armv7l" ]; then
+    ARMEABI="true"
+  fi
+  if [ "$ARCH" == "armv8b" ] || [ "$ARCH" == "armv8l" ] || [ "$ARCH" == "aarch64" ]; then
+    AARCH64="true"
+  fi
 }
 
 # insert_line <file> <if search string> <before|after> <line match string> <inserted line>
@@ -124,7 +131,7 @@ insert_line() {
   fi
 }
 
-# Create temporary dir
+# Create temporary directory
 tmp_dir() {
   test -d $TMP/app || mkdir $TMP/app
   test -d $TMP/priv-app || mkdir $TMP/priv-app
@@ -153,14 +160,19 @@ tmp_dir() {
   test -d $TMP/overlay || mkdir $TMP/overlay
 }
 
-# Wipe temporary dir
-del_tmp_dir() {
-  for i in app priv-app etc default-permissions permissions preferred-apps sysconfig framework addon rwg fboot overlay SYS* PRO*; do
-    rm -rf $TMP/$i
-  done
+f_cleanup() {
+  ($l/find .$TMP -mindepth 1 -maxdepth 1 -type f -not -name 'recovery.log' -not -name 'busybox-arm' -not -name 'backuptool.functions' -exec rm -rf '{}' \;)
 }
 
+d_cleanup() {
+  ($l/find .$TMP -mindepth 1 -maxdepth 1 -type d -not -name 'bin' -not -name 'install' -exec rm -rf '{}' \;)
+}
+
+# Wipe conflicting packages
 shared_library() {
+  # Override function
+  return 255
+  # Discard execution of below functions
   rm -rf $S/app/ExtShared
   rm -rf $S/priv-app/ExtServices
   rm -rf $S/product/app/ExtShared
@@ -227,9 +239,15 @@ setup_mountpoint() {
 }
 
 mount_apex() {
-  if [ "$($BB grep -w -o /system_root $fstab)" ]; then S="/system_root/system"; fi
-  if [ "$($BB grep -w -o /system $fstab)" ]; then S="/system"; fi
-  if [ "$($BB grep -w -o /system $fstab)" ] && [ -d "/system/system" ]; then S="/system/system"; fi
+  if [ "$($BB grep -w -o /system_root $fstab)" ]; then
+    S="/system_root/system"
+  fi
+  if [ "$($BB grep -w -o /system $fstab)" ]; then
+    S="/system"
+    if [ -d "/system/system" ]; then
+      S="/system/system"
+    fi
+  fi
   # Set hardcoded system layout
   if [ -z "$S" ]; then
     S="/system_root/system"
@@ -256,7 +274,7 @@ mount_apex() {
             num=$((num + 1))
             losetup $loop | grep -q $dest.img && break
           done
-          mount -t ext4 -o ro,loop,noatime $loop $dest
+          mount -t ext4 -o ro,loop,noatime $loop $dest 2>/dev/null
           if [ $? != 0 ]; then
             losetup -d $loop 2>/dev/null
           fi
@@ -283,7 +301,6 @@ mount_apex() {
 }
 
 umount_apex() {
-  export ANDROID_ROOT=$OLD_ANDROID_ROOT
   test -d /apex || return 1
   local dest loop
   for dest in $(find /apex -type d -mindepth 1 -maxdepth 1); do
@@ -302,12 +319,12 @@ umount_apex() {
 }
 
 unmount_all() {
-  (umount -l /system_root
-   umount -l /system
-   umount -l /product
-   umount -l /system_ext
-   umount -l /vendor
-   umount -l /persist) > /dev/null 2>&1
+  umount -l /system_root > /dev/null 2>&1
+  umount -l /system > /dev/null 2>&1
+  umount -l /product > /dev/null 2>&1
+  umount -l /system_ext > /dev/null 2>&1
+  umount -l /vendor > /dev/null 2>&1
+  umount -l /persist > /dev/null 2>&1
 }
 
 # Mount partitions
@@ -321,12 +338,12 @@ mount_all() {
   fi
   if [ "$($l/grep -w -o /cache $fstab)" ]; then
     mount -o ro -t auto /cache > /dev/null 2>&1
-    mount -o rw,remount -t auto /cache
+    mount -o rw,remount -t auto /cache > /dev/null 2>&1
   fi
   mount -o ro -t auto /persist > /dev/null 2>&1
+  mount -o rw,remount -t auto /persist > /dev/null 2>&1
   # Unset predefined environmental variable
-  OLD_ANDROID_ROOT=$ANDROID_ROOT
-  unset ANDROID_ROOT
+  OLD_ANDROID_ROOT=$ANDROID_ROOT; unset ANDROID_ROOT
   # Wipe conflicting layouts
   ($(! is_mounted '/system_root') && rm -rf /system_root)
   ($(! is_mounted '/product') && rm -rf /product)
@@ -336,17 +353,24 @@ mount_all() {
     ($(! is_mounted '/system') && rm -rf /system)
   fi
   # Create initial path and set ANDROID_ROOT in the global environment
-  if [ "$($BB grep -w -o /system_root $fstab)" ]; then mkdir /system_root; export ANDROID_ROOT="/system_root"; fi
-  if [ "$($BB grep -w -o /system $fstab)" ]; then mkdir /system; export ANDROID_ROOT="/system"; fi
-  if [ "$($BB grep -w -o /product $fstab)" ]; then mkdir /product; fi
-  if [ "$($BB grep -w -o /system_ext $fstab)" ]; then mkdir /system_ext; fi
+  if [ "$($BB grep -w -o /system_root $fstab)" ]; then
+    mkdir /system_root; export ANDROID_ROOT="/system_root"
+  fi
+  if [ "$($BB grep -w -o /system $fstab)" ]; then
+    mkdir /system; export ANDROID_ROOT="/system"
+  fi
+  if [ "$($BB grep -w -o /product $fstab)" ]; then
+    mkdir /product
+  fi
+  if [ "$($BB grep -w -o /system_ext $fstab)" ]; then
+    mkdir /system_ext
+  fi
   # Set '/system_root' as mount point, if previous check failed. This adaption,
   # for recoveries using "/" as mount point in auto-generated fstab but not,
   # actually mounting to "/" and using some other mount location. At this point,
   # we can mount system using its block device to any location.
   if [ -z "$ANDROID_ROOT" ]; then
-    mkdir /system_root
-    export ANDROID_ROOT="/system_root"
+    mkdir /system_root; export ANDROID_ROOT="/system_root"
   fi
   # Set A/B slot property
   local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
@@ -433,11 +457,12 @@ mount_all() {
           BLK="/dev/block/bootdevice/by-name/system"
         elif [ -e "/dev/block/platform/*/by-name/system" ]; then
           BLK="/dev/block/platform/*/by-name/system"
-        elif [ -e "/dev/block/platform/*/*/by-name/system" ]; then
-          BLK="/dev/block/platform/*/*/by-name/system"
         else
-          ui_print "BackupTools: Failed to restore BiTGApps backup"
-          exit 1
+          BLK="/dev/block/platform/*/*/by-name/system"
+        fi
+        # Do not proceed without system block
+        if [ -z "$BLK" ]; then
+          ui_print "! Cannot find system block" && exit 1
         fi
         # Mount using block device
         mount $BLK $ANDROID_ROOT > /dev/null 2>&1
@@ -490,10 +515,14 @@ system_layout() {
     export S="/system_root/system"
   fi
   # Adaptation to A/B OTAs
-  if [ ! -z $backuptool_ab ]; then export S="/postinstall/system"; fi
+  if [ ! -z $backuptool_ab ]; then
+    export S="/postinstall/system"
+  fi
 }
 
-get_file_prop() { grep -m1 "^$2=" "$1" | cut -d= -f2; }
+get_file_prop() {
+  grep -m1 "^$2=" "$1" | cut -d= -f2
+}
 
 get_prop() {
   # Check known .prop files using get_file_prop
@@ -513,7 +542,9 @@ get_prop() {
   fi
 }
 
-on_version_check() { android_sdk="$(get_prop "ro.build.version.sdk")"; }
+on_version_check() {
+  android_sdk="$(get_prop "ro.build.version.sdk")"
+}
 
 ensure_dir() {
   SYSTEM_ADDOND="$SYSTEM/addon.d"
@@ -536,10 +567,19 @@ ensure_dir() {
 }
 
 # Set installation layout
-set_pathmap() { SYSTEM="$S"; ensure_dir; }
+set_pathmap() {
+  SYSTEM="$S"
+  ensure_dir
+}
 
 # Confirm that restore is done
-conf_addon_restore() { if [ -f $S/config.prop ]; then ui_print "BackupTools: MicroG backup restored"; else ui_print "BackupTools: Failed to restore MicroG backup"; fi; }
+conf_addon_restore() {
+  if [ -f $S/config.prop ]; then
+    ui_print "BackupTools: MicroG backup restored"
+  else
+    ui_print "BackupTools: Failed to restore MicroG backup"
+  fi
+}
 
 # Delete existing GMS Doze entry from Android 7.1+
 opt_v25() {
@@ -578,7 +618,7 @@ purge_whitelist_permission() {
     chmod 0644 $S/system_ext/build.prop
     rm -rf $TMP/system_ext
   fi
-  if [ -f "$S/etc/prop.default" ] && [ -f "$ANDROID_ROOT/default.prop" ] && [ -n "$(cat $S/etc/prop.default | grep control_privapp_permissions)" ]; then
+  if [ "$(readlink -f "$ANDROID_ROOT/default.prop")" = "$S/etc/prop.default" ] && [ -n "$(cat $S/etc/prop.default | grep control_privapp_permissions)" ]; then
     rm -rf $ANDROID_ROOT/default.prop
     grep -v "ro.control_privapp_permissions" $S/etc/prop.default > $TMP/prop.default
     rm -rf $S/etc/prop.default
@@ -643,13 +683,22 @@ purge_whitelist_permission() {
 }
 
 # Add Whitelist property with flag disable
-set_whitelist_permission() { insert_line $S/build.prop "ro.control_privapp_permissions=disable" after 'net.bt.name=Android' 'ro.control_privapp_permissions=disable'; }
+set_whitelist_permission() {
+  insert_line $S/build.prop "ro.control_privapp_permissions=disable" after 'net.bt.name=Android' 'ro.control_privapp_permissions=disable'
+}
 
 # Set microG property
-set_microg_device() { insert_line $S/build.prop "ro.microg.device=true" after 'net.bt.name=Android' 'ro.microg.device=true'; }
+set_microg_device() {
+  insert_line $S/build.prop "ro.microg.device=true" after 'net.bt.name=Android' 'ro.microg.device=true'
+}
 
 # Enable Google Assistant
-set_assistant() { insert_line $S/build.prop "ro.opa.eligible_device=true" after 'net.bt.name=Android' 'ro.opa.eligible_device=true'; }
+set_assistant() {
+  # Override function
+  return 255
+  # Discard execution of below functions
+  insert_line $S/build.prop "ro.opa.eligible_device=true" after 'net.bt.name=Android' 'ro.opa.eligible_device=true'
+}
 
 # Set Deprecated Release Tag
 set_release_tag() {
@@ -657,49 +706,60 @@ set_release_tag() {
 }
 
 # Check SetupWizard Status
-on_setup_status_check() { setup_install_status="$(get_prop "ro.setup.enabled")"; }
+on_setup_status_check() {
+  # Override function
+  return 255
+  # Discard execution of below functions
+  setup_install_status="$(get_prop "ro.setup.enabled")"
+}
 
 # Check Addon Status
-on_addon_status_check() { addon_install_status="$(get_prop "ro.addon.enabled")"; }
+on_addon_status_check() {
+  # Override function
+  return 255
+  # Discard execution of below functions
+  addon_install_status="$(get_prop "ro.addon.enabled")"
+}
 
 # Check RWG Status
-on_rwg_status_check() { rwg_install_status="$(get_prop "ro.rwg.device")"; }
+on_rwg_status_check() {
+  rwg_install_status="$(get_prop "ro.rwg.device")"
+}
 
 # API fixes
 sdk_fix() {
   if [ "$android_sdk" -ge "26" ]; then # Android 8.0+ uses 0600 for its permission on build.prop
-    (chmod 0600 $S/build.prop
-     chmod 0600 $S/config.prop
-     chmod 0600 $S/etc/prop.default
-     chmod 0600 $S/product/build.prop
-     chmod 0600 $S/system_ext/build.prop
-     chmod 0600 $S/vendor/build.prop
-     chmod 0600 $S/vendor/default.prop
-     chmod 0600 $VENDOR/build.prop
-     chmod 0600 $VENDOR/default.prop
-     chmod 0600 $VENDOR/odm/etc/build.prop
-     chmod 0600 $VENDOR/odm_dlkm/etc/build.prop
-     chmod 0600 $VENDOR/vendor_dlkm/etc/build.prop) 2>/dev/null
+    chmod 0600 $S/build.prop 2>/dev/null
+    chmod 0600 $S/config.prop 2>/dev/null
+    chmod 0600 $S/etc/prop.default 2>/dev/null
+    chmod 0600 $S/product/build.prop 2>/dev/null
+    chmod 0600 $S/system_ext/build.prop 2>/dev/null
+    chmod 0600 $S/vendor/build.prop 2>/dev/null
+    chmod 0600 $S/vendor/default.prop 2>/dev/null
+    chmod 0600 $VENDOR/build.prop 2>/dev/null
+    chmod 0600 $VENDOR/default.prop 2>/dev/null
+    chmod 0600 $VENDOR/odm/etc/build.prop 2>/dev/null
+    chmod 0600 $VENDOR/odm_dlkm/etc/build.prop 2>/dev/null
+    chmod 0600 $VENDOR/vendor_dlkm/etc/build.prop 2>/dev/null
   fi
 }
 
 # SELinux security context
 selinux_fix() {
-  (chcon -h u:object_r:system_file:s0 "$S/build.prop"
-   chcon -h u:object_r:system_file:s0 "$S/config.prop"
-   chcon -h u:object_r:system_file:s0 "$S/etc/prop.default"
-   chcon -h u:object_r:system_file:s0 "$S/product/build.prop"
-   chcon -h u:object_r:system_file:s0 "$S/system_ext/build.prop"
-   chcon -h u:object_r:system_file:s0 "$S/vendor/build.prop"
-   chcon -h u:object_r:system_file:s0 "$S/vendor/default.prop"
-   chcon -h u:object_r:vendor_file:s0 "$VENDOR/build.prop"
-   chcon -h u:object_r:vendor_file:s0 "$VENDOR/default.prop"
-   chcon -h u:object_r:vendor_configs_file:s0 "$VENDOR/odm/etc/build.prop"
-   chcon -h u:object_r:vendor_configs_file:s0 "$VENDOR/odm_dlkm/etc/build.prop"
-   chcon -h u:object_r:vendor_configs_file:s0 "$VENDOR/vendor_dlkm/etc/build.prop") 2>/dev/null
+  chcon -h u:object_r:system_file:s0 "$S/build.prop" 2>/dev/null
+  chcon -h u:object_r:system_file:s0 "$S/config.prop" 2>/dev/null
+  chcon -h u:object_r:system_file:s0 "$S/etc/prop.default" 2>/dev/null
+  chcon -h u:object_r:system_file:s0 "$S/product/build.prop" 2>/dev/null
+  chcon -h u:object_r:system_file:s0 "$S/system_ext/build.prop" 2>/dev/null
+  chcon -h u:object_r:system_file:s0 "$S/vendor/build.prop" 2>/dev/null
+  chcon -h u:object_r:system_file:s0 "$S/vendor/default.prop" 2>/dev/null
+  chcon -h u:object_r:vendor_file:s0 "$VENDOR/build.prop" 2>/dev/null
+  chcon -h u:object_r:vendor_file:s0 "$VENDOR/default.prop" 2>/dev/null
+  chcon -h u:object_r:vendor_configs_file:s0 "$VENDOR/odm/etc/build.prop" 2>/dev/null
+  chcon -h u:object_r:vendor_configs_file:s0 "$VENDOR/odm_dlkm/etc/build.prop" 2>/dev/null
+  chcon -h u:object_r:vendor_configs_file:s0 "$VENDOR/vendor_dlkm/etc/build.prop" 2>/dev/null
 }
 
-# Remove pre-installed packages shipped with ROM
 pkg_System() {
   for i in \
     AndroidAuto* arcore Books* CarHomeGoogle CalculatorGoogle* CalendarGoogle* CarHomeGoogle Chrome* \
@@ -714,7 +774,12 @@ pkg_System() {
     YouTube Abstruct BasicDreams BlissPapers BookmarkProvider Browser* Camera* Chromium ColtPapers \
     EasterEgg* EggGame Email* ExactCalculator Exchange2 Gallery* GugelClock HTMLViewer Jelly \
     messaging MiXplorer* Music* Partnerbookmark* PartnerBookmark* Phonograph PhotoTable RetroMusic* \
-    VanillaMusic Via* QPGallery QuickSearchBox; do
+    VanillaMusic Via* QPGallery QuickSearchBox GoogleContacts* GoogleExtShared GoogleGalleryGo \
+    LocationHistory* MicropaperPrebuilt PrebuiltBugle PrebuiltClockGoogle PrebuiltDeskClockGoogle \
+    SoundAmplifierPrebuilt YouTube* AboutBliss BlissStatistics Calendar* Dashboard DeskClock EmergencyInfo \
+    Etar HTMLViewer Jelly Messaging messaging PhotoTable* Recorder* SimpleGallery WallpaperZone \
+    CaptivePortalLoginGoogle GooglePrint* NexusWallpapers* PlayAutoInstallConfig PrebuiltDeskClockGoogle \
+    PrebuiltGoogleTelemetryTvp TurboAdapter TrichromeLibrary; do
     rm -rf $S/app/$i $S/product/app/$i $S/system_ext/app/$i
   done
   for i in \
@@ -724,7 +789,10 @@ pkg_System() {
     GoogleExtservices GoogleExtServicesPrebuilt GoogleFeedback GoogleOneTimeInitializer GooglePartnerSetup GoogleRestore \
     GoogleServicesFramework HotwordEnrollment* HotWordEnrollment* matchmaker* Matchmaker* Phonesky PixelLive* PrebuiltGmsCore* \
     PixelSetupWizard* SetupWizard* Tag* Tips* Turbo* Velvet Wellbeing* AudioFX Camera* Eleven MatLog MusicFX OmniSwitch \
-    Snap* Tag* Via* VinylMusicPlayer; do
+    Snap* Tag* Via* VinylMusicPlayer ConnMetrics GoogleContacts* GoogleDialer GoogleExtServices MaestroPrebuilt SCONE Scribe* \
+    RecorderPrebuilt WallpaperPickerGoogleRelease AncientWallpaperZone Contacts crDroidMusic Dialer EmergencyInfo Gallery2 \
+    Recorder* AmbientSensePrebuilt AndroidAutoFullPrebuilt DeviceIntelligenceNetworkPrebuilt DevicePersonalizationPrebuiltPixel3 \
+    GoogleRestorePrebuilt PartnerSetupPrebuilt PrebuiltBugle TurboPrebuilt DocumentsUIGoogle TagGoogle; do
     rm -rf $S/priv-app/$i $S/product/priv-app/$i $S/system_ext/priv-app/$i
   done
   for i in \
@@ -769,8 +837,10 @@ pkg_System() {
     permissions/com.google.android.gms* sysconfig/microg* sysconfig/nogoolag*; do
     rm -rf $S/etc/$i $S/product/etc/$i $S/system_ext/etc/$i
   done
-  for i in $S/overlay $S/product/overlay $S/system_ext/overlay; do
-    rm -rf $i/PixelConfigOverlay*
+  for i in \
+    GoogleConfigOverlay* GmsConfigOverlay* PixelConfigOverlay* PixelSetupWizard* \
+    ManagedProvisioningPixel* ChromeOverlay* TelegramOverlay* WhatsAppOverlay*; do
+    rm -rf $S/overlay/$i $S/product/overlay/$i $S/system_ext/overlay/$i
   done
   for i in $S/usr $S/product/usr $S/system_ext/usr; do
     rm -rf $i/share/ime $i/srec
@@ -778,7 +848,11 @@ pkg_System() {
 }
 
 # Limit installation of AOSP APKs
-lim_aosp_install() { if [ "$rwg_install_status" == "true" ]; then pkg_System; fi; }
+lim_aosp_install() {
+  if [ "$rwg_install_status" == "true" ]; then
+    pkg_System
+  fi
+}
 
 # Set restore function
 restoredirTMP() {
@@ -910,18 +984,15 @@ restoredirTMPAddon() {
     $TMP/addon/usr/en-US"
 }
 
-restoredirTMPAddonv2() {
-  TMP_APP_ADDON="
-    $TMP/addon/app/YouTube
-    $TMP/addon/app/MicroGGMSCore"
-}
-
 restoredirTMPOverlay() {
   TMP_OVERLAY="
     $TMP/overlay/PlayStoreOverlay"
 }
 
 trigger_fboot_restore() {
+  # Override function
+  return 255
+  # Discard execution of below functions
   if [ "$setup_install_status" == "true" ]; then
     mv $TMP_PRIVAPP_SETUP $SYSTEM/priv-app 2>/dev/null
   fi
@@ -936,14 +1007,16 @@ trigger_rwg_restore() {
 }
 
 trigger_addon_restore() {
+  # Override function
+  return 255
+  # Discard execution of below functions
   if [ "$addon_install_status" == "true" ]; then
     mv $TMP_APP_ADDON $SYSTEM/app 2>/dev/null
     mv $TMP_PRIVAPP_ADDON $SYSTEM/priv-app 2>/dev/null
     mv $TMP_SYSCONFIG_ADDON $SYSTEM/etc/sysconfig 2>/dev/null
     mv $TMP_PERMISSIONS_ADDON $SYSTEM/etc/permissions 2>/dev/null
     if [ -n "$(cat $S/config.prop | grep ro.config.dps)" ]; then
-      mkdir $S/etc/firmware
-      mv $TMP_FIRMWARE_ADDON $S/etc/firmware 2>/dev/null
+      mkdir $S/etc/firmware; mv $TMP_FIRMWARE_ADDON $S/etc/firmware 2>/dev/null
     fi
     mv $TMP_FRAMEWORK_ADDON $SYSTEM/framework 2>/dev/null
     mv $TMP_OVERLAY_ADDON $SYSTEM/product/overlay 2>/dev/null
@@ -960,14 +1033,11 @@ trigger_addon_restore() {
   fi
 }
 
-trigger_addon_restore_v2() {
-  if [ "$addon_install_status" == "true" ]; then
-    mv $TMP_APP_ADDON $SYSTEM/app 2>/dev/null
-  fi
-}
-
 # Wipe conflicting packages
 fix_setup_conflict() {
+  # Override function
+  return 255
+  # Discard execution of below functions
   if [ "$setup_install_status" == "true" ]; then
     for i in $S/app $S/priv-app $S/product/app $S/product/priv-app $S/system_ext/app $S/system_ext/priv-app; do
       rm -rf $i/ManagedProvisioning $i/Provision $i/LineageSetupWizard $i/OneTimeInitializer
@@ -980,6 +1050,9 @@ fix_setup_conflict() {
 
 # Wipe conflicting packages
 fix_addon_conflict() {
+  # Override function
+  return 255
+  # Discard execution of below functions
   if [ "$addon_install_status" == "true" ]; then
     if [ -n "$(cat $S/config.prop | grep ro.config.assistant)" ]; then
       for i in $S/app $S/priv-app $S/product/app $S/product/priv-app $S/system_ext/app $S/system_ext/priv-app; do
@@ -988,7 +1061,7 @@ fix_addon_conflict() {
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.bromite)" ]; then
       for i in $S/app $S/priv-app $S/product/app $S/product/priv-app $S/system_ext/app $S/system_ext/priv-app; do
-        rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle $i/BromitePrebuilt $i/WebViewBromite
+        rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/BromitePrebuilt
       done
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.calculator)" ]; then
@@ -1003,7 +1076,7 @@ fix_addon_conflict() {
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.chrome)" ]; then
       for i in $S/app $S/priv-app $S/product/app $S/product/priv-app $S/system_ext/app $S/system_ext/priv-app; do
-        rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/TrichromeLibrary $i/WebViewGoogle
+        rm -rf $i/Browser $i/Jelly $i/Chrome* $i/GoogleChrome $i/BromitePrebuilt
       done
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.contacts)" ]; then
@@ -1052,7 +1125,8 @@ fix_addon_conflict() {
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.launcher)" ]; then
       for i in $S/app $S/priv-app $S/product/app $S/product/priv-app $S/system_ext/app $S/system_ext/priv-app; do
-        rm -rf $i/Launcher3 $i/Launcher3QuickStep $i/NexusLauncherPrebuilt $i/NexusLauncherRelease $i/NexusQuickAccessWallet $i/QuickAccessWallet $i/QuickStep $i/QuickStepLauncher $i/TrebuchetQuickStep
+        rm -rf $i/Launcher3 $i/Launcher3QuickStep $i/NexusLauncherPrebuilt $i/NexusLauncherRelease
+        rm -rf $i/NexusQuickAccessWallet $i/QuickAccessWallet $i/QuickStep $i/QuickStepLauncher $i/TrebuchetQuickStep
       done
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.maps)" ]; then
@@ -1112,6 +1186,8 @@ copy_ota_script() {
 # Runtime functions
 case "$1" in
   restore)
+    # Wait for post processes to finish
+    sleep 7
     if [ "$RUN_STAGE_RESTORE" == "true" ]; then
       trampoline
       check_busybox "$@"
@@ -1134,13 +1210,13 @@ case "$1" in
       lim_aosp_install
       restoredirTMP
       mv $TMP_APP $SYSTEM/app 2>/dev/null
-      # mv $TMP_APP_JAR $S/app 2>/dev/null
+      mv $TMP_APP_JAR $S/app 2>/dev/null
       mv $TMP_PRIVAPP $SYSTEM/priv-app 2>/dev/null
-      # mv $TMP_PRIVAPP_JAR $S/priv-app 2>/dev/null
+      mv $TMP_PRIVAPP_JAR $S/priv-app 2>/dev/null
       mv $TMP_SYSCONFIG $SYSTEM/etc/sysconfig 2>/dev/null
       mv $TMP_DEFAULTPERMISSIONS $SYSTEM/etc/default-permissions 2>/dev/null
       mv $TMP_PERMISSIONS $SYSTEM/etc/permissions 2>/dev/null
-      # mv $TMP_PREFERREDAPPS $SYSTEM/etc/preferred-apps 2>/dev/null
+      mv $TMP_PREFERREDAPPS $SYSTEM/etc/preferred-apps 2>/dev/null
       mv $TMP_FRAMEWORK $SYSTEM/framework 2>/dev/null
       mv $TMP_PROPFILE $S/etc 2>/dev/null
       mv $TMP_BUILDFILE $S 2>/dev/null
@@ -1148,28 +1224,27 @@ case "$1" in
       purge_whitelist_permission
       set_whitelist_permission
       set_microg_device
-      # set_assistant
+      set_assistant
       set_release_tag
-      # restoredirTMPFboot
-      # on_setup_status_check
-      # trigger_fboot_restore
-      # fix_setup_conflict
+      restoredirTMPFboot
+      on_setup_status_check
+      trigger_fboot_restore
+      fix_setup_conflict
       restoredirTMPRwg
       on_rwg_status_check
       trigger_rwg_restore
       on_addon_status_check
-      # fix_addon_conflict
-      # restoredirTMPAddon
-      restoredirTMPAddonv2
-      # trigger_addon_restore
-      trigger_addon_restore_v2
+      fix_addon_conflict
+      restoredirTMPAddon
+      trigger_addon_restore
       restoredirTMPOverlay
       mv $TMP_OVERLAY $SYSTEM/product/overlay 2>/dev/null
       copy_ota_script
       sdk_fix
       selinux_fix
-      # shared_library
-      del_tmp_dir
+      shared_library
+      f_cleanup
+      d_cleanup
       conf_addon_restore
       umount_apex
       unmount_all

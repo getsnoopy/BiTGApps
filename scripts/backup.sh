@@ -23,12 +23,14 @@
 #####################################################
 
 # Set default
-if [ -z $backuptool_ab ]; then TMP="/tmp"; else TMP="/postinstall/tmp"; fi
+if [ -z $backuptool_ab ]; then
+  TMP="/tmp"
+else
+  TMP="/postinstall/tmp"
+fi
 
 # Set busybox
-if [ -e "/data/toybox/toybox-arm" ]; then
-  BB="/data/toybox/toybox-arm"
-elif [ -e "$TMP/busybox-arm" ]; then
+if [ -e "$TMP/busybox-arm" ]; then
   BB="$TMP/busybox-arm"
 else
   BB="$?"
@@ -38,7 +40,7 @@ fi
 fstab="/etc/fstab"
 
 # Set ADDOND_VERSION
-ADDOND_VERSION=""
+ADDOND_VERSION="3"
 
 # Export functions from backuptool
 . $TMP/backuptool.functions
@@ -85,13 +87,14 @@ recovery_cleanup() {
 # Set pre-bundled busybox
 set_bb() {
   l="$TMP/bin"
+  rm -rf $l
   install -d "$l"
   chmod 0755 $BB
   for i in $($BB --list); do
     if ! ln -sf "$BB" "$l/$i" && ! $BB ln -sf "$BB" "$l/$i" && ! $BB ln -f "$BB" "$l/$i" ; then
       # Create script wrapper if symlinking and hardlinking failed because of restrictive selinux policy
       if ! echo "#!$BB" > "$l/$i" || ! chmod 0755 "$l/$i" ; then
-        ui_print "! Failed to set-up pre-bundled busybox"
+        ui_print "BackupTools: Failed to set-up pre-bundled busybox"
         exit 1
       fi
     fi
@@ -103,8 +106,12 @@ set_bb() {
 # Check device architecture
 set_arch() {
   ARCH=$(uname -m)
-  if [ "$ARCH" == "armv6l" ] || [ "$ARCH" == "armv7l" ]; then ARMEABI="true"; fi
-  if [ "$ARCH" == "armv8b" ] || [ "$ARCH" == "armv8l" ] || [ "$ARCH" == "aarch64" ]; then AARCH64="true"; fi
+  if [ "$ARCH" == "armv6l" ] || [ "$ARCH" == "armv7l" ]; then
+    ARMEABI="true"
+  fi
+  if [ "$ARCH" == "armv8b" ] || [ "$ARCH" == "armv8l" ] || [ "$ARCH" == "aarch64" ]; then
+    AARCH64="true"
+  fi
 }
 
 # insert_line <file> <if search string> <before|after> <line match string> <inserted line>
@@ -124,7 +131,7 @@ insert_line() {
   fi
 }
 
-# Create temporary dir
+# Create temporary directory
 tmp_dir() {
   test -d $TMP/app || mkdir $TMP/app
   test -d $TMP/priv-app || mkdir $TMP/priv-app
@@ -207,9 +214,15 @@ setup_mountpoint() {
 }
 
 mount_apex() {
-  if [ "$($BB grep -w -o /system_root $fstab)" ]; then S="/system_root/system"; fi
-  if [ "$($BB grep -w -o /system $fstab)" ]; then S="/system"; fi
-  if [ "$($BB grep -w -o /system $fstab)" ] && [ -d "/system/system" ]; then S="/system/system"; fi
+  if [ "$($BB grep -w -o /system_root $fstab)" ]; then
+    S="/system_root/system"
+  fi
+  if [ "$($BB grep -w -o /system $fstab)" ]; then
+    S="/system"
+    if [ -d "/system/system" ]; then
+      S="/system/system"
+    fi
+  fi
   # Set hardcoded system layout
   if [ -z "$S" ]; then
     S="/system_root/system"
@@ -236,7 +249,7 @@ mount_apex() {
             num=$((num + 1))
             losetup $loop | grep -q $dest.img && break
           done
-          mount -t ext4 -o ro,loop,noatime $loop $dest
+          mount -t ext4 -o ro,loop,noatime $loop $dest 2>/dev/null
           if [ $? != 0 ]; then
             losetup -d $loop 2>/dev/null
           fi
@@ -263,7 +276,6 @@ mount_apex() {
 }
 
 umount_apex() {
-  export ANDROID_ROOT=$OLD_ANDROID_ROOT
   test -d /apex || return 1
   local dest loop
   for dest in $(find /apex -type d -mindepth 1 -maxdepth 1); do
@@ -282,12 +294,12 @@ umount_apex() {
 }
 
 unmount_all() {
-  (umount -l /system_root
-   umount -l /system
-   umount -l /product
-   umount -l /system_ext
-   umount -l /vendor
-   umount -l /persist) > /dev/null 2>&1
+  umount -l /system_root > /dev/null 2>&1
+  umount -l /system > /dev/null 2>&1
+  umount -l /product > /dev/null 2>&1
+  umount -l /system_ext > /dev/null 2>&1
+  umount -l /vendor > /dev/null 2>&1
+  umount -l /persist > /dev/null 2>&1
 }
 
 # Mount partitions
@@ -301,12 +313,12 @@ mount_all() {
   fi
   if [ "$($l/grep -w -o /cache $fstab)" ]; then
     mount -o ro -t auto /cache > /dev/null 2>&1
-    mount -o rw,remount -t auto /cache
+    mount -o rw,remount -t auto /cache > /dev/null 2>&1
   fi
   mount -o ro -t auto /persist > /dev/null 2>&1
+  mount -o rw,remount -t auto /persist > /dev/null 2>&1
   # Unset predefined environmental variable
-  OLD_ANDROID_ROOT=$ANDROID_ROOT
-  unset ANDROID_ROOT
+  OLD_ANDROID_ROOT=$ANDROID_ROOT; unset ANDROID_ROOT
   # Wipe conflicting layouts
   ($(! is_mounted '/system_root') && rm -rf /system_root)
   ($(! is_mounted '/product') && rm -rf /product)
@@ -316,17 +328,24 @@ mount_all() {
     ($(! is_mounted '/system') && rm -rf /system)
   fi
   # Create initial path and set ANDROID_ROOT in the global environment
-  if [ "$($BB grep -w -o /system_root $fstab)" ]; then mkdir /system_root; export ANDROID_ROOT="/system_root"; fi
-  if [ "$($BB grep -w -o /system $fstab)" ]; then mkdir /system; export ANDROID_ROOT="/system"; fi
-  if [ "$($BB grep -w -o /product $fstab)" ]; then mkdir /product; fi
-  if [ "$($BB grep -w -o /system_ext $fstab)" ]; then mkdir /system_ext; fi
+  if [ "$($BB grep -w -o /system_root $fstab)" ]; then
+    mkdir /system_root; export ANDROID_ROOT="/system_root"
+  fi
+  if [ "$($BB grep -w -o /system $fstab)" ]; then
+    mkdir /system; export ANDROID_ROOT="/system"
+  fi
+  if [ "$($BB grep -w -o /product $fstab)" ]; then
+    mkdir /product
+  fi
+  if [ "$($BB grep -w -o /system_ext $fstab)" ]; then
+    mkdir /system_ext
+  fi
   # Set '/system_root' as mount point, if previous check failed. This adaption,
   # for recoveries using "/" as mount point in auto-generated fstab but not,
   # actually mounting to "/" and using some other mount location. At this point,
   # we can mount system using its block device to any location.
   if [ -z "$ANDROID_ROOT" ]; then
-    mkdir /system_root
-    export ANDROID_ROOT="/system_root"
+    mkdir /system_root; export ANDROID_ROOT="/system_root"
   fi
   # Set A/B slot property
   local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
@@ -413,11 +432,12 @@ mount_all() {
           BLK="/dev/block/bootdevice/by-name/system"
         elif [ -e "/dev/block/platform/*/by-name/system" ]; then
           BLK="/dev/block/platform/*/by-name/system"
-        elif [ -e "/dev/block/platform/*/*/by-name/system" ]; then
-          BLK="/dev/block/platform/*/*/by-name/system"
         else
-          ui_print "BackupTools: Failed to create BiTGApps backup"
-          exit 1
+          BLK="/dev/block/platform/*/*/by-name/system"
+        fi
+        # Do not proceed without system block
+        if [ -z "$BLK" ]; then
+          ui_print "! Cannot find system block" && exit 1
         fi
         # Mount using block device
         mount $BLK $ANDROID_ROOT > /dev/null 2>&1
@@ -470,10 +490,14 @@ system_layout() {
     export S="/system_root/system"
   fi
   # Adaptation to A/B OTAs
-  if [ ! -z $backuptool_ab ]; then export S="/postinstall/system"; fi
+  if [ ! -z $backuptool_ab ]; then
+    export S="/postinstall/system"
+  fi
 }
 
-get_file_prop() { grep -m1 "^$2=" "$1" | cut -d= -f2; }
+get_file_prop() {
+  grep -m1 "^$2=" "$1" | cut -d= -f2
+}
 
 get_prop() {
   # Check known .prop files using get_file_prop
@@ -493,7 +517,9 @@ get_prop() {
   fi
 }
 
-on_version_check() { android_sdk="$(get_prop "ro.build.version.sdk")"; }
+on_version_check() {
+  android_sdk="$(get_prop "ro.build.version.sdk")"
+}
 
 ensure_dir() {
   SYSTEM_ADDOND="$SYSTEM/addon.d"
@@ -516,19 +542,34 @@ ensure_dir() {
 }
 
 # Set installation layout
-set_pathmap() { SYSTEM="$S"; ensure_dir; }
+set_pathmap() {
+  SYSTEM="$S"
+  ensure_dir
+}
 
 # Confirm that backup is done
-conf_addon_backup() { if [ -f $TMP/config.prop ]; then ui_print "BackupTools: BiTGApps backup created"; else ui_print "BackupTools: Failed to create BiTGApps backup"; fi; }
+conf_addon_backup() {
+  if [ -f $TMP/config.prop ]; then
+    ui_print "BackupTools: BiTGApps backup created"
+  else
+    ui_print "BackupTools: Failed to create BiTGApps backup"
+  fi
+}
 
 # Check SetupWizard Status
-on_setup_status_check() { setup_install_status="$(get_prop "ro.setup.enabled")"; }
+on_setup_status_check() {
+  setup_install_status="$(get_prop "ro.setup.enabled")"
+}
 
 # Check Addon Status
-on_addon_status_check() { addon_install_status="$(get_prop "ro.addon.enabled")"; }
+on_addon_status_check() {
+  addon_install_status="$(get_prop "ro.addon.enabled")"
+}
 
 # Check RWG Status
-on_rwg_status_check() { rwg_install_status="$(get_prop "ro.rwg.device")"; }
+on_rwg_status_check() {
+  rwg_install_status="$(get_prop "ro.rwg.device")"
+}
 
 # Set backup function
 backupdirSYS() {
@@ -709,6 +750,8 @@ copy_ota_script() {
 # Runtime functions
 case "$1" in
   backup)
+    # Wait for post processes to finish
+    sleep 7
     if [ "$RUN_STAGE_BACKUP" == "true" ]; then
       trampoline
       check_busybox "$@"

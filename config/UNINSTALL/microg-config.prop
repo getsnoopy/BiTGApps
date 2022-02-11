@@ -1,0 +1,12 @@
+#############################
+# MicroG Configuration File #
+#############################
+
+# Configuration File Type
+#UNINSTALL
+
+# Enable systemless installation
+ro.config.systemless=false
+
+# Enable Full Uninstall
+ro.config.wipe=false

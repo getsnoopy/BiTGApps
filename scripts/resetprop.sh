@@ -60,12 +60,6 @@ resetprop --delete ro.build.selinux
 # Reset Privileged Permission
 resetprop ro.control_privapp_permissions "enforce"
 
-# Reset Encryption State
-resetprop ro.crypto.state "encrypted"
-resetprop ro.crypto.type "file"
-resetprop ro.crypto.uses_fs_ioc_add_encryption_key "true"
-resetprop ro.crypto.volume.filenames_mode "aes-256-cts"
-
 # Hide SELinux State
 chmod 0640 /sys/fs/selinux/enforce
 chmod 0440 /sys/fs/selinux/policy

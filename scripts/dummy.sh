@@ -22,7 +22,15 @@
 # General Public License for more details.
 #####################################################
 
-. /tmp/backuptool.functions
+# Set default
+if [ -z $backuptool_ab ]; then
+  TMP="/tmp"
+else
+  TMP="/postinstall/tmp"
+fi
+
+# Export functions from backuptool
+. $TMP/backuptool.functions
 
 # update-binary|updater <RECOVERY_API_VERSION> <OUTFD> <ZIPFILE>
 OUTFD=$(ps | grep -v 'grep' | grep -oE 'update(.*) 3 [0-9]+' | cut -d" " -f3)

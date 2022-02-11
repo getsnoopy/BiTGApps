@@ -25,16 +25,19 @@
 # Check root
 id=`id`; id=`echo ${id#*=}`; id=`echo ${id%%\(*}`; id=`echo ${id%% *}`
 if [ "$id" != "0" ] && [ "$id" != "root" ]; then
-sleep 1
-printf '\n%.0s'
-echo "You are NOT running as root..."
-printf '\n%.0s'
-sleep 1
-printf '\n%.0s'
-echo "Please type 'su' first before typing 'bootmode.sh'..."
-printf '\n%.0s'
-exit 1
+  sleep 1
+  printf '\n%.0s'
+  echo "You are NOT running as root..."
+  printf '\n%.0s'
+  sleep 1
+  printf '\n%.0s'
+  echo "Please type 'su' first before typing 'bootmode.sh'..."
+  printf '\n%.0s'
+  exit 1
 fi
+
+# Change selinux state to permissive
+setenforce 0
 
 # Check Magisk
 if [ ! -d "/data/adb/magisk" ]; then
@@ -69,13 +72,18 @@ if [ -f /data/adb/magisk/util_functions.sh ]; then
   fi
 fi
 
+# Installation base is bootmode script not Magisk
+if [[ "$(getprop "sys.boot_completed")" == "1" ]]; then
+  setprop sys.bootmode "1"
+fi
+
 echo $divider
-$BB echo -e "\e[00;00m ========= BiTGApps Installer ========= \e[00;37;40m"
-$BB echo -e "\e[00;44m 1. Construct Install Environment       \e[00;37;40m"
-$BB echo -e "\e[00;00m 2. Wipe data partition                 \e[00;37;40m"
-$BB echo -e "\e[00;00m 3. Install BiTGApps Package            \e[00;37;40m"
-$BB echo -e "\e[00;41m 4. Reboot                              \e[00;37;40m"
-$BB echo -e "\e[00;00m 5. Exit                                \e[00;37;40m"
+$BB echo -e "========= BiTGApps Installer ========="
+$BB echo -e "1. Construct Install Environment      "
+$BB echo -e "2. Wipe data partition                "
+$BB echo -e "3. Install BiTGApps Package           "
+$BB echo -e "4. Reboot                             "
+$BB echo -e "5. Exit                               "
 echo $divider
 
 echo -n "Please select an option [1-5]: "
@@ -93,51 +101,69 @@ if [ "$option" == "1" ]; then
   mount -o remount,rw,errors=continue /system_ext > /dev/null 2>&1
   mount -o remount,rw,errors=continue /cache > /dev/null 2>&1
   mount -o remount,rw,errors=continue /metadata > /dev/null 2>&1
+  mount -o remount,rw,errors=continue /persist > /dev/null 2>&1
   # Set default
   export TMP="/tmp"
   # Create temporary directory
   test -d $TMP || mkdir $TMP
+  # Check SBIN
+  [ ! -d "/sbin" ] && SBIN="true" || SBIN="false"
+  # Check SHELL
+  [ ! -e "/sbin/sh" ] && SHELL="true" || SHELL="false"
   # Create shell symlink
   test -d /sbin || mkdir /sbin
   ln -sfnv /system/bin/sh /sbin/sh > /dev/null 2>&1
+  # Local Environment
+  PATH=/data/BiTGApps:$PATH
   # Run script again
-  . /data/BiTGApps/bootmode.sh
+  bootmode.sh
 elif [ "$option" == "2" ]; then
   clear
   echo $divider
-  $BB echo -e "\e[00;41m Wipe data without wiping internal storage \e[00;37;40m"
+  $BB echo -e "Wipe data without wiping internal storage"
   echo $divider
   ($BB find ./data -mindepth 1 -maxdepth 1 -type d -not -name 'media' -exec rm -rf '{}' \;)
   sleep 1
   clear
+  # Local Environment
+  PATH=/data/BiTGApps:$PATH
   # Run script again
-  . /data/BiTGApps/bootmode.sh
+  bootmode.sh
 elif [ "$option" == "3" ]; then
   clear
   ZIPFILE="/data/media/0/BiTGApps"
-  $BB echo -e "\e[00;41m Select BiTGApps Package \e[00;37;40m"
+  $BB echo -e "Select BiTGApps Package"
   files=$(ls $ZIPFILE/*.zip); i=1
   for j in $files
   do
     echo "$i.$j"; file[i]=$j; i=$(( i + 1 ))
   done
   echo $divider
-  $BB echo -e "\e[00;46m Enter number from above list \e[00;37;40m"
+  $BB echo -e "Enter number from above list"
   read input
   clear
   echo "Package: ${file[$input]}"
-  unzip -o "${file[$input]}" -d $TMP >/dev/null
+  $(unzip -o "${file[$input]}" -d "$TMP" >/dev/null 2>&1)
   sleep 1
   clear
-  if [ -f "$TMP/installer.sh" ]; then $BB sh $TMP/installer.sh "$@"; fi
-  # Wipe sbin to prevent conflicts with magisk
-  rm -rf /sbin
+  if [ -f "$TMP/installer.sh" ]; then
+    $BB sh $TMP/installer.sh "$@"
+  fi
+  # Remove SBIN/SHELL to prevent conflicts with Magisk
+  $SBIN && rm -rf /sbin
+  $SHELL && rm -rf /sbin/sh
+  # Unset predefined environmental variable
+  unset SBIN
+  unset SHELL
+  # Remove temporary directory
   rm -rf /tmp
+  # Local Environment
+  PATH=/data/BiTGApps:$PATH
   # Run script again
-  . /data/BiTGApps/bootmode.sh
+  bootmode.sh
 elif [ "$option" == "4" ]; then
   clear
-  $BB echo -e "\e[00;41m Rebooting Now \e[00;37;40m"
+  $BB echo -e "Rebooting Now"
   sleep 1
   reboot
 elif [ "$option" == "5" ]; then
@@ -146,10 +172,12 @@ elif [ "$option" == "5" ]; then
 else
   clear
   echo $divider
-  $BB echo -e "\e[00;41m Invalid option, please try again ! \e[00;37;40m"
+  $BB echo -e "Invalid option, please try again !"
   echo $divider
   sleep 1
   clear
+  # Local Environment
+  PATH=/data/BiTGApps:$PATH
   # Run script again
-  . /data/BiTGApps/bootmode.sh
+  bootmode.sh
 fi

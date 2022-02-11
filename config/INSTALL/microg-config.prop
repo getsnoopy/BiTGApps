@@ -2,5 +2,8 @@
 # MicroG Configuration File #
 #############################
 
+# Configuration File Type
+#INSTALL
+
 # Enable systemless installation
 ro.config.systemless=false

@@ -23,10 +23,18 @@
 #####################################################
 
 # Set default
-if [ -z $backuptool_ab ]; then TMP="/tmp"; else TMP="/postinstall/tmp"; fi
+if [ -z $backuptool_ab ]; then
+  TMP="/tmp"
+else
+  TMP="/postinstall/tmp"
+fi
 
 # Set busybox
-if [ -z $backuptool_ab ]; then BBDIR="/tmp"; else BBDIR="/postinstall/tmp"; fi
+if [ -z $backuptool_ab ]; then
+  BBDIR="/tmp"
+else
+  BBDIR="/postinstall/tmp"
+fi
 
 # Use busybox backup from /data
 BBBAK="/data/toybox"
@@ -34,9 +42,21 @@ BBBAK="/data/toybox"
 # Use busybox backup from /data/unencrypted
 BBBAC="/data/unencrypted/toybox"
 
+# Mount data partition
+if ! grep -q " $(readlink -f '/data') " /proc/mounts; then
+  mount /data
+  if [ -z "$(ls -A /sdcard)" ]; then
+    mount -o bind /data/media/0 /sdcard
+  fi
+fi
+
 # Copy busybox backup
-[ -e "$BBBAK/toybox-arm" ] && cp -f $BBBAK/toybox-arm $BBDIR/busybox-arm
-[ -e "$BBBAC/toybox-arm" ] && cp -f $BBBAC/toybox-arm $BBDIR/busybox-arm
+if [ -e "$BBBAK/toybox-arm" ]; then
+  cp -f $BBBAK/toybox-arm $BBDIR/busybox-arm
+fi
+if [ -e "$BBBAC/toybox-arm" ]; then
+  cp -f $BBBAC/toybox-arm $BBDIR/busybox-arm
+fi
 
 # Mount backup partitions
 for i in /cache /persist /metadata; do
@@ -44,44 +64,50 @@ for i in /cache /persist /metadata; do
 done
 
 # Copy busybox backup
-[ -e "/cache/toybox/toybox-arm" ] && cp -f /cache/toybox/toybox-arm $BBDIR/busybox-arm
-[ -e "/persist/toybox/toybox-arm" ] && cp -f /persist/toybox/toybox-arm $BBDIR/busybox-arm
-[ -e "/metadata/toybox/toybox-arm" ]&& cp -f /metadata/toybox/toybox-arm $BBDIR/busybox-arm
+if [ -e "/cache/toybox/toybox-arm" ]; then
+  cp -f /cache/toybox/toybox-arm $BBDIR/busybox-arm
+fi
+if [ -e "/persist/toybox/toybox-arm" ]; then
+  cp -f /persist/toybox/toybox-arm $BBDIR/busybox-arm
+fi
+if [ -e "/metadata/toybox/toybox-arm" ]; then
+  cp -f /metadata/toybox/toybox-arm $BBDIR/busybox-arm
+fi
 
 # Set runtime permission
-[ -e "$BBDIR/busybox-arm" ] && chmod +x $BBDIR/busybox-arm
+if [ -e "$BBDIR/busybox-arm" ]; then
+  chmod +x $BBDIR/busybox-arm
+fi
 
 # Unmount backup partitions
 for i in /cache /persist /metadata; do
-  (umount $i && umount -l $i) > /dev/null 2>&1
+  (umount -l $i) > /dev/null 2>&1
 done
 
 # Run scripts in the busybox environment
 case "$1" in
   backup)
+    # Wait for post processes to finish
+    sleep 7
+    # ASH Standalone Shell Mode
     export ASH_STANDALONE=1
     # Set backuptool stage
     export RUN_STAGE_BACKUP="true"
     if [ -e "$BBDIR/busybox-arm" ]; then
       exec $BBDIR/busybox-arm sh "$TMP/addon.d/backup.sh" "$@"
-    elif [ -e "$BBBAK/busybox-arm" ]; then
-      exec $BBBAK/busybox-arm sh "$TMP/addon.d/backup.sh" "$@"
-    elif [ -e "$BBBAC/busybox-arm" ]; then
-      exec $BBBAC/busybox-arm sh "$TMP/addon.d/backup.sh" "$@"
     else
       source "$TMP/addon.d/backup.sh" "$@"
     fi
   ;;
   restore)
+    # Wait for post processes to finish
+    sleep 7
+    # ASH Standalone Shell Mode
     export ASH_STANDALONE=1
     # Set backuptool stage
     export RUN_STAGE_RESTORE="true"
     if [ -e "$BBDIR/busybox-arm" ]; then
       exec $BBDIR/busybox-arm sh "$TMP/addon.d/restore.sh" "$@"
-    elif [ -e "$BBBAK/busybox-arm" ]; then
-      exec $BBBAK/busybox-arm sh "$TMP/addon.d/restore.sh" "$@"
-    elif [ -e "$BBBAC/busybox-arm" ]; then
-      exec $BBBAC/busybox-arm sh "$TMP/addon.d/restore.sh" "$@"
     else
       source "$TMP/addon.d/restore.sh" "$@"
     fi

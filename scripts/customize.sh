@@ -28,10 +28,18 @@ export OUTFD="$2"
 export TMP="/tmp"
 export ASH_STANDALONE=1
 
+# Control and customize installation process
+SKIPUNZIP=1
+
 # Check unsupported architecture and abort installation
 ARCH=$(uname -m)
 if [ "$ARCH" == "x86" ] || [ "$ARCH" == "x86_64" ]; then
   exit 1
+fi
+
+# Check customization script
+if [ -f "$MODPATH/customize.sh" ]; then
+  ZIPFILE="/data/user/0/com.topjohnwu.magisk/cache/flash/install.zip"
 fi
 
 # Package for generating configuration file properties

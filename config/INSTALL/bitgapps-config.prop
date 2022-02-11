@@ -2,6 +2,9 @@
 # BiTGApps Configuration File #
 ###############################
 
+# Configuration File Type
+#INSTALL
+
 # Enable systemless installation
 ro.config.systemless=false
 
@@ -27,7 +30,7 @@ ro.config.messages=false
 ro.config.photos=false
 ro.config.soundpicker=false
 ro.config.tts=false
-ro.config.vanced=false
-ro.config.microg=false
-ro.config.data=false
+ro.config.vanced.microg=false
+ro.config.vanced.nonroot=false
+ro.config.vanced.root=false
 ro.config.wellbeing=false

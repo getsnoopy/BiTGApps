@@ -3,7 +3,7 @@
 #####################################################
 # File name   : restore.sh
 #
-# Description : BiTGApps OTA survival restore script
+# Description : Minimal OTA survival restore script
 #
 # Copyright   : Copyright (C) 2018-2021 TheHitMan7
 #
@@ -29,13 +29,6 @@ else
   TMP="/postinstall/tmp"
 fi
 
-# Set busybox
-if [ -e "$TMP/busybox-arm" ]; then
-  BB="$TMP/busybox-arm"
-else
-  BB="$?"
-fi
-
 # Set auto-generated fstab
 fstab="/etc/fstab"
 
@@ -56,36 +49,9 @@ trampoline() {
   ui_print() { echo -e "ui_print $1\nui_print" >> /proc/self/fd/$OUTFD; }
 }
 
-check_busybox() {
-  if [ "$1" == "restore" ] && [ ! -f "$BB" ]; then
-    ui_print "*************************"
-    ui_print " BiTGApps addon.d failed "
-    ui_print "*************************"
-    ui_print "! Cannot find Busybox - was data wiped or not decrypted?"
-    ui_print "! Reflash OTA from decrypted recovery or reflash BiTGApps"
-    exit 1
-  fi
-}
-
-# Unset predefined environmental variable
-recovery_actions() {
-  OLD_LD_LIB=$LD_LIBRARY_PATH
-  OLD_LD_PRE=$LD_PRELOAD
-  OLD_LD_CFG=$LD_CONFIG_FILE
-  unset LD_LIBRARY_PATH
-  unset LD_PRELOAD
-  unset LD_CONFIG_FILE
-}
-
-# Restore predefined environmental variable
-recovery_cleanup() {
-  [ -z $OLD_LD_LIB ] || export LD_LIBRARY_PATH=$OLD_LD_LIB
-  [ -z $OLD_LD_PRE ] || export LD_PRELOAD=$OLD_LD_PRE
-  [ -z $OLD_LD_CFG ] || export LD_CONFIG_FILE=$OLD_LD_CFG
-}
-
 # Set pre-bundled busybox
 set_bb() {
+  BB="$TMP/busybox-arm"
   l="$TMP/bin"
   rm -rf $l
   install -d "$l"
@@ -95,7 +61,7 @@ set_bb() {
       # Create script wrapper if symlinking and hardlinking failed because of restrictive selinux policy
       if ! echo "#!$BB" > "$l/$i" || ! chmod 0755 "$l/$i" ; then
         ui_print "BackupTools: Failed to set-up pre-bundled busybox"
-        exit 1
+        return 0
       fi
     fi
   done
@@ -103,14 +69,9 @@ set_bb() {
   export PATH="$l:$PATH"
 }
 
-# Check device architecture
-set_arch() {
-  ARCH=$(uname -m)
-  if [ "$ARCH" == "armv6l" ] || [ "$ARCH" == "armv7l" ]; then
-    ARMEABI="true"
-  fi
-  if [ "$ARCH" == "armv8b" ] || [ "$ARCH" == "armv8l" ] || [ "$ARCH" == "aarch64" ]; then
-    AARCH64="true"
+tmp_bb() {
+  if [ -e "$TMP/busybox-arm" ]; then
+    set_bb
   fi
 }
 
@@ -159,14 +120,6 @@ tmp_dir() {
   test -d $TMP/overlay || mkdir $TMP/overlay
 }
 
-f_cleanup() {
-  ($l/find .$TMP -mindepth 1 -maxdepth 1 -type f -not -name 'recovery.log' -not -name 'busybox-arm' -not -name 'backuptool.functions' -exec rm -rf '{}' \;)
-}
-
-d_cleanup() {
-  ($l/find .$TMP -mindepth 1 -maxdepth 1 -type d -not -name 'bin' -not -name 'install' -exec rm -rf '{}' \;)
-}
-
 # Wipe conflicting packages
 shared_library() {
   rm -rf $S/app/ExtShared
@@ -177,342 +130,15 @@ shared_library() {
   rm -rf $S/system_ext/priv-app/ExtServices
 }
 
-# Set partition and boot slot property
-on_partition_check() {
-  system_as_root=$(getprop ro.build.system_root_image)
-  active_slot=$(getprop ro.boot.slot_suffix)
-  AB_OTA_UPDATER=$(getprop ro.build.ab_update)
-  dynamic_partitions=$(getprop ro.boot.dynamic_partitions)
-}
-
 # Set vendor mount point
 vendor_mnt() {
   device_vendorpartition="false"
-  if [ "$($l/grep -w -o /vendor $fstab)" ]; then
+  if [ "$(grep -w -o /vendor $fstab)" ]; then
     device_vendorpartition="true"
     VENDOR="/vendor"
   fi
   if [ "$device_vendorpartition" == "true" ]; then
-    vendor_as_rw=`$l/grep -v '#' /proc/mounts | $l/grep -E '/vendor?[^a-zA-Z]' | $l/grep -oE 'rw' | head -n 1`
-  fi
-}
-
-# Detect A/B partition layout https://source.android.com/devices/tech/ota/ab_updates
-ab_partition() {
-  device_abpartition="false"
-  if [ ! -z "$active_slot" ] || [ "$AB_OTA_UPDATER" == "true" ]; then
-    device_abpartition="true"
-  fi
-}
-
-# Detect system-as-root https://source.android.com/devices/bootloader/system-as-root
-system_as_root() {
-  SYSTEM_ROOT="false"
-  if [ "$system_as_root" == "true" ]; then
-    SYSTEM_ROOT="true"
-  fi
-}
-
-# Detect dynamic partition layout https://source.android.com/devices/tech/ota/dynamic_partitions/implement
-super_partition() {
-  SUPER_PARTITION="false"
-  if [ "$dynamic_partitions" == "true" ]; then
-    SUPER_PARTITION="true"
-  fi
-}
-
-is_mounted() {
-  grep -q " $(readlink -f $1) " /proc/mounts 2>/dev/null
-  return $?
-}
-
-setup_mountpoint() {
-  test -L $1 && mv -f $1 ${1}_link
-  if [ ! -d $1 ]; then
-    rm -f $1
-    mkdir $1
-  fi
-}
-
-mount_apex() {
-  if [ "$($BB grep -w -o /system_root $fstab)" ]; then
-    S="/system_root/system"
-  fi
-  if [ "$($BB grep -w -o /system $fstab)" ]; then
-    S="/system"
-    if [ -d "/system/system" ]; then
-      S="/system/system"
-    fi
-  fi
-  # Set hardcoded system layout
-  if [ -z "$S" ]; then
-    S="/system_root/system"
-  fi
-  test -d "$S/apex" || return 1
-  local apex dest loop minorx num
-  setup_mountpoint /apex
-  test -e /dev/block/loop1 && minorx=$(ls -l /dev/block/loop1 | awk '{ print $6 }') || minorx="1"
-  num="0"
-  for apex in $S/apex/*; do
-    dest=/apex/$(basename $apex .apex)
-    test "$dest" == /apex/com.android.runtime.release && dest=/apex/com.android.runtime
-    mkdir -p $dest
-    case $apex in
-      *.apex)
-        unzip -qo $apex apex_payload.img -d /apex
-        mv -f /apex/apex_payload.img $dest.img
-        mount -t ext4 -o ro,noatime $dest.img $dest 2>/dev/null
-        if [ $? != 0 ]; then
-          while [ $num -lt 64 ]; do
-            loop=/dev/block/loop$num
-            (mknod $loop b 7 $((num * minorx))
-            losetup $loop $dest.img) 2>/dev/null
-            num=$((num + 1))
-            losetup $loop | grep -q $dest.img && break
-          done
-          mount -t ext4 -o ro,loop,noatime $loop $dest 2>/dev/null
-          if [ $? != 0 ]; then
-            losetup -d $loop 2>/dev/null
-          fi
-        fi
-      ;;
-      *) mount -o bind $apex $dest;;
-    esac
-  done
-  export ANDROID_RUNTIME_ROOT="/apex/com.android.runtime"
-  export ANDROID_TZDATA_ROOT="/apex/com.android.tzdata"
-  export ANDROID_ART_ROOT="/apex/com.android.art"
-  export ANDROID_I18N_ROOT="/apex/com.android.i18n"
-  local APEXJARS=$(find /apex -name '*.jar' | sort | tr '\n' ':')
-  local FWK=$S/framework
-  export BOOTCLASSPATH="${APEXJARS}\
-  $FWK/framework.jar:\
-  $FWK/framework-graphics.jar:\
-  $FWK/ext.jar:\
-  $FWK/telephony-common.jar:\
-  $FWK/voip-common.jar:\
-  $FWK/ims-common.jar:\
-  $FWK/framework-atb-backward-compatibility.jar:\
-  $FWK/android.test.base.jar"
-}
-
-umount_apex() {
-  test -d /apex || return 1
-  local dest loop
-  for dest in $(find /apex -type d -mindepth 1 -maxdepth 1); do
-    if [ -f $dest.img ]; then
-      loop=$(mount | $BB grep $dest | cut -d" " -f1)
-    fi
-    (umount -l $dest
-    losetup -d $loop) 2>/dev/null
-  done
-  rm -rf /apex 2>/dev/null
-  unset ANDROID_RUNTIME_ROOT
-  unset ANDROID_TZDATA_ROOT
-  unset ANDROID_ART_ROOT
-  unset ANDROID_I18N_ROOT
-  unset BOOTCLASSPATH
-}
-
-unmount_all() {
-  umount -l /system_root > /dev/null 2>&1
-  umount -l /system > /dev/null 2>&1
-  umount -l /product > /dev/null 2>&1
-  umount -l /system_ext > /dev/null 2>&1
-  umount -l /vendor > /dev/null 2>&1
-  umount -l /persist > /dev/null 2>&1
-}
-
-# Mount partitions
-mount_all() {
-  mount -o bind /dev/urandom /dev/random
-  if ! is_mounted /data; then
-    mount /data
-    if [ -z "$(ls -A /sdcard)" ]; then
-      mount -o bind /data/media/0 /sdcard
-    fi
-  fi
-  if [ "$($l/grep -w -o /cache $fstab)" ]; then
-    mount -o ro -t auto /cache > /dev/null 2>&1
-    mount -o rw,remount -t auto /cache > /dev/null 2>&1
-  fi
-  mount -o ro -t auto /persist > /dev/null 2>&1
-  mount -o rw,remount -t auto /persist > /dev/null 2>&1
-  # Unset predefined environmental variable
-  OLD_ANDROID_ROOT=$ANDROID_ROOT; unset ANDROID_ROOT
-  # Wipe conflicting layouts
-  ($(! is_mounted '/system_root') && rm -rf /system_root)
-  ($(! is_mounted '/product') && rm -rf /product)
-  ($(! is_mounted '/system_ext') && rm -rf /system_ext)
-  # Do not wipe system, if it create symlinks in root
-  if [ ! "$(readlink -f "/bin")" = "/system/bin" ] && [ ! "$(readlink -f "/etc")" = "/system/etc" ]; then
-    ($(! is_mounted '/system') && rm -rf /system)
-  fi
-  # Create initial path and set ANDROID_ROOT in the global environment
-  if [ "$($BB grep -w -o /system_root $fstab)" ]; then
-    mkdir /system_root; export ANDROID_ROOT="/system_root"
-  fi
-  if [ "$($BB grep -w -o /system $fstab)" ]; then
-    mkdir /system; export ANDROID_ROOT="/system"
-  fi
-  if [ "$($BB grep -w -o /product $fstab)" ]; then
-    mkdir /product
-  fi
-  if [ "$($BB grep -w -o /system_ext $fstab)" ]; then
-    mkdir /system_ext
-  fi
-  # Set '/system_root' as mount point, if previous check failed. This adaption,
-  # for recoveries using "/" as mount point in auto-generated fstab but not,
-  # actually mounting to "/" and using some other mount location. At this point,
-  # we can mount system using its block device to any location.
-  if [ -z "$ANDROID_ROOT" ]; then
-    mkdir /system_root; export ANDROID_ROOT="/system_root"
-  fi
-  # Set A/B slot property
-  local slot=$(getprop ro.boot.slot_suffix 2>/dev/null)
-  if [ "$SUPER_PARTITION" == "true" ]; then
-    if [ "$device_abpartition" == "true" ]; then
-      for block in system system_ext product vendor; do
-        for slot in "" _a _b; do
-          blockdev --setrw /dev/block/mapper/$block$slot > /dev/null 2>&1
-        done
-      done
-      mount -o ro -t auto /dev/block/mapper/system$slot $ANDROID_ROOT > /dev/null 2>&1
-      mount -o rw,remount -t auto /dev/block/mapper/system$slot $ANDROID_ROOT > /dev/null 2>&1
-      is_mounted $ANDROID_ROOT || SYSTEM_DM_MOUNT="true"
-      if [ "$SYSTEM_DM_MOUNT" == "true" ]; then
-        if [ "$($BB grep -w -o /system_root $fstab)" ]; then
-          SYSTEM_MAPPER=`$BB grep -v '#' $fstab | $BB grep -E '/system_root' | $BB grep -oE '/dev/block/dm-[0-9]' | head -n 1`
-        fi
-        if [ "$($BB grep -w -o /system $fstab)" ]; then
-          SYSTEM_MAPPER=`$BB grep -v '#' $fstab | $BB grep -E '/system' | $BB grep -oE '/dev/block/dm-[0-9]' | head -n 1`
-        fi
-        mount -o ro -t auto $SYSTEM_MAPPER $ANDROID_ROOT > /dev/null 2>&1
-        mount -o rw,remount -t auto $SYSTEM_MAPPER $ANDROID_ROOT > /dev/null 2>&1
-      fi
-      if [ "$device_vendorpartition" == "true" ]; then
-        mount -o ro -t auto /dev/block/mapper/vendor$slot $VENDOR > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/vendor$slot $VENDOR > /dev/null 2>&1
-        is_mounted $VENDOR || VENDOR_DM_MOUNT="true"
-        if [ "$VENDOR_DM_MOUNT" == "true" ]; then
-          VENDOR_MAPPER=`$BB grep -v '#' $fstab | $BB grep -E '/vendor' | $BB grep -oE '/dev/block/dm-[0-9]' | head -n 1`
-          mount -o ro -t auto $VENDOR_MAPPER $VENDOR > /dev/null 2>&1
-          mount -o rw,remount -t auto $VENDOR_MAPPER $VENDOR > /dev/null 2>&1
-        fi
-      fi
-      if [ "$($l/grep -w -o /product $fstab)" ]; then
-        mount -o ro -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/product$slot /product > /dev/null 2>&1
-        is_mounted /product || PRODUCT_DM_MOUNT="true"
-        if [ "$PRODUCT_DM_MOUNT" == "true" ]; then
-          PRODUCT_MAPPER=`$BB grep -v '#' $fstab | $BB grep -E '/product' | $BB grep -oE '/dev/block/dm-[0-9]' | head -n 1`
-          mount -o ro -t auto $PRODUCT_MAPPER /product > /dev/null 2>&1
-          mount -o rw,remount -t auto $PRODUCT_MAPPER /product > /dev/null 2>&1
-        fi
-      fi
-      if [ "$($l/grep -w -o /system_ext $fstab)" ]; then
-        mount -o ro -t auto /dev/block/mapper/system_ext$slot /system_ext > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/system_ext$slot /system_ext > /dev/null 2>&1
-        is_mounted /system_ext || SYSTEMEXT_DM_MOUNT="true"
-        if [ "$SYSTEMEXT_DM_MOUNT" == "true" ]; then
-          SYSTEMEXT_MAPPER=`$BB grep -v '#' $fstab | $BB grep -E '/system_ext' | $BB grep -oE '/dev/block/dm-[0-9]' | head -n 1`
-          mount -o ro -t auto $SYSTEMEXT_MAPPER /system_ext > /dev/null 2>&1
-          mount -o rw,remount -t auto $SYSTEMEXT_MAPPER /system_ext > /dev/null 2>&1
-        fi
-      fi
-    fi
-    if [ "$device_abpartition" == "false" ]; then
-      for block in system system_ext product vendor; do
-        blockdev --setrw /dev/block/mapper/$block > /dev/null 2>&1
-      done
-      mount -o ro -t auto /dev/block/mapper/system $ANDROID_ROOT > /dev/null 2>&1
-      mount -o rw,remount -t auto /dev/block/mapper/system $ANDROID_ROOT > /dev/null 2>&1
-      if [ "$device_vendorpartition" == "true" ]; then
-        mount -o ro -t auto /dev/block/mapper/vendor $VENDOR > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/vendor $VENDOR > /dev/null 2>&1
-      fi
-      if [ "$($l/grep -w -o /product $fstab)" ]; then
-        mount -o ro -t auto /dev/block/mapper/product /product > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/product /product > /dev/null 2>&1
-      fi
-      if [ "$($l/grep -w -o /system_ext $fstab)" ]; then
-        mount -o ro -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/mapper/system_ext /system_ext > /dev/null 2>&1
-      fi
-    fi
-  fi
-  if [ "$SUPER_PARTITION" == "false" ]; then
-    if [ "$device_abpartition" == "false" ]; then
-      mount -o ro -t auto $ANDROID_ROOT > /dev/null 2>&1
-      mount -o rw,remount -t auto $ANDROID_ROOT > /dev/null 2>&1
-      is_mounted $ANDROID_ROOT || NEED_BLOCK_MOUNT="true"
-      if [ "$NEED_BLOCK_MOUNT" == "true" ]; then
-        if [ -e "/dev/block/by-name/system" ]; then
-          BLK="/dev/block/by-name/system"
-        elif [ -e "/dev/block/bootdevice/by-name/system" ]; then
-          BLK="/dev/block/bootdevice/by-name/system"
-        elif [ -e "/dev/block/platform/*/by-name/system" ]; then
-          BLK="/dev/block/platform/*/by-name/system"
-        else
-          BLK="/dev/block/platform/*/*/by-name/system"
-        fi
-        # Do not proceed without system block
-        if [ -z "$BLK" ]; then
-          ui_print "! Cannot find system block" && exit 1
-        fi
-        # Mount using block device
-        mount $BLK $ANDROID_ROOT > /dev/null 2>&1
-      fi
-      if [ "$device_vendorpartition" == "true" ]; then
-        mount -o ro -t auto $VENDOR > /dev/null 2>&1
-        mount -o rw,remount -t auto $VENDOR > /dev/null 2>&1
-      fi
-      if [ "$($l/grep -w -o /product $fstab)" ]; then
-        mount -o ro -t auto /product > /dev/null 2>&1
-        mount -o rw,remount -t auto /product > /dev/null 2>&1
-      fi
-    fi
-    if [ "$device_abpartition" == "true" ] && [ "$system_as_root" == "true" ]; then
-      if [ "$ANDROID_ROOT" == "/system_root" ]; then
-        mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
-      fi
-      if [ "$ANDROID_ROOT" == "/system" ]; then
-        mount -o ro -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/system$slot $ANDROID_ROOT > /dev/null 2>&1
-      fi
-      if [ "$device_vendorpartition" == "true" ]; then
-        mount -o ro -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/vendor$slot $VENDOR > /dev/null 2>&1
-      fi
-      if [ "$($l/grep -w -o /product $fstab)" ]; then
-        mount -o ro -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
-        mount -o rw,remount -t auto /dev/block/bootdevice/by-name/product$slot /product > /dev/null 2>&1
-      fi
-    fi
-  fi
-  mount_apex
-}
-
-# Export our own system layout
-system_layout() {
-  # Wipe SYSTEM variable that is set using 'mount_apex' function
-  unset S
-  if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($BB grep -w -o /system_root $fstab)" ]; then
-    export S="/system_root/system"
-  fi
-  if [ -f $ANDROID_ROOT/build.prop ] && [ "$($BB grep -w -o /system $fstab)" ]; then
-    export S="/system"
-  fi
-  if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($BB grep -w -o /system $fstab)" ]; then
-    export S="/system/system"
-  fi
-  if [ -f $ANDROID_ROOT/system/build.prop ] && [ "$($BB grep -w -o /system_root /proc/mounts)" ]; then
-    export S="/system_root/system"
-  fi
-  # Adaptation to A/B OTAs
-  if [ ! -z $backuptool_ab ]; then
-    export S="/postinstall/system"
+    vendor_as_rw=`grep -v '#' /proc/mounts | grep -E '/vendor?[^a-zA-Z]' | grep -oE 'rw' | head -n 1`
   fi
 }
 
@@ -540,41 +166,6 @@ get_prop() {
 
 on_version_check() {
   android_sdk="$(get_prop "ro.build.version.sdk")"
-}
-
-ensure_dir() {
-  SYSTEM_ADDOND="$SYSTEM/addon.d"
-  SYSTEM_APP="$SYSTEM/app"
-  SYSTEM_PRIV_APP="$SYSTEM/priv-app"
-  SYSTEM_ETC_CONFIG="$SYSTEM/etc/sysconfig"
-  SYSTEM_ETC_DEFAULT="$SYSTEM/etc/default-permissions"
-  SYSTEM_ETC_PERM="$SYSTEM/etc/permissions"
-  SYSTEM_ETC_PREF="$SYSTEM/etc/preferred-apps"
-  SYSTEM_FRAMEWORK="$SYSTEM/framework"
-  SYSTEM_OVERLAY="$SYSTEM/product/overlay"
-  for i in \
-    $SYSTEM_ETC_DEFAULT \
-    $SYSTEM_ETC_PREF \
-    $SYSTEM_OVERLAY; do
-    test -d $i || mkdir $i
-    chmod 0755 $i
-    chcon -h u:object_r:system_file:s0 "$i"
-  done
-}
-
-# Set installation layout
-set_pathmap() {
-  SYSTEM="$S"
-  ensure_dir
-}
-
-# Confirm that restore is done
-conf_addon_restore() {
-  if [ -f $S/config.prop ]; then
-    ui_print "BackupTools: BiTGApps backup restored"
-  else
-    ui_print "BackupTools: Failed to restore BiTGApps backup"
-  fi
 }
 
 # Delete existing GMS Doze entry from Android 7.1+
@@ -837,6 +428,15 @@ lim_aosp_install() {
   fi
 }
 
+# Confirm that restore is done
+conf_addon_restore() {
+  if [ -f $S/config.prop ]; then
+    ui_print "BackupTools: BiTGApps backup restored"
+  else
+    ui_print "BackupTools: Failed to restore BiTGApps backup"
+  fi
+}
+
 # Set restore function
 restoredirTMP() {
   TMP_APP="
@@ -984,7 +584,7 @@ restoredirTMPOverlay() {
 
 trigger_fboot_restore() {
   if [ "$setup_install_status" == "true" ]; then
-    mv $TMP_PRIVAPP_SETUP $SYSTEM/priv-app 2>/dev/null
+    mv $TMP_PRIVAPP_SETUP $S/priv-app 2>/dev/null
   fi
 }
 
@@ -998,23 +598,23 @@ trigger_rwg_restore() {
 
 trigger_addon_restore() {
   if [ "$addon_install_status" == "true" ]; then
-    mv $TMP_APP_ADDON $SYSTEM/app 2>/dev/null
-    mv $TMP_PRIVAPP_ADDON $SYSTEM/priv-app 2>/dev/null
-    mv $TMP_SYSCONFIG_ADDON $SYSTEM/etc/sysconfig 2>/dev/null
-    mv $TMP_PERMISSIONS_ADDON $SYSTEM/etc/permissions 2>/dev/null
+    mv $TMP_APP_ADDON $S/app 2>/dev/null
+    mv $TMP_PRIVAPP_ADDON $S/priv-app 2>/dev/null
+    mv $TMP_SYSCONFIG_ADDON $S/etc/sysconfig 2>/dev/null
+    mv $TMP_PERMISSIONS_ADDON $S/etc/permissions 2>/dev/null
     if [ -n "$(cat $S/config.prop | grep ro.config.dps)" ]; then
       mkdir $S/etc/firmware; mv $TMP_FIRMWARE_ADDON $S/etc/firmware 2>/dev/null
     fi
-    mv $TMP_FRAMEWORK_ADDON $SYSTEM/framework 2>/dev/null
-    mv $TMP_OVERLAY_ADDON $SYSTEM/product/overlay 2>/dev/null
+    mv $TMP_FRAMEWORK_ADDON $S/framework 2>/dev/null
+    mv $TMP_OVERLAY_ADDON $S/product/overlay 2>/dev/null
     if [ -n "$(cat $S/config.prop | grep ro.config.gboard)" ]; then
-      mkdir -p $SYSTEM/usr/share/ime/google/d3_lms
-      mkdir -p $SYSTEM/usr/srec/en-US
+      mkdir -p $S/usr/share/ime/google/d3_lms
+      mkdir -p $S/usr/srec/en-US
       for share in $TMP_SHARE_ADDON/*; do
-        cp -f $share $SYSTEM/usr/share/ime/google/d3_lms 2>/dev/null
+        cp -f $share $S/usr/share/ime/google/d3_lms 2>/dev/null
       done
       for srec in $TMP_SREC_ADDON/*; do
-        cp -f $srec $SYSTEM/usr/srec/en-US 2>/dev/null
+        cp -f $srec $S/usr/srec/en-US 2>/dev/null
       done
     fi
   fi
@@ -1052,7 +652,7 @@ fix_addon_conflict() {
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.calendar)" ]; then
       for i in $S/app $S/priv-app $S/product/app $S/product/priv-app $S/system_ext/app $S/system_ext/priv-app; do
-        ($l/find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'CalendarProvider' -exec rm -rf $i/Calendar $i/calendar $i/Etar \;) 2>/dev/null
+        (find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'CalendarProvider' -exec rm -rf $i/Calendar $i/calendar $i/Etar \;) 2>/dev/null
       done
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.chrome)" ]; then
@@ -1062,7 +662,7 @@ fix_addon_conflict() {
     fi
     if [ -n "$(cat $S/config.prop | grep ro.config.contacts)" ]; then
       for i in $S/app $S/priv-app $S/product/app $S/product/priv-app $S/system_ext/app $S/system_ext/priv-app; do
-        ($l/find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'ContactsProvider' -exec rm -rf $i/Contacts $i/contacts \;) 2>/dev/null
+        (find .$i -mindepth 1 -maxdepth 1 -type d -not -name 'ContactsProvider' -exec rm -rf $i/Contacts $i/contacts \;) 2>/dev/null
       done
       for i in $S/etc/permissions $S/product/etc/permissions $S/system_ext/etc/permissions; do
         rm -rf $i/com.android.contacts.xml
@@ -1158,53 +758,31 @@ fix_addon_conflict() {
   fi
 }
 
-copy_ota_script() {
-  for f in bitgapps.sh backup.sh restore.sh; do
-    cp -f $TMP/addon.d/$f $S/addon.d/$f
-  done
-}
-
-# Runtime functions
 case "$1" in
   restore)
     # Wait for post processes to finish
     sleep 7
     if [ "$RUN_STAGE_RESTORE" == "true" ]; then
       trampoline
-      check_busybox "$@"
       ui_print "BackupTools: Restoring BiTGApps backup"
       set_bb
-      unmount_all
-      recovery_actions
-      set_arch
+      tmp_bb
       tmp_dir
-      on_partition_check
-      ab_partition
-      system_as_root
-      super_partition
       vendor_mnt
-      mount_all
-      system_layout
       on_version_check
-      set_pathmap
       on_rwg_status_check
       lim_aosp_install
       restoredirTMP
-      mv $TMP_APP $SYSTEM/app 2>/dev/null
+      mv $TMP_APP $S/app 2>/dev/null
       mv $TMP_APP_JAR $S/app 2>/dev/null
-      mv $TMP_PRIVAPP $SYSTEM/priv-app 2>/dev/null
+      mv $TMP_PRIVAPP $S/priv-app 2>/dev/null
       mv $TMP_PRIVAPP_JAR $S/priv-app 2>/dev/null
-      mv $TMP_SYSCONFIG $SYSTEM/etc/sysconfig 2>/dev/null
-      mv $TMP_DEFAULTPERMISSIONS $SYSTEM/etc/default-permissions 2>/dev/null
-      mv $TMP_PERMISSIONS $SYSTEM/etc/permissions 2>/dev/null
-      mv $TMP_PREFERREDAPPS $SYSTEM/etc/preferred-apps 2>/dev/null
+      mv $TMP_SYSCONFIG $S/etc/sysconfig 2>/dev/null
+      mv $TMP_DEFAULTPERMISSIONS $S/etc/default-permissions 2>/dev/null
+      mv $TMP_PERMISSIONS $S/etc/permissions 2>/dev/null
+      mv $TMP_PREFERREDAPPS $S/etc/preferred-apps 2>/dev/null
       mv $TMP_PROPFILE $S/etc 2>/dev/null
       mv $TMP_BUILDFILE $S 2>/dev/null
-      opt_v25
-      purge_whitelist_permission
-      set_whitelist_permission
-      set_assistant
-      set_release_tag
       restoredirTMPFboot
       on_setup_status_check
       trigger_fboot_restore
@@ -1217,17 +795,16 @@ case "$1" in
       restoredirTMPAddon
       trigger_addon_restore
       restoredirTMPOverlay
-      mv $TMP_OVERLAY $SYSTEM/product/overlay 2>/dev/null
-      copy_ota_script
+      mv $TMP_OVERLAY $S/product/overlay 2>/dev/null
+      shared_library
+      opt_v25
+      purge_whitelist_permission
+      set_whitelist_permission
+      set_assistant
+      set_release_tag
       sdk_fix
       selinux_fix
-      shared_library
-      f_cleanup
-      d_cleanup
       conf_addon_restore
-      umount_apex
-      unmount_all
-      recovery_cleanup
     fi
   ;;
 esac
