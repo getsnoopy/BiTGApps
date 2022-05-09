@@ -7,10 +7,10 @@
     <img src="https://img.shields.io/badge/Revision-45-blue.svg?longCache=true&style=flat-square"
       alt="Version" />
   <!-- Last Updated -->
-    <img src="https://img.shields.io/badge/Updated-January 26, 2022-orange.svg?longCache=true&style=flat-square"
+    <img src="https://img.shields.io/badge/Updated-26 January 2022-orange.svg?longCache=true&style=flat-square"
       alt="_time_stamp_" />
-  <!-- License -->
-    <a href="https://www.gnu.org/licenses/gpl-3.0" target="_blank"><img src="https://img.shields.io/badge/License-GPLv3-yellow.svg?longCache=true&style=flat-square"></a>
+  <!-- Licence -->
+    <a href="https://www.gnu.org/licenses/gpl-3.0" target="_blank"><img src="https://img.shields.io/badge/Licence-GPLv3-yellow.svg?longCache=true&style=flat-square"></a>
   <!-- Status -->
     <img src="https://img.shields.io/badge/Status-Stable-green.svg?longCache=true&style=flat-square"
       alt="_time_stamp_" />
@@ -81,11 +81,11 @@ Here are feature highlights:
 * [Paypal](https://www.paypal.me/kartikverma443)
 * [buymeacoffee](https://www.buymeacoffee.com/TheHitMan7/developing-custom-android-software)
 
-## License
+## Licence
 
-The BiTGApps Project itself is licensed under the [GPLv3](https://github.com/BiTGApps/BiTGApps/blob/master/LICENSE) and anyone wanting to use it has to adhere to this license.
+The BiTGApps Project itself is licensed under the [GPLv3](https://github.com/BiTGApps/BiTGApps/blob/master/LICENSE) and anyone wanting to use it has to adhere to this licence.
 
-License terms used by the BiTGApps installer and pre-built packages
+Licence terms used by the BiTGApps installer and pre-built packages
 
    * The BiTGApps Project does not allow creation of any project based on BiTGApps source itself like using the whole same source but with different project name.
    * BiTGApps installer scripts are provided in such a way that it can be freely used to make personal build. But does not allow its public release.
